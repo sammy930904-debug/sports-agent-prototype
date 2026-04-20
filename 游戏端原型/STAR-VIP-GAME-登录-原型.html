@@ -94,9 +94,24 @@ const I18N = {
     pwd_label:"密码",
     pwd_ph:"请输入密码",
     btn_login:"登录",
-    err_empty:"请填写账号和密码",
-    err_auth:"账号或密码错误",
+    // 场景提示 · 友好文案(V0.2 客户端口吻)
+    err_empty:"请输入您的账号和密码",
+    err_auth:"账号或密码不正确,请再确认后输入",
+    err_disabled:"账号暂时无法登录,请联系专属客服协助处理",
+    err_frozen:"账号目前不可用,请联系专属客服了解详情",
+    err_locked:"登录尝试过于频繁,请稍后再试",
+    err_network:"网络连接不太稳定,请稍后再试一次",
+    err_server:"服务正在恢复中,请稍后再试;如持续未恢复请联系专属客服",
+    scheme_empty:"您当前还没有可用的币种方案,请联系专属客服为您开通",
+    scheme_refreshed:"方案信息已更新,为您刷新最新列表,请重新选择",
+    enter_failed:"正在为您接入游戏,请稍后再试一次",
+    session_expired:"登录信息已过期,请重新登录",
+    game_exit_msg:"您已退出游戏,请重新登录以继续",
+    insufficient:"当前方案余额不足,请联系专属客服充值后继续",
+    game_unavailable:"游戏暂时无法进入,请稍后再试或联系专属客服",
+    goodbye:"您已安全退出,欢迎下次光临",
     hint_demo:"演示账号:顶代 top / 非顶代 player / 密码任意",
+    preview_title:"查看所有场景文案",
     scheme_title:"请选择币种方案",
     scheme_desc:"您当前持有多个币种的交收方案,请选择一个进入游戏",
     scheme_balance:"余额",
@@ -116,7 +131,26 @@ const I18N = {
     currency_PHP:"菲律宾比索",
     currency_USD:"美元",
     currency_CNY:"人民币",
-    currency_KRW:"韩元"
+    currency_KRW:"韩元",
+    // 场景预览面板用的分组名与条目名
+    scn_group_login:"登录",
+    scn_group_scheme:"方案选择",
+    scn_group_game:"游戏 / 退出",
+    scn_label_empty:"两字段未填",
+    scn_label_auth:"账号或密码错",
+    scn_label_disabled:"账号被禁用",
+    scn_label_frozen:"账号被冻结",
+    scn_label_locked:"登录频繁失败",
+    scn_label_network:"网络超时",
+    scn_label_server:"服务繁忙",
+    scn_label_scheme_empty:"顶代无可用方案",
+    scn_label_scheme_refreshed:"方案失效自动刷新",
+    scn_label_enter_failed:"进入游戏失败",
+    scn_label_session_expired:"登录过期",
+    scn_label_game_exit_msg:"三方回跳失效",
+    scn_label_insufficient:"方案余额不足",
+    scn_label_game_unavailable:"游戏暂不可用",
+    scn_label_goodbye:"安全退出"
   },
   "en-US": {
     _name:"English", _short:"EN",
@@ -129,9 +163,24 @@ const I18N = {
     pwd_label:"Password",
     pwd_ph:"Enter your password",
     btn_login:"Login",
-    err_empty:"Please enter account and password",
-    err_auth:"Incorrect account or password",
+    // Friendly client-facing copy (V0.2)
+    err_empty:"Please enter your account and password.",
+    err_auth:"The account or password doesn't match. Please check and try again.",
+    err_disabled:"This account can't sign in at the moment. Please contact VIP support for assistance.",
+    err_frozen:"This account is currently unavailable. Please contact VIP support for details.",
+    err_locked:"Too many sign-in attempts. Please try again later.",
+    err_network:"Your connection seems unstable. Please try again in a moment.",
+    err_server:"We're getting things back to normal. Please try again shortly, or contact VIP support if it persists.",
+    scheme_empty:"You don't have a scheme available yet. Please contact VIP support to set one up.",
+    scheme_refreshed:"The scheme list has been refreshed. Please select again.",
+    enter_failed:"We're getting your game ready. Please try again in a moment.",
+    session_expired:"Your session has expired. Please sign in again.",
+    game_exit_msg:"You've signed out of the game. Please sign in again to continue.",
+    insufficient:"Your scheme balance is too low. Please contact VIP support to top up.",
+    game_unavailable:"The game isn't available right now. Please try again later or contact VIP support.",
+    goodbye:"You've safely signed out. See you next time!",
     hint_demo:"Demo: top-agent `top` / sub `player` / any password",
+    preview_title:"See all scenario messages",
     scheme_title:"Select a Settlement Scheme",
     scheme_desc:"You hold schemes in multiple currencies. Please select one to enter the game.",
     scheme_balance:"Balance",
@@ -151,7 +200,25 @@ const I18N = {
     currency_PHP:"Philippine Peso",
     currency_USD:"US Dollar",
     currency_CNY:"Chinese Yuan",
-    currency_KRW:"Korean Won"
+    currency_KRW:"Korean Won",
+    scn_group_login:"Sign-In",
+    scn_group_scheme:"Scheme Selection",
+    scn_group_game:"Game / Logout",
+    scn_label_empty:"Empty fields",
+    scn_label_auth:"Wrong account or password",
+    scn_label_disabled:"Account disabled",
+    scn_label_frozen:"Account frozen",
+    scn_label_locked:"Too many attempts",
+    scn_label_network:"Network timeout",
+    scn_label_server:"Server busy",
+    scn_label_scheme_empty:"No scheme available",
+    scn_label_scheme_refreshed:"Scheme refreshed",
+    scn_label_enter_failed:"Enter game failed",
+    scn_label_session_expired:"Session expired",
+    scn_label_game_exit_msg:"3P callback expired",
+    scn_label_insufficient:"Insufficient balance",
+    scn_label_game_unavailable:"Game unavailable",
+    scn_label_goodbye:"Safely signed out"
   },
   "ko-KR": {
     _name:"한국어", _short:"한",
@@ -164,9 +231,24 @@ const I18N = {
     pwd_label:"비밀번호",
     pwd_ph:"비밀번호를 입력하세요",
     btn_login:"로그인",
-    err_empty:"계정과 비밀번호를 입력하세요",
-    err_auth:"계정 또는 비밀번호가 올바르지 않습니다",
+    // 친절한 클라이언트 문구 (V0.2)
+    err_empty:"계정과 비밀번호를 입력해 주세요.",
+    err_auth:"계정 또는 비밀번호가 일치하지 않습니다. 다시 확인해 주세요.",
+    err_disabled:"현재 이 계정으로 로그인할 수 없습니다. VIP 고객센터로 문의해 주세요.",
+    err_frozen:"이 계정은 현재 이용할 수 없습니다. 자세한 내용은 VIP 고객센터로 문의해 주세요.",
+    err_locked:"로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+    err_network:"네트워크가 불안정합니다. 잠시 후 다시 시도해 주세요.",
+    err_server:"서비스가 곧 정상화됩니다. 잠시 후 다시 시도하시고, 계속되면 VIP 고객센터로 문의해 주세요.",
+    scheme_empty:"사용 가능한 통화 방식이 아직 없습니다. VIP 고객센터에 개설을 요청해 주세요.",
+    scheme_refreshed:"방식 목록이 업데이트되었습니다. 다시 선택해 주세요.",
+    enter_failed:"게임을 준비하고 있습니다. 잠시 후 다시 시도해 주세요.",
+    session_expired:"로그인이 만료되었습니다. 다시 로그인해 주세요.",
+    game_exit_msg:"게임에서 로그아웃되었습니다. 계속하시려면 다시 로그인해 주세요.",
+    insufficient:"방식 잔액이 부족합니다. VIP 고객센터에 충전을 요청해 주세요.",
+    game_unavailable:"게임을 이용할 수 없습니다. 잠시 후 다시 시도하시거나 VIP 고객센터로 문의해 주세요.",
+    goodbye:"안전하게 로그아웃되었습니다. 다음에 또 만나요!",
     hint_demo:"데모: 상위 대리 top / 하위 player / 비밀번호 자유",
+    preview_title:"모든 시나리오 문구 보기",
     scheme_title:"통화 결제 방식 선택",
     scheme_desc:"여러 통화의 결제 방식을 보유하고 있습니다. 하나를 선택하여 게임에 입장하세요.",
     scheme_balance:"잔액",
@@ -186,7 +268,25 @@ const I18N = {
     currency_PHP:"필리핀 페소",
     currency_USD:"미국 달러",
     currency_CNY:"중국 위안",
-    currency_KRW:"한국 원"
+    currency_KRW:"한국 원",
+    scn_group_login:"로그인",
+    scn_group_scheme:"방식 선택",
+    scn_group_game:"게임 / 로그아웃",
+    scn_label_empty:"필드 비어 있음",
+    scn_label_auth:"계정 / 비밀번호 불일치",
+    scn_label_disabled:"계정 비활성",
+    scn_label_frozen:"계정 동결",
+    scn_label_locked:"잦은 로그인 실패",
+    scn_label_network:"네트워크 타임아웃",
+    scn_label_server:"서비스 점검 중",
+    scn_label_scheme_empty:"방식 없음",
+    scn_label_scheme_refreshed:"방식 새로고침",
+    scn_label_enter_failed:"게임 진입 실패",
+    scn_label_session_expired:"세션 만료",
+    scn_label_game_exit_msg:"서드파티 복귀 만료",
+    scn_label_insufficient:"방식 잔액 부족",
+    scn_label_game_unavailable:"게임 이용 불가",
+    scn_label_goodbye:"안전 로그아웃"
   }
 };
 
@@ -328,12 +428,67 @@ function LoginPage({ lang, setLang, devRole, onLoggedIn }){
               <div className="text-xs muted text-center pt-2">{t.hint_demo}</div>
             </div>
           </div>
+
+          {/* V0.2 新增:场景文案预览面板(仅评审用,正式环境删除) */}
+          <CopyPreview lang={lang}/>
         </div>
       </div>
 
       {/* 底部留白 */}
       <div className="h-8"></div>
     </div>
+  );
+}
+
+/* =========================
+   场景文案预览面板(V0.2;评审用)
+========================= */
+function CopyPreview({ lang }){
+  const t = I18N[lang];
+  const groups = [
+    { name: t.scn_group_login, items: [
+      { label: t.scn_label_empty,    key: "err_empty" },
+      { label: t.scn_label_auth,     key: "err_auth" },
+      { label: t.scn_label_disabled, key: "err_disabled" },
+      { label: t.scn_label_frozen,   key: "err_frozen" },
+      { label: t.scn_label_locked,   key: "err_locked" },
+      { label: t.scn_label_network,  key: "err_network" },
+      { label: t.scn_label_server,   key: "err_server" },
+    ]},
+    { name: t.scn_group_scheme, items: [
+      { label: t.scn_label_scheme_empty,      key: "scheme_empty" },
+      { label: t.scn_label_scheme_refreshed,  key: "scheme_refreshed" },
+      { label: t.scn_label_enter_failed,      key: "enter_failed" },
+    ]},
+    { name: t.scn_group_game, items: [
+      { label: t.scn_label_session_expired,   key: "session_expired" },
+      { label: t.scn_label_game_exit_msg,     key: "game_exit_msg" },
+      { label: t.scn_label_insufficient,      key: "insufficient" },
+      { label: t.scn_label_game_unavailable,  key: "game_unavailable" },
+      { label: t.scn_label_goodbye,           key: "goodbye" },
+    ]},
+  ];
+  return (
+    <details className="mt-4 bg-card bd border rounded-xl px-4 py-3">
+      <summary className="text-xs muted cursor-pointer select-none hover:text-white">
+        <span className="gold mr-1">▸</span>{t.preview_title}
+      </summary>
+      <div className="mt-3 space-y-4">
+        {groups.map((g,i)=>(
+          <div key={i}>
+            <div className="text-xs gold font-semibold mb-1">{g.name}</div>
+            <div className="space-y-1.5">
+              {g.items.map(it=>(
+                <div key={it.key} className="text-xs">
+                  <span className="muted inline-block" style={{width:"8.5rem"}}>{it.label}</span>
+                  <span style={{color:"#E8E8EA"}}>{t[it.key]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </details>
   );
 }
 
