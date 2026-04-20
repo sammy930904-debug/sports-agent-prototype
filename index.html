@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>体育代理 · 原型总入口</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:#0F0F10;color:#E8E8EA;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;min-height:100vh}
+    body{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px}
+    .brand{text-align:center;margin-bottom:40px}
+    .brand .star{font-size:56px;color:#F0B93A;line-height:1;margin-bottom:12px}
+    .brand h1{margin:0 0 8px;font-size:22px;font-weight:600;letter-spacing:4px;color:#F0B93A}
+    .brand p{margin:0;font-size:13px;color:#8E8E93}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:960px;width:100%}
+    @media (max-width: 720px){ .grid{grid-template-columns:1fr} }
+    .card{background:#1A1A1C;border:1px solid #2A2A2D;border-radius:14px;padding:28px 24px;text-decoration:none;color:inherit;display:block;transition:transform .15s ease, border-color .15s ease, box-shadow .15s ease}
+    .card:hover{transform:translateY(-2px);border-color:#F0B93A;box-shadow:0 8px 24px rgba(240,185,58,0.12)}
+    .tag{display:inline-block;font-size:11px;padding:3px 10px;border-radius:999px;background:#2A2A2D;color:#F0B93A;letter-spacing:1px;margin-bottom:14px}
+    .card h2{margin:0 0 6px;font-size:20px;font-weight:600;color:#E8E8EA}
+    .card .sub{margin:0 0 14px;font-size:13px;color:#8E8E93}
+    .card ul{margin:0;padding:0;list-style:none}
+    .card li{font-size:12.5px;color:#B8B8BC;padding:4px 0;position:relative;padding-left:14px}
+    .card li::before{content:"·";color:#F0B93A;position:absolute;left:4px}
+    .cta{margin-top:18px;display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#F0B93A;font-weight:500}
+    .cta::after{content:"→";transition:transform .15s ease}
+    .card:hover .cta::after{transform:translateX(4px)}
+    footer{margin-top:32px;font-size:11px;color:#5C5C62;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="brand">
+    <div class="star">★</div>
+    <h1>体育代理原型</h1>
+    <p>请选择要查看的端</p>
+  </div>
+  <div class="grid">
+    <a class="card" href="体育后台原型/">
+      <span class="tag">B 端</span>
+      <h2>体育代理后台</h2>
+      <p class="sub">代理 / 下线管理 · 上下分 · 交收方案</p>
+      <ul>
+        <li>账号管理模块(下线列表 / 新增 / 修改)</li>
+        <li>上分 / 下分 · 启用 / 禁用 · 修改交收方案</li>
+        <li>币种汇总 · 三语切换 · 操作密码校验</li>
+      </ul>
+      <span class="cta">进入代理后台原型</span>
+    </a>
+    <a class="card" href="游戏端原型/">
+      <span class="tag">C 端</span>
+      <h2>STAR VIP GAME</h2>
+      <p class="sub">玩家登录 · 顶代选交收方案 · H5 一级支持</p>
+      <ul>
+        <li>登录页(桌面 / H5 双模式)</li>
+        <li>顶代多方案选择(桌面弹窗 / H5 全屏)</li>
+        <li>三语 VIP 敬语文案 · Seamless Wallet</li>
+      </ul>
+      <span class="cta">进入游戏端原型</span>
+    </a>
+  </div>
+  <footer>© 2026 体育代理 · 原型仅供评审使用</footer>
+</body>
+</html>
