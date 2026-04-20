@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>STAR VIP GAME · 登录 原型 V0.1</title>
+<title>STAR VIP GAME · 登录 原型 V0.3(含 H5)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -71,6 +71,125 @@
 
   .lang-btn { padding:4px 10px; font-size:12px; border-radius:4px; color:#8E8E93; }
   .lang-btn.active { color:#F0B93A; background:rgba(240,185,58,.08); border:1px solid rgba(240,185,58,.4); }
+
+  /* ===== V0.3 新增:输入框图标 + 清除/眼睛按钮 ===== */
+  .input-wrap { position:relative; }
+  .input-wrap .input-icon {
+    position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    font-size:16px; line-height:1; pointer-events:none; opacity:.9;
+  }
+  .input-wrap .input-suffix {
+    position:absolute; right:10px; top:50%; transform:translateY(-50%);
+    display:flex; align-items:center; gap:6px;
+  }
+  .input-wrap .suffix-btn {
+    width:28px; height:28px; border-radius:50%; display:inline-flex;
+    align-items:center; justify-content:center; color:#8E8E93;
+    border:1px solid transparent;
+  }
+  .input-wrap .suffix-btn:hover { color:#F0B93A; border-color:rgba(240,185,58,.35); }
+  .input.with-icons { padding-left:42px; padding-right:80px; }
+
+  /* ===== V0.3 新增:H5 胶囊输入框 + 金色圆角大按钮 ===== */
+  .input-pill {
+    background:rgba(26,26,28,.92); border:1px solid #2A2A2C; color:#fff;
+    padding:12px 18px; border-radius:14px; outline:none; height:56px; width:100%;
+    font-size:15px;
+  }
+  .input-pill:focus { border-color:#F0B93A; }
+  .input-pill.with-icons { padding-left:44px; padding-right:80px; }
+  .btn-primary-pill {
+    background:linear-gradient(180deg,#F6CC5E 0%,#E6A72A 100%);
+    color:#1F1F1F; font-weight:700; height:56px; border-radius:14px; width:100%;
+    box-shadow:0 6px 18px rgba(240,185,58,.25);
+    font-size:16px; letter-spacing:1px;
+  }
+  .btn-primary-pill:disabled { opacity:.4; cursor:not-allowed; }
+
+  /* ===== V0.3 新增:方案卡片(H5 丝带样式) ===== */
+  .scheme-card-h5 {
+    position:relative; background:#1A1A1C; border:2px solid #2A2A2C;
+    border-radius:12px; padding:18px 20px; cursor:pointer; overflow:hidden;
+    transition: border-color .15s, box-shadow .15s, transform .05s;
+    min-height:90px;
+  }
+  .scheme-card-h5:active { transform: scale(.995); }
+  .scheme-card-h5.selected {
+    border-color:#F0B93A; box-shadow:0 0 0 1px #F0B93A inset;
+  }
+  /* 卡片左上角 斜切丝带(装饰层) */
+  .scheme-card-h5 .ribbon {
+    position:absolute; top:0; left:0;
+    display:inline-flex; align-items:center; gap:8px;
+    padding:10px 28px 10px 16px;
+    background: linear-gradient(135deg,#3A3A3C 0%,#2A2A2C 100%);
+    color:#E8E8EA; font-weight:600; letter-spacing:.5px; font-size:16px;
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
+  }
+  .scheme-card-h5.selected .ribbon {
+    background: linear-gradient(135deg,#F6CC5E 0%,#D9A930 100%);
+    color:#1F1F1F;
+  }
+  .scheme-card-h5 .ribbon .flag {
+    width:22px; height:22px; border-radius:50%; background:#0F0F10;
+    display:inline-flex; align-items:center; justify-content:center; font-size:14px;
+  }
+  .scheme-card-h5 .balance-text {
+    text-align:right; font-weight:700; font-size:22px; line-height:1.1;
+  }
+  .scheme-card-h5.selected .balance-text { color:#F0B93A; }
+  .scheme-card-h5:not(.selected) .balance-text { color:#8E8E93; }
+  .scheme-card-h5 .meta-row {
+    margin-top:10px; display:flex; align-items:center; justify-content:space-between;
+    font-size:12px; color:#8E8E93;
+  }
+  .scheme-card-h5.selected .meta-row { color:#B7913B; }
+  .scheme-card-h5 .meta-row .rate { }
+  .scheme-card-h5 .meta-row .balance-label { }
+
+  /* ===== V0.3 新增:H5 方案全屏页 ===== */
+  .scheme-page { min-height:100vh; display:flex; flex-direction:column; }
+  .scheme-page .sp-header {
+    position:sticky; top:0; z-index:10;
+    display:flex; align-items:center; justify-content:center;
+    padding:14px 16px; background:rgba(20,20,22,.88); backdrop-filter: blur(8px);
+    border-bottom:1px solid #2A2A2C;
+  }
+  .scheme-page .sp-title { font-size:16px; font-weight:600; color:#F0B93A; letter-spacing:2px; }
+  .scheme-page .sp-exit {
+    position:absolute; right:14px; top:50%; transform:translateY(-50%);
+    color:#F0B93A; padding:6px 10px; border-radius:8px;
+  }
+  .scheme-page .sp-list { flex:1; overflow-y:auto; padding:14px 14px 110px; display:flex; flex-direction:column; gap:12px; }
+  /* 横屏两列 */
+  @media (orientation: landscape) and (max-height: 520px) {
+    .scheme-page .sp-list { display:grid; grid-template-columns: 1fr 1fr; gap:12px 14px; padding-bottom:120px; }
+  }
+  .scheme-page .sp-footer {
+    position:fixed; left:0; right:0; bottom:0; z-index:20;
+    padding:12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+    background:linear-gradient(180deg, rgba(15,15,16,0), rgba(15,15,16,.92) 40%, rgba(15,15,16,1));
+    display:flex; gap:12px;
+  }
+  .scheme-page .sp-footer .btn-secondary { flex:1; height:52px; border-radius:14px; font-size:15px; }
+  .scheme-page .sp-footer .btn-primary-pill { flex:2; }
+
+  /* ===== V0.3 新增:H5 登录页语言胶囊 ===== */
+  .lang-pill {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 14px 8px 10px; border-radius:999px;
+    background:#1A1A1C; border:1px solid #2A2A2C; color:#E8E8EA; font-size:14px;
+  }
+  .lang-pill .flag { width:22px; height:22px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:#0F0F10; font-size:14px; }
+  .lang-pill .caret { color:#F0B93A; margin-left:2px; }
+
+  /* ===== V0.3 新增:显示控制 ===== */
+  .mobile-only { display:none; }
+  .desktop-only { display:flex; }
+  @media (max-width: 767px), (orientation: landscape) and (max-height: 520px) {
+    .mobile-only { display:flex; }
+    .desktop-only { display:none; }
+  }
 </style>
 </head>
 <body>
@@ -78,6 +197,27 @@
 
 <script type="text/babel" data-presets="react">
 const { useState, useMemo, useEffect } = React;
+
+/* V0.3 新增:视口检测 —— H5(窄屏/横屏矮窗)vs 桌面 */
+function useViewport(){
+  const calc = ()=>{
+    const w = window.innerWidth, h = window.innerHeight;
+    const isLandscape = w > h;
+    const isMobile = w <= 767 || (isLandscape && h <= 520);
+    return { w, h, isMobile, isLandscape };
+  };
+  const [vp, setVp] = useState(calc);
+  useEffect(()=>{
+    const onResize = ()=> setVp(calc());
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    return ()=>{
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
+  }, []);
+  return vp;
+}
 
 /* =========================
    i18n(与代理后台保留同一套命名风格;后续合并共用词典)
@@ -150,7 +290,12 @@ const I18N = {
     scn_label_game_exit_msg:"三方回跳失效",
     scn_label_insufficient:"方案余额不足",
     scn_label_game_unavailable:"游戏暂不可用",
-    scn_label_goodbye:"安全退出"
+    scn_label_goodbye:"安全退出",
+    // V0.3 H5
+    lang_pill:"中国", lang_flag:"🇨🇳",
+    pwd_toggle_show:"显示密码", pwd_toggle_hide:"隐藏密码",
+    clear_input:"清空",
+    exit_to_login:"退出登录"
   },
   "en-US": {
     _name:"English", _short:"EN",
@@ -218,7 +363,12 @@ const I18N = {
     scn_label_game_exit_msg:"3P callback expired",
     scn_label_insufficient:"Insufficient balance",
     scn_label_game_unavailable:"Game unavailable",
-    scn_label_goodbye:"Safely signed out"
+    scn_label_goodbye:"Safely signed out",
+    // V0.3 H5
+    lang_pill:"English", lang_flag:"🇺🇸",
+    pwd_toggle_show:"Show password", pwd_toggle_hide:"Hide password",
+    clear_input:"Clear",
+    exit_to_login:"Sign out"
   },
   "ko-KR": {
     _name:"한국어", _short:"한",
@@ -286,7 +436,12 @@ const I18N = {
     scn_label_game_exit_msg:"서드파티 복귀 만료",
     scn_label_insufficient:"방식 잔액 부족",
     scn_label_game_unavailable:"게임 이용 불가",
-    scn_label_goodbye:"안전 로그아웃"
+    scn_label_goodbye:"안전 로그아웃",
+    // V0.3 H5
+    lang_pill:"한국", lang_flag:"🇰🇷",
+    pwd_toggle_show:"비밀번호 표시", pwd_toggle_hide:"비밀번호 숨기기",
+    clear_input:"지우기",
+    exit_to_login:"로그아웃"
   }
 };
 
@@ -350,15 +505,86 @@ function DevBar({ role, setRole, lang, onReset }){
 }
 
 /* =========================
-   登录页
+   账号 / 密码 输入(V0.3 含清除 + 眼睛切换,两端统一)
 ========================= */
-function LoginPage({ lang, setLang, devRole, onLoggedIn }){
+function AccountInput({ t, value, onChange, onEnter, pill }){
+  return (
+    <div className="input-wrap">
+      <span className="input-icon">👤</span>
+      <input className={(pill?"input-pill":"input")+" with-icons"}
+             placeholder={t.account_ph}
+             value={value}
+             onChange={e=>onChange(e.target.value)}
+             onKeyDown={e=>e.key==="Enter" && onEnter && onEnter()}/>
+      <div className="input-suffix">
+        {value && (
+          <button className="suffix-btn" title={t.clear_input}
+                  onClick={()=>onChange("")}>✕</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PasswordInput({ t, value, onChange, onEnter, pill }){
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="input-wrap">
+      <span className="input-icon">🔑</span>
+      <input className={(pill?"input-pill":"input")+" with-icons"}
+             type={visible?"text":"password"}
+             placeholder={t.pwd_ph}
+             value={value}
+             onChange={e=>onChange(e.target.value)}
+             onKeyDown={e=>e.key==="Enter" && onEnter && onEnter()}/>
+      <div className="input-suffix">
+        <button className="suffix-btn"
+                title={visible ? t.pwd_toggle_hide : t.pwd_toggle_show}
+                onClick={()=>setVisible(v=>!v)}>
+          {visible ? "👁" : "⦸"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   语言胶囊(H5;点击展开选择)
+========================= */
+function LangPill({ lang, setLang }){
+  const [open, setOpen] = useState(false);
+  const t = I18N[lang];
+  return (
+    <div className="relative inline-flex">
+      <button className="lang-pill" onClick={()=>setOpen(o=>!o)}>
+        <span className="flag">{t.lang_flag}</span>
+        <span>{t.lang_pill}</span>
+        <span className="caret">▾</span>
+      </button>
+      {open && (
+        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-card bd border rounded-xl py-1 shadow-2xl min-w-[160px]">
+          {Object.keys(I18N).map(k=>(
+            <button key={k}
+                    className={`flex items-center gap-2 w-full px-3 py-2 text-sm ${k===lang?"gold":"text-white"} hover:bg-black hover:bg-opacity-30`}
+                    onClick={()=>{ setLang(k); setOpen(false); }}>
+              <span>{I18N[k].lang_flag}</span><span>{I18N[k].lang_pill}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* =========================
+   登录页(V0.3 · 双模式:桌面保留代理网,H5 取消代理网并改用底部语言胶囊)
+========================= */
+function LoginPage({ lang, setLang, devRole, onLoggedIn, isMobile }){
   const t = I18N[lang];
   const [account, setAccount] = useState(devRole==="top" ? "top" : "player");
   const [pwd, setPwd] = useState("");
   const [err, setErr] = useState("");
 
-  // devRole 切换时,同步默认账号,方便演示
   useEffect(()=>{
     setAccount(devRole==="top" ? "top" : "player");
     setErr("");
@@ -371,6 +597,58 @@ function LoginPage({ lang, setLang, devRole, onLoggedIn }){
     onLoggedIn(u);
   };
 
+  /* ---------- H5 布局(竖屏 / 横屏矮窗) ---------- */
+  if(isMobile){
+    return (
+      <div className="stadium-bg min-h-screen flex flex-col relative">
+        {/* H5 顶部:仅品牌小 logo + 右上语言胶囊(横屏) */}
+        <div className="flex items-center justify-between px-4 pt-4" style={{minHeight:"48px"}}>
+          <div className="flex items-center gap-1">
+            <span className="gold text-2xl logo-glow leading-none">★</span>
+            <span className="text-[10px] gold tracking-[3px] mt-1">STAR VIP GAME</span>
+          </div>
+        </div>
+
+        {/* 中央内容 */}
+        <div className="flex-1 flex flex-col items-center justify-center px-5 relative z-10">
+          {/* 大号 logo(仅竖屏突出) */}
+          <div className="text-center logo-glow mb-8" style={{marginTop:"-20px"}}>
+            <div className="gold font-bold" style={{fontSize:"88px", lineHeight:1}}>★</div>
+            <div className="gold font-bold tracking-[6px] mt-2" style={{fontSize:"22px"}}>{t.brand}</div>
+          </div>
+
+          {/* 登录卡片(胶囊输入框 + 大金按钮) */}
+          <div className="bg-card bd border rounded-2xl p-5 w-full max-w-sm" style={{boxShadow:"0 10px 40px rgba(0,0,0,.55)"}}>
+            <div className="space-y-3">
+              <AccountInput t={t} value={account}
+                            onChange={v=>{setAccount(v); setErr("");}}
+                            onEnter={submit} pill/>
+              <PasswordInput t={t} value={pwd}
+                             onChange={v=>{setPwd(v); setErr("");}}
+                             onEnter={submit} pill/>
+              {err && <div className="text-xs pt-1" style={{color:"#FF4D4F"}}>{err}</div>}
+              <button className="btn-primary-pill mt-2" onClick={submit}>{t.btn_login}</button>
+            </div>
+          </div>
+
+          {/* 底部语言胶囊 */}
+          <div className="mt-6">
+            <LangPill lang={lang} setLang={setLang}/>
+          </div>
+
+          {/* 演示提示 + 场景预览(仅原型评审用,正式环境删除) */}
+          <div className="w-full max-w-sm mt-6">
+            <div className="text-xs muted text-center mb-3">{t.hint_demo}</div>
+            <CopyPreview lang={lang}/>
+          </div>
+        </div>
+
+        <div className="h-6"></div>
+      </div>
+    );
+  }
+
+  /* ---------- 桌面布局(保留代理网 + 顶部三语按钮组) ---------- */
   return (
     <div className="stadium-bg min-h-screen flex flex-col">
       {/* 顶部栏 */}
@@ -388,37 +666,29 @@ function LoginPage({ lang, setLang, devRole, onLoggedIn }){
         </div>
       </div>
 
-      {/* 中央登录区 */}
       <div className="flex-1 flex items-center justify-center px-6 relative z-10">
         <div className="w-full max-w-md">
-          {/* Logo */}
           <div className="text-center mb-10 logo-glow">
             <div className="text-6xl gold leading-none">★</div>
             <div className="text-3xl font-bold tracking-widest mt-3 gold">{t.brand}</div>
             <div className="text-sm muted mt-2 tracking-wider">{t.tagline}</div>
           </div>
 
-          {/* 表单卡片 */}
           <div className="bg-card bd border rounded-xl p-6 shadow-2xl">
             <div className="text-base font-semibold mb-5">{t.login_title}</div>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-xs muted mb-1">{t.account_label}</label>
-                <input className="input"
-                       placeholder={t.account_ph}
-                       value={account}
-                       onChange={e=>{ setAccount(e.target.value); setErr(""); }}
-                       onKeyDown={e=>e.key==="Enter" && submit()}/>
+                <AccountInput t={t} value={account}
+                              onChange={v=>{setAccount(v); setErr("");}}
+                              onEnter={submit}/>
               </div>
               <div>
                 <label className="block text-xs muted mb-1">{t.pwd_label}</label>
-                <input className="input"
-                       type="password"
-                       placeholder={t.pwd_ph}
-                       value={pwd}
-                       onChange={e=>{ setPwd(e.target.value); setErr(""); }}
-                       onKeyDown={e=>e.key==="Enter" && submit()}/>
+                <PasswordInput t={t} value={pwd}
+                               onChange={v=>{setPwd(v); setErr("");}}
+                               onEnter={submit}/>
               </div>
 
               {err && <div className="text-xs" style={{color:"#FF4D4F"}}>{err}</div>}
@@ -429,12 +699,10 @@ function LoginPage({ lang, setLang, devRole, onLoggedIn }){
             </div>
           </div>
 
-          {/* V0.2 新增:场景文案预览面板(仅评审用,正式环境删除) */}
           <CopyPreview lang={lang}/>
         </div>
       </div>
 
-      {/* 底部留白 */}
       <div className="h-8"></div>
     </div>
   );
@@ -493,7 +761,8 @@ function CopyPreview({ lang }){
 }
 
 /* =========================
-   交收方案选择弹窗 — 仅顶代登录后出现
+   交收方案选择弹窗(桌面端) — 仅顶代登录后出现
+   C 端 V0.3:卡片仅展示 余额 + 佣金率,去掉占成 / 洗码
 ========================= */
 function SchemeModal({ lang, schemes, onCancel, onConfirm }){
   const t = I18N[lang];
@@ -557,6 +826,65 @@ function SchemeModal({ lang, schemes, onCancel, onConfirm }){
 }
 
 /* =========================
+   交收方案选择页(H5 全屏) — V0.3 新增
+   - 顶部 sticky 标题 + 右上角退出登录
+   - 卡片:左上角斜切金色丝带(国旗 + 币种)+ 右侧大号余额 + 底部「余额 / 佣金率」
+   - 底部固定 CTA:取消 / 进入游戏(横屏两列网格)
+========================= */
+function SchemePage({ lang, schemes, onCancel, onConfirm }){
+  const t = I18N[lang];
+  const [selectedId, setSelectedId] = useState(schemes[0]?.id || null);
+  const selected = schemes.find(s=>s.id===selectedId);
+
+  return (
+    <div className="scheme-page" style={{ background:"#0F0F10" }}>
+      {/* 顶部标题 */}
+      <div className="sp-header">
+        <div className="sp-title">{t.scheme_title}</div>
+        <button className="sp-exit text-sm" onClick={onCancel}>{t.exit_to_login}</button>
+      </div>
+
+      {/* 卡片列表 */}
+      <div className="sp-list">
+        {schemes.map(s=>{
+          const sel = s.id===selectedId;
+          return (
+            <div key={s.id}
+                 className={`scheme-card-h5 ${sel?"selected":""}`}
+                 onClick={()=>setSelectedId(s.id)}>
+              {/* 左上角丝带:国旗 + 币种 */}
+              <div className="ribbon">
+                <span className="flag">{s.flag}</span>
+                <span>{s.currency}</span>
+              </div>
+              {/* 余额(大号,右对齐) */}
+              <div className="balance-text" style={{marginTop:6}}>
+                {fmt(s.balance, s.currency)}
+              </div>
+              {/* 元数据行:余额 label + 佣金率 */}
+              <div className="meta-row">
+                <span className="balance-label">{t.scheme_balance}</span>
+                <span className="rate">{t.scheme_rate} {s.rate}%</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 底部固定 CTA */}
+      <div className="sp-footer">
+        <button className="btn-secondary" onClick={onCancel}>{t.btn_cancel}</button>
+        <button className="btn-primary-pill"
+                disabled={!selected}
+                onClick={()=>selected && onConfirm(selected)}>
+          {t.btn_enter}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
    三方游戏占位页
 ========================= */
 function ThirdPartyGame({ lang, user, scheme, onLogout }){
@@ -604,6 +932,7 @@ function ThirdPartyGame({ lang, user, scheme, onLogout }){
    根组件 — 驱动三种视图 + 演示顶代/非顶代分支
 ========================= */
 function App(){
+  const vp = useViewport();
   const [lang, setLang] = useState("zh-CN");
   const [devRole, setDevRole] = useState("top"); // top | sub
   // stage: login | scheme | game
@@ -641,20 +970,30 @@ function App(){
       {stage==="login" && (
         <LoginPage lang={lang} setLang={setLang}
                    devRole={devRole}
+                   isMobile={vp.isMobile}
                    onLoggedIn={onLoggedIn}/>
       )}
 
       {stage==="scheme" && user && (
-        <>
-          {/* 弹窗同时保留登录页背景更接近真实体验 */}
-          <LoginPage lang={lang} setLang={setLang}
-                     devRole={devRole}
-                     onLoggedIn={()=>{}}/>
-          <SchemeModal lang={lang}
-                       schemes={user.schemes}
-                       onCancel={onSchemeCancel}
-                       onConfirm={onSchemeConfirm}/>
-        </>
+        vp.isMobile ? (
+          /* H5:方案页是全屏的,不叠加登录页背景 */
+          <SchemePage lang={lang}
+                      schemes={user.schemes}
+                      onCancel={onSchemeCancel}
+                      onConfirm={onSchemeConfirm}/>
+        ) : (
+          <>
+            {/* 桌面端:弹窗叠在登录页背景上,更接近真实体验 */}
+            <LoginPage lang={lang} setLang={setLang}
+                       devRole={devRole}
+                       isMobile={false}
+                       onLoggedIn={()=>{}}/>
+            <SchemeModal lang={lang}
+                         schemes={user.schemes}
+                         onCancel={onSchemeCancel}
+                         onConfirm={onSchemeConfirm}/>
+          </>
+        )
       )}
 
       {stage==="game" && user && scheme && (
