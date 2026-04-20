@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=1280"/>
+<title>体育游戏总控后台 · 原型 V0.1</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  html,body { background:#0B0F15; color:#E6EAF0; font-family: -apple-system, "Microsoft YaHei", system-ui, sans-serif; }
+  .accent { color:#4A9EFF; }
+  .bg-accent { background:#4A9EFF; color:#0B0F15; }
+  .bd-accent { border-color:#4A9EFF; }
+  .bg-card { background:#141A22; }
+  .bg-elev { background:#0F141B; }
+  .bd { border-color:#1F2730; }
+  .muted { color:#7E8A9A; }
+  .danger { color:#FF5961; }
+  .bg-danger-soft { background:rgba(255,89,97,.12); }
+  .warn { color:#FFB547; }
+  .bg-warn-soft { background:rgba(255,181,71,.12); }
+  .good { color:#3DD68C; }
+  .bg-good-soft { background:rgba(61,214,140,.12); }
+  .input { background:#0F141B; border:1px solid #1F2730; color:#E6EAF0; padding:8px 12px; border-radius:6px; outline:none; height:36px; font-size:13px; }
+  .input:focus { border-color:#4A9EFF; }
+  .btn-primary { background:#4A9EFF; color:#0B0F15; font-weight:600; padding:0 14px; height:36px; border-radius:6px; font-size:13px; }
+  .btn-primary:disabled { opacity:.4; cursor:not-allowed; }
+  .btn-secondary { background:#1F2730; color:#E6EAF0; padding:0 14px; height:36px; border-radius:6px; font-size:13px; border:1px solid #2A323D; }
+  .btn-ghost { color:#4A9EFF; padding:0 8px; font-size:13px; }
+  .btn-danger { background:rgba(255,89,97,.15); color:#FF5961; border:1px solid rgba(255,89,97,.3); padding:0 14px; height:36px; border-radius:6px; font-size:13px; }
+  .chip { display:inline-block; padding:2px 10px; border-radius:9999px; font-size:11px; }
+  .chip-on { background:rgba(61,214,140,.15); color:#3DD68C; }
+  .chip-off { background:rgba(126,138,154,.2); color:#7E8A9A; }
+  .chip-frozen { background:rgba(255,89,97,.15); color:#FF5961; }
+  .chip-warn { background:rgba(255,181,71,.15); color:#FFB547; }
+  .chip-role { background:rgba(74,158,255,.15); color:#4A9EFF; border:1px solid rgba(74,158,255,.3); }
+  .table-head { background:#0F141B; color:#7E8A9A; font-size:11px; letter-spacing:.5px; text-transform:uppercase; }
+  .row-hover:hover { background:#0F141B; }
+  .divider { border-top:1px solid #1F2730; }
+  .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:50; display:flex; align-items:center; justify-content:center; }
+  .scroll::-webkit-scrollbar { width:8px; height:8px; }
+  .scroll::-webkit-scrollbar-thumb { background:#2A323D; border-radius:4px; }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:6px; color:#7E8A9A; cursor:pointer; font-size:13px; }
+  .nav-item:hover { background:#0F141B; color:#E6EAF0; }
+  .nav-active { background:rgba(74,158,255,.1); color:#4A9EFF; border-left:2px solid #4A9EFF; padding-left:14px; }
+  .kpi-card { background:#141A22; border:1px solid #1F2730; border-radius:8px; padding:16px 18px; }
+  .kpi-label { color:#7E8A9A; font-size:12px; margin-bottom:6px; }
+  .kpi-value { color:#E6EAF0; font-size:26px; font-weight:600; line-height:1.2; }
+  .kpi-delta-up { color:#3DD68C; font-size:12px; margin-top:4px; }
+  .kpi-delta-down { color:#FF5961; font-size:12px; margin-top:4px; }
+  .tag-dev { background:#2A323D; color:#7E8A9A; font-size:10px; padding:2px 6px; border-radius:3px; letter-spacing:.5px; }
+  .req::before { content:"*"; color:#FF5961; margin-right:4px; }
+  .tab-btn { padding:10px 18px; font-size:13px; color:#7E8A9A; border-bottom:2px solid transparent; cursor:pointer; }
+  .tab-btn.active { color:#4A9EFF; border-bottom-color:#4A9EFF; }
+  .alert-row { display:flex; gap:10px; padding:10px 12px; border-radius:6px; background:#0F141B; border:1px solid #1F2730; align-items:flex-start; font-size:12px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useMemo, useEffect } = React;
+
+/* =========================
+   Mock 数据
+========================= */
+const ROLES = {
+  operator: { name:"平台运营", menus:["dashboard","agents","ledger"] },
+  risk:     { name:"风控审计", menus:["dashboard","ledger"] },
+  finance:  { name:"财务对账", menus:["dashboard","ledger"] }
+};
+
+const CURRENCIES = ["PHP","USDT","KRW"];
+
+// 顶代数据(五个顶代,账房户绑定)
+const TOP_AGENTS = [
+  { id:"qweqwe",   nick:"Alpha",   accHouse:"AH-001", scheme:"PHP 1.5% / 6,000,000", currency:"PHP",  rate:1.5, balance:6000000,   subCount:48, status:"active",  driftSec:12,  createdAt:"2025-08-14 11:32" },
+  { id:"lucky88",  nick:"Lucky88", accHouse:"AH-014", scheme:"USDT 0.8% / 120,000",  currency:"USDT", rate:0.8, balance:120000,    subCount:23, status:"active",  driftSec:4,   createdAt:"2025-10-02 09:10" },
+  { id:"diamond",  nick:"Diamond", accHouse:"AH-022", scheme:"PHP 1.2% / 4,500,000", currency:"PHP",  rate:1.2, balance:4500000,   subCount:31, status:"active",  driftSec:94,  createdAt:"2025-12-18 16:45" },
+  { id:"emerald",  nick:"Emerald", accHouse:"AH-031", scheme:"KRW 2.0% / 420,000,000", currency:"KRW", rate:2.0, balance:420000000, subCount:17, status:"frozen",  driftSec:0,   createdAt:"2026-01-20 14:02" },
+  { id:"sapphire", nick:"Sapphire",accHouse:"AH-045", scheme:"USDT 1.0% / 85,000",   currency:"USDT", rate:1.0, balance:85000,     subCount:9,  status:"active",  driftSec:2,   createdAt:"2026-03-11 10:28" }
+];
+
+// 今日异常告警
+const ALERTS = [
+  { id:1, level:"critical", time:"14:22:05", agent:"diamond",  code:"RECON_DRIFT",     msg:"账房↔体育余额差额 ¥1,248(PHP),持续 94 秒未对齐,已超过 60s 阈值" },
+  { id:2, level:"critical", time:"13:48:11", agent:"emerald",  code:"LEDGER_TIMEOUT",  msg:"账房同步接口连续 3 次超时,当前顶代已冻结拒绝所有上下分" },
+  { id:3, level:"warn",     time:"11:15:33", agent:"qweqwe",   code:"LARGE_CREDIT",    msg:"Alpha 对 qweqwe-1-1 单笔上分 500,000 PHP,超过 200,000 风控阈值" },
+  { id:4, level:"warn",     time:"10:02:47", agent:"lucky88",  code:"RATE_CHANGED",    msg:"Lucky88 过去 24 小时内修改显示佣金率 3 次,已触发频繁变更告警" },
+  { id:5, level:"info",     time:"09:18:02", agent:"sapphire", code:"FIRST_LOGIN",     msg:"Sapphire 完成首次登录并已修改初始密码" }
+];
+
+// 流水 mock(内部上下分)
+const LEDGER_INTERNAL = [
+  { id:"L20260420-001", time:"15:02:11", agent:"qweqwe",  from:"qweqwe",   to:"qweqwe-1",     direction:"credit", amount:50000,  currency:"PHP",  operator:"qweqwe" },
+  { id:"L20260420-002", time:"15:01:48", agent:"qweqwe",  from:"qweqwe-1", to:"qweqwe-1-1",   direction:"credit", amount:30000,  currency:"PHP",  operator:"qweqwe-1" },
+  { id:"L20260420-003", time:"14:59:22", agent:"lucky88", from:"lucky88",  to:"lucky88-3",    direction:"debit",  amount:500,    currency:"USDT", operator:"lucky88" },
+  { id:"L20260420-004", time:"14:55:07", agent:"diamond", from:"diamond",  to:"diamond-2",    direction:"credit", amount:200000, currency:"PHP",  operator:"diamond" },
+  { id:"L20260420-005", time:"14:51:35", agent:"qweqwe",  from:"qweqwe",   to:"qweqwe-2",     direction:"credit", amount:80000,  currency:"PHP",  operator:"qweqwe" },
+  { id:"L20260420-006", time:"14:48:19", agent:"sapphire",from:"sapphire", to:"sapphire-1",   direction:"credit", amount:1200,   currency:"USDT", operator:"sapphire" },
+  { id:"L20260420-007", time:"14:42:00", agent:"diamond", from:"diamond-2",to:"diamond",      direction:"debit",  amount:15000,  currency:"PHP",  operator:"diamond" },
+  { id:"L20260420-008", time:"14:30:51", agent:"qweqwe",  from:"qweqwe-1-1",to:"qweqwe-1",    direction:"debit",  amount:10000,  currency:"PHP",  operator:"qweqwe-1" },
+  { id:"L20260420-009", time:"14:15:28", agent:"lucky88", from:"lucky88",  to:"lucky88-7",    direction:"credit", amount:3500,   currency:"USDT", operator:"lucky88" },
+  { id:"L20260420-010", time:"13:58:02", agent:"qweqwe",  from:"qweqwe",   to:"qweqwe-1-1",   direction:"credit", amount:500000, currency:"PHP",  operator:"qweqwe" }
+];
+
+// 账房对账(按顶代)
+const LEDGER_HOUSE = TOP_AGENTS.map(a => {
+  const ahBal = a.status === "frozen" ? a.balance - 12400 : (a.driftSec > 60 ? a.balance - 1248 : a.balance);
+  return {
+    agent: a.id, nick: a.nick, accHouse: a.accHouse,
+    currency: a.currency,
+    houseBalance: ahBal,
+    platBalance: a.balance,
+    diff: a.balance - ahBal,
+    lastSync: a.status === "frozen" ? "14:05:12 (已停止)" : (a.driftSec > 60 ? `${a.driftSec}s 前` : `${a.driftSec}s 前`),
+    status: a.status === "frozen" ? "stopped" : (a.driftSec > 60 ? "drift" : "ok")
+  };
+});
+
+/* 工具 */
+const fmt = (n, cur) => {
+  if (typeof n !== "number") return "—";
+  const s = n.toLocaleString("en-US",{minimumFractionDigits:0, maximumFractionDigits:2});
+  return cur ? `${s} ${cur}` : s;
+};
+const fmtDrift = (sec) => sec === 0 ? "—" : `${sec}s`;
+
+/* =========================
+   Top Bar
+========================= */
+function TopBar({ role, setRole, onLogout }){
+  return (
+    <div className="flex items-center justify-between px-6 h-14 bg-card bd border-b" style={{borderColor:"#1F2730"}}>
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-md bg-accent flex items-center justify-center font-bold">S</div>
+        <div>
+          <div className="text-sm font-semibold">体育游戏总控后台</div>
+          <div className="text-xs muted">Platform Control · Internal Only</div>
+        </div>
+        <span className="tag-dev ml-3">V0.1 · DEV</span>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="text-xs muted">角色:</span>
+        <select value={role} onChange={e=>setRole(e.target.value)} className="input" style={{height:32, paddingRight:28}}>
+          {Object.entries(ROLES).map(([k,v])=> <option key={k} value={k}>{v.name}</option>)}
+        </select>
+        <span className="chip chip-role">{ROLES[role].name}</span>
+        <span className="mx-2 muted">|</span>
+        <span className="text-xs">admin@platform · Sammy</span>
+        <button className="btn-secondary ml-2" onClick={onLogout}>退出</button>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   Sidebar
+========================= */
+function Sidebar({ active, setActive, role }){
+  const allMenus = [
+    { key:"dashboard", label:"数据看板",     icon:"▣" },
+    { key:"agents",    label:"顶代账号管理", icon:"◉" },
+    { key:"ledger",    label:"流水与对账",   icon:"≡" }
+  ];
+  const visible = allMenus.filter(m => ROLES[role].menus.includes(m.key));
+  return (
+    <aside className="w-56 bg-card bd border-r flex-shrink-0" style={{borderColor:"#1F2730", minHeight:"calc(100vh - 56px)"}}>
+      <div className="p-3 space-y-1">
+        {visible.map(m => (
+          <div key={m.key} className={`nav-item ${active===m.key?"nav-active":""}`} onClick={()=>setActive(m.key)}>
+            <span className="accent" style={{fontSize:14}}>{m.icon}</span>
+            <span>{m.label}</span>
+          </div>
+        ))}
+      </div>
+      <div className="divider mt-3 mx-3"></div>
+      <div className="p-3 text-xs muted leading-relaxed">
+        <div className="mb-2" style={{color:"#E6EAF0"}}>当前角色权限</div>
+        <div>可见模块:{ROLES[role].menus.length} / 3</div>
+        <div className="mt-1">隐藏菜单:{3 - ROLES[role].menus.length} 项</div>
+        {role !== "operator" && <div className="mt-2 warn">⚠ 当前角色无新增/冻结权限</div>}
+      </div>
+    </aside>
+  );
+}
+
+/* =========================
+   Dashboard
+========================= */
+function Dashboard(){
+  const activeCount = TOP_AGENTS.filter(a=>a.status==="active").length;
+  const frozenCount = TOP_AGENTS.filter(a=>a.status==="frozen").length;
+  const totalSubs   = TOP_AGENTS.reduce((s,a)=>s+a.subCount, 0);
+  const todayCredits = LEDGER_INTERNAL.filter(l=>l.direction==="credit").length;
+  const todayDebits  = LEDGER_INTERNAL.filter(l=>l.direction==="debit").length;
+  const criticalCount = ALERTS.filter(a=>a.level==="critical").length;
+  const warnCount     = ALERTS.filter(a=>a.level==="warn").length;
+
+  // 按币种聚合
+  const byCur = CURRENCIES.map(c => {
+    const total = TOP_AGENTS.filter(a=>a.currency===c).reduce((s,a)=>s+a.balance,0);
+    const count = TOP_AGENTS.filter(a=>a.currency===c).length;
+    return { currency:c, total, count };
+  });
+
+  return (
+    <div className="p-6 space-y-5">
+      <div>
+        <h1 className="text-lg font-semibold">数据看板</h1>
+        <div className="text-xs muted mt-1">2026-04-20 · 数据刷新时间 15:03:42 · 自动刷新间隔 30s</div>
+      </div>
+
+      {/* KPI 卡片 */}
+      <div className="grid grid-cols-4 gap-4">
+        <div className="kpi-card">
+          <div className="kpi-label">顶代总数</div>
+          <div className="kpi-value">{TOP_AGENTS.length}</div>
+          <div className="kpi-delta-up">活跃 {activeCount} · 冻结 {frozenCount}</div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-label">活跃下线(所有层级)</div>
+          <div className="kpi-value">{totalSubs}</div>
+          <div className="kpi-delta-up">↑ 较昨日 +3</div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-label">今日上下分笔数</div>
+          <div className="kpi-value">{LEDGER_INTERNAL.length}</div>
+          <div className="muted text-xs mt-1">上分 {todayCredits} · 下分 {todayDebits}</div>
+        </div>
+        <div className="kpi-card" style={criticalCount>0?{borderColor:"#FF5961"}:{}}>
+          <div className="kpi-label">今日异常告警</div>
+          <div className="kpi-value" style={criticalCount>0?{color:"#FF5961"}:{}}>{ALERTS.length}</div>
+          <div className="kpi-delta-down">Critical {criticalCount} · Warn {warnCount}</div>
+        </div>
+      </div>
+
+      {/* 币种池 + 异常告警 */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-card bd border rounded-lg p-5 col-span-1" style={{borderColor:"#1F2730"}}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="font-semibold text-sm">币种余额池(平台侧合计)</div>
+            <span className="tag-dev">SUM</span>
+          </div>
+          <div className="space-y-4">
+            {byCur.map(c => (
+              <div key={c.currency}>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="muted">{c.currency}</span>
+                  <span className="muted">绑定顶代 {c.count} 个</span>
+                </div>
+                <div className="text-lg font-semibold">{fmt(c.total)} <span className="text-xs muted">{c.currency}</span></div>
+                <div className="h-1 rounded mt-2" style={{background:"#1F2730"}}>
+                  <div className="h-1 rounded bg-accent" style={{width: `${Math.min(100, c.total / (c.currency==="KRW"?5000000000:c.currency==="PHP"?15000000:500000) * 100)}%`}}></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-card bd border rounded-lg p-5 col-span-2" style={{borderColor:"#1F2730"}}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="font-semibold text-sm">最近异常告警</div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="chip chip-frozen">Critical {criticalCount}</span>
+              <span className="chip chip-warn">Warn {warnCount}</span>
+              <span className="chip chip-off">Info 1</span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {ALERTS.map(a => (
+              <div key={a.id} className="alert-row">
+                <span className={
+                  a.level==="critical"?"chip chip-frozen":
+                  a.level==="warn"?"chip chip-warn":
+                  "chip chip-off"
+                } style={{flexShrink:0}}>{a.level.toUpperCase()}</span>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs muted">{a.time}</span>
+                    <span className="accent text-xs">[{a.code}]</span>
+                    <span className="text-xs" style={{color:"#E6EAF0"}}>顶代 {a.agent}</span>
+                  </div>
+                  <div className="mt-1 text-xs" style={{lineHeight:1.5}}>{a.msg}</div>
+                </div>
+                <button className="btn-ghost text-xs" style={{flexShrink:0}}>处理 →</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   Top Agents
+========================= */
+function AgentsPage({ role }){
+  const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [showAdd, setShowAdd] = useState(false);
+  const [freezeTarget, setFreezeTarget] = useState(null);
+  const [toast, setToast] = useState("");
+
+  const rows = TOP_AGENTS.filter(a => {
+    if (statusFilter !== "all" && a.status !== statusFilter) return false;
+    if (q && !(a.id.includes(q) || a.nick.toLowerCase().includes(q.toLowerCase()) || a.accHouse.includes(q))) return false;
+    return true;
+  });
+
+  const canOperate = role === "operator";
+
+  const doFreeze = ()=>{
+    setToast(`已${freezeTarget.status==="frozen"?"解冻":"冻结"}顶代 ${freezeTarget.nick}(${freezeTarget.id}),相关下级操作已${freezeTarget.status==="frozen"?"恢复":"全部阻断"}`);
+    setFreezeTarget(null);
+    setTimeout(()=>setToast(""), 3000);
+  };
+
+  return (
+    <div className="p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold">顶代账号管理</h1>
+          <div className="text-xs muted mt-1">共 {TOP_AGENTS.length} 个顶代 · 平台运营专属 · 变更即审计</div>
+        </div>
+        {canOperate && <button className="btn-primary" onClick={()=>setShowAdd(true)}>+ 新增顶代</button>}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <input className="input w-72" placeholder="搜索系统户口号 / 昵称 / 账房户号" value={q} onChange={e=>setQ(e.target.value)}/>
+        <select className="input" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
+          <option value="all">全部状态</option>
+          <option value="active">活跃</option>
+          <option value="frozen">已冻结</option>
+        </select>
+        <div className="ml-auto text-xs muted">命中 {rows.length} 条</div>
+      </div>
+
+      <div className="bg-card bd border rounded-lg overflow-hidden" style={{borderColor:"#1F2730"}}>
+        <table className="w-full text-sm">
+          <thead className="table-head">
+            <tr>
+              <th className="text-left px-4 py-3">系统户口号</th>
+              <th className="text-left px-4 py-3">昵称</th>
+              <th className="text-left px-4 py-3">账房户</th>
+              <th className="text-left px-4 py-3">交收方案</th>
+              <th className="text-right px-4 py-3">可用余额</th>
+              <th className="text-center px-4 py-3">下线数</th>
+              <th className="text-center px-4 py-3">对账偏差</th>
+              <th className="text-center px-4 py-3">状态</th>
+              <th className="text-left px-4 py-3">创建时间</th>
+              <th className="text-right px-4 py-3 pr-6">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length===0 && (
+              <tr><td colSpan="10" className="text-center py-10 muted text-sm">无匹配顶代,请调整筛选条件</td></tr>
+            )}
+            {rows.map(a => (
+              <tr key={a.id} className="row-hover bd border-t" style={{borderColor:"#1F2730"}}>
+                <td className="px-4 py-3 font-mono text-xs">{a.id}</td>
+                <td className="px-4 py-3">{a.nick}</td>
+                <td className="px-4 py-3 font-mono text-xs muted">{a.accHouse}</td>
+                <td className="px-4 py-3 text-xs">{a.scheme}</td>
+                <td className="px-4 py-3 text-right">{fmt(a.balance)} <span className="muted text-xs">{a.currency}</span></td>
+                <td className="px-4 py-3 text-center">{a.subCount}</td>
+                <td className="px-4 py-3 text-center">
+                  {a.status==="frozen" ? <span className="muted text-xs">—</span> :
+                   a.driftSec > 60 ? <span className="chip chip-frozen">{fmtDrift(a.driftSec)} 超阈值</span> :
+                   <span className="chip chip-on">{fmtDrift(a.driftSec)}</span>}
+                </td>
+                <td className="px-4 py-3 text-center">
+                  {a.status==="active" ? <span className="chip chip-on">活跃</span> : <span className="chip chip-frozen">已冻结</span>}
+                </td>
+                <td className="px-4 py-3 text-xs muted">{a.createdAt}</td>
+                <td className="px-4 py-3 text-right pr-6">
+                  {canOperate ? (
+                    <div className="flex gap-2 justify-end">
+                      <button className="btn-ghost">修改</button>
+                      <button className="btn-ghost" style={{color: a.status==="frozen" ? "#3DD68C" : "#FF5961"}}
+                        onClick={()=>setFreezeTarget(a)}>
+                        {a.status==="frozen" ? "解冻" : "冻结"}
+                      </button>
+                    </div>
+                  ) : <span className="muted text-xs">只读</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {showAdd && <AddAgentModal onClose={()=>setShowAdd(false)} onDone={(msg)=>{ setShowAdd(false); setToast(msg); setTimeout(()=>setToast(""),3000); }} />}
+      {freezeTarget && <FreezeModal agent={freezeTarget} onClose={()=>setFreezeTarget(null)} onConfirm={doFreeze} />}
+      {toast && <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-card bd border rounded px-4 py-2 text-sm z-50" style={{borderColor:"#1F2730"}}>{toast}</div>}
+    </div>
+  );
+}
+
+function AddAgentModal({ onClose, onDone }){
+  const [accHouse, setAccHouse] = useState("");
+  const [nick, setNick] = useState("");
+  const [currency, setCurrency] = useState("PHP");
+  const [rate, setRate] = useState("");
+  const [initBalance, setInitBalance] = useState("");
+  const [rateCap, setRateCap] = useState("");
+  const [opPwd, setOpPwd] = useState("");
+  const [err, setErr] = useState({});
+
+  const submit = ()=>{
+    const e = {};
+    if (!accHouse) e.accHouse = "账房户号必填";
+    if (!nick) e.nick = "昵称必填";
+    if (!rate || +rate<=0) e.rate = "佣金率必填且 > 0";
+    if (!rateCap || +rateCap < +rate) e.rateCap = "佣金率上限必须 ≥ 当前佣金率";
+    if (!opPwd) e.opPwd = "操作密码必填";
+    else if (opPwd !== "123456") e.opPwd = "操作密码错误(Mock: 123456)";
+    setErr(e);
+    if (Object.keys(e).length) return;
+    // 系统户口号生成:acc house 转换
+    const sysId = accHouse.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "newagent";
+    onDone(`已创建顶代 ${nick}(${sysId}),绑定账房户 ${accHouse},初始方案 ${currency} ${rate}%,初始余额 ${initBalance||0}`);
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="bg-card bd border rounded-lg p-6 w-[560px]" style={{borderColor:"#1F2730"}} onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-semibold">新增顶代</h2>
+          <button className="muted text-xl" onClick={onClose}>×</button>
+        </div>
+
+        <div className="bg-warn-soft warn text-xs p-3 rounded mb-4 border" style={{borderColor:"rgba(255,181,71,.3)"}}>
+          ⚠ 高风险操作:创建顶代会自动分配系统户口号并锁定账房户映射,一经提交不可撤销;请核对账房户号与初始方案后再确认。
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="req text-xs muted block mb-1">账房户号</label>
+            <input className="input w-full" placeholder="AH-001 / ACCH-XXX" value={accHouse} onChange={e=>setAccHouse(e.target.value)}/>
+            {err.accHouse && <div className="danger text-xs mt-1">{err.accHouse}</div>}
+          </div>
+          <div>
+            <label className="req text-xs muted block mb-1">顶代昵称(界面展示用)</label>
+            <input className="input w-full" value={nick} onChange={e=>setNick(e.target.value)}/>
+            {err.nick && <div className="danger text-xs mt-1">{err.nick}</div>}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="req text-xs muted block mb-1">初始交收方案 · 币种</label>
+              <select className="input w-full" value={currency} onChange={e=>setCurrency(e.target.value)}>
+                {CURRENCIES.map(c=><option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="req text-xs muted block mb-1">初始佣金率(%)</label>
+              <input className="input w-full" type="number" step="0.1" value={rate} onChange={e=>setRate(e.target.value)}/>
+              {err.rate && <div className="danger text-xs mt-1">{err.rate}</div>}
+            </div>
+            <div>
+              <label className="req text-xs muted block mb-1">佣金率上限(%)</label>
+              <input className="input w-full" type="number" step="0.1" value={rateCap} onChange={e=>setRateCap(e.target.value)}/>
+              {err.rateCap && <div className="danger text-xs mt-1">{err.rateCap}</div>}
+            </div>
+            <div>
+              <label className="text-xs muted block mb-1">初始可用余额(选填)</label>
+              <input className="input w-full" type="number" value={initBalance} onChange={e=>setInitBalance(e.target.value)}/>
+            </div>
+          </div>
+          <div>
+            <label className="req text-xs muted block mb-1">操作密码二次验证</label>
+            <input className="input w-full" type="password" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
+            {err.opPwd && <div className="danger text-xs mt-1">{err.opPwd}</div>}
+            <div className="text-xs muted mt-1">Mock 密码:123456;连续 5 次错误锁定 10 分钟</div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 mt-6">
+          <button className="btn-secondary" onClick={onClose}>取消</button>
+          <button className="btn-primary" onClick={submit}>确认创建</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FreezeModal({ agent, onClose, onConfirm }){
+  const [reason, setReason] = useState("");
+  const [opPwd, setOpPwd] = useState("");
+  const [err, setErr] = useState("");
+  const frozen = agent.status === "frozen";
+  const submit = ()=>{
+    if (!reason) { setErr("请填写操作原因以便审计"); return; }
+    if (!opPwd) { setErr("请输入操作密码"); return; }
+    if (opPwd !== "123456") { setErr("操作密码错误"); return; }
+    onConfirm();
+  };
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="bg-card bd border rounded-lg p-6 w-[480px]" style={{borderColor:"#1F2730"}} onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold">{frozen ? "解冻顶代" : "冻结顶代"}</h2>
+          <button className="muted text-xl" onClick={onClose}>×</button>
+        </div>
+        <div className={frozen ? "bg-good-soft good text-xs p-3 rounded mb-4 border" : "bg-danger-soft danger text-xs p-3 rounded mb-4 border"}
+             style={{borderColor: frozen?"rgba(61,214,140,.3)":"rgba(255,89,97,.3)"}}>
+          {frozen
+            ? `即将解冻 ${agent.nick}(${agent.id}),该顶代及其全部下线将恢复登录、上下分、修改方案等操作。`
+            : `即将冻结 ${agent.nick}(${agent.id}),该顶代的 ${agent.subCount} 个下线全部无法登录、无法发起上下分;正在进行的会话强制登出。`}
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="req text-xs muted block mb-1">操作原因(审计必填)</label>
+            <textarea className="input w-full" style={{height:72}} value={reason} onChange={e=>setReason(e.target.value)}
+              placeholder={frozen?"例:风控审查已结束,恢复运营":"例:检测到异常流水,暂停运营等待核查"}/>
+          </div>
+          <div>
+            <label className="req text-xs muted block mb-1">操作密码</label>
+            <input className="input w-full" type="password" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
+          </div>
+          {err && <div className="danger text-xs">{err}</div>}
+        </div>
+        <div className="flex justify-end gap-2 mt-5">
+          <button className="btn-secondary" onClick={onClose}>取消</button>
+          <button className={frozen?"btn-primary":"btn-danger"} onClick={submit}>{frozen?"确认解冻":"确认冻结"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   Ledger & Reconciliation
+========================= */
+function LedgerPage(){
+  const [tab, setTab] = useState("internal");
+  const [agentFilter, setAgentFilter] = useState("all");
+  const [curFilter, setCurFilter] = useState("all");
+  const [dirFilter, setDirFilter] = useState("all");
+
+  const internalRows = LEDGER_INTERNAL.filter(r => {
+    if (agentFilter !== "all" && r.agent !== agentFilter) return false;
+    if (curFilter !== "all" && r.currency !== curFilter) return false;
+    if (dirFilter !== "all" && r.direction !== dirFilter) return false;
+    return true;
+  });
+
+  const houseRows = LEDGER_HOUSE.filter(r => {
+    if (agentFilter !== "all" && r.agent !== agentFilter) return false;
+    if (curFilter !== "all" && r.currency !== curFilter) return false;
+    return true;
+  });
+
+  const totalCredit = internalRows.filter(r=>r.direction==="credit").reduce((s,r)=>s+r.amount,0);
+  const totalDebit  = internalRows.filter(r=>r.direction==="debit").reduce((s,r)=>s+r.amount,0);
+  const driftCount  = houseRows.filter(r=>r.status==="drift"||r.status==="stopped").length;
+
+  return (
+    <div className="p-6 space-y-4">
+      <div>
+        <h1 className="text-lg font-semibold">流水与对账</h1>
+        <div className="text-xs muted mt-1">内部上下分 + 账房双向对账 · 所有数据 T+0 实时(账房侧延迟 ≤ 60s)</div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex bd border-b" style={{borderColor:"#1F2730"}}>
+        <div className={`tab-btn ${tab==="internal"?"active":""}`} onClick={()=>setTab("internal")}>内部流水({internalRows.length})</div>
+        <div className={`tab-btn ${tab==="house"?"active":""}`} onClick={()=>setTab("house")}>账房对账({houseRows.length}
+          {driftCount>0 && <span className="ml-1 chip chip-frozen" style={{fontSize:10}}>偏差 {driftCount}</span>})</div>
+        <div className="ml-auto flex items-center gap-3">
+          <button className="btn-secondary">导出 CSV</button>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <select className="input" value={agentFilter} onChange={e=>setAgentFilter(e.target.value)}>
+          <option value="all">全部顶代</option>
+          {TOP_AGENTS.map(a=><option key={a.id} value={a.id}>{a.nick}({a.id})</option>)}
+        </select>
+        <select className="input" value={curFilter} onChange={e=>setCurFilter(e.target.value)}>
+          <option value="all">全部币种</option>
+          {CURRENCIES.map(c=><option key={c}>{c}</option>)}
+        </select>
+        {tab==="internal" && (
+          <select className="input" value={dirFilter} onChange={e=>setDirFilter(e.target.value)}>
+            <option value="all">全部方向</option>
+            <option value="credit">上分</option>
+            <option value="debit">下分</option>
+          </select>
+        )}
+        <input className="input" type="date" defaultValue="2026-04-20"/>
+        <span className="muted text-xs">~</span>
+        <input className="input" type="date" defaultValue="2026-04-20"/>
+      </div>
+
+      {/* Internal 流水 */}
+      {tab==="internal" && (
+        <>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="kpi-card"><div className="kpi-label">上分合计</div><div className="kpi-value good">+{fmt(totalCredit)}</div><div className="muted text-xs mt-1">{internalRows.filter(r=>r.direction==="credit").length} 笔</div></div>
+            <div className="kpi-card"><div className="kpi-label">下分合计</div><div className="kpi-value danger">-{fmt(totalDebit)}</div><div className="muted text-xs mt-1">{internalRows.filter(r=>r.direction==="debit").length} 笔</div></div>
+            <div className="kpi-card"><div className="kpi-label">净额(内部闭环)</div><div className="kpi-value">{fmt(totalCredit-totalDebit)}</div><div className="muted text-xs mt-1">不涉及账房真实资金</div></div>
+          </div>
+
+          <div className="bg-card bd border rounded-lg overflow-hidden" style={{borderColor:"#1F2730"}}>
+            <table className="w-full text-sm">
+              <thead className="table-head">
+                <tr>
+                  <th className="text-left px-4 py-3">流水号</th>
+                  <th className="text-left px-4 py-3">时间</th>
+                  <th className="text-left px-4 py-3">顶代</th>
+                  <th className="text-left px-4 py-3">From</th>
+                  <th className="text-left px-4 py-3">To</th>
+                  <th className="text-center px-4 py-3">方向</th>
+                  <th className="text-right px-4 py-3">金额</th>
+                  <th className="text-center px-4 py-3">币种</th>
+                  <th className="text-left px-4 py-3">操作人</th>
+                </tr>
+              </thead>
+              <tbody>
+                {internalRows.length===0 && (
+                  <tr><td colSpan="9" className="text-center py-10 muted text-sm">无匹配流水</td></tr>
+                )}
+                {internalRows.map(r => (
+                  <tr key={r.id} className="row-hover bd border-t" style={{borderColor:"#1F2730"}}>
+                    <td className="px-4 py-3 font-mono text-xs accent">{r.id}</td>
+                    <td className="px-4 py-3 text-xs muted">{r.time}</td>
+                    <td className="px-4 py-3 text-xs">{r.agent}</td>
+                    <td className="px-4 py-3 font-mono text-xs">{r.from}</td>
+                    <td className="px-4 py-3 font-mono text-xs">{r.to}</td>
+                    <td className="px-4 py-3 text-center">
+                      {r.direction==="credit" ? <span className="chip chip-on">上分</span> : <span className="chip chip-frozen">下分</span>}
+                    </td>
+                    <td className="px-4 py-3 text-right">{fmt(r.amount)}</td>
+                    <td className="px-4 py-3 text-center text-xs muted">{r.currency}</td>
+                    <td className="px-4 py-3 text-xs">{r.operator}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {/* House 对账 */}
+      {tab==="house" && (
+        <>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="kpi-card"><div className="kpi-label">对账一致顶代</div><div className="kpi-value good">{houseRows.filter(r=>r.status==="ok").length}</div></div>
+            <div className="kpi-card"><div className="kpi-label">偏差超 60s</div><div className="kpi-value warn">{houseRows.filter(r=>r.status==="drift").length}</div><div className="muted text-xs mt-1">需人工核查</div></div>
+            <div className="kpi-card"><div className="kpi-label">同步停止</div><div className="kpi-value danger">{houseRows.filter(r=>r.status==="stopped").length}</div><div className="muted text-xs mt-1">立即处理</div></div>
+          </div>
+
+          <div className="bg-card bd border rounded-lg overflow-hidden" style={{borderColor:"#1F2730"}}>
+            <table className="w-full text-sm">
+              <thead className="table-head">
+                <tr>
+                  <th className="text-left px-4 py-3">顶代</th>
+                  <th className="text-left px-4 py-3">账房户号</th>
+                  <th className="text-center px-4 py-3">币种</th>
+                  <th className="text-right px-4 py-3">账房侧余额</th>
+                  <th className="text-right px-4 py-3">平台侧余额</th>
+                  <th className="text-right px-4 py-3">差额</th>
+                  <th className="text-left px-4 py-3">最后同步</th>
+                  <th className="text-center px-4 py-3">状态</th>
+                  <th className="text-right px-4 py-3 pr-6">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {houseRows.length===0 && (
+                  <tr><td colSpan="9" className="text-center py-10 muted text-sm">无匹配对账记录</td></tr>
+                )}
+                {houseRows.map(r => (
+                  <tr key={r.agent} className="row-hover bd border-t" style={{borderColor:"#1F2730"}}>
+                    <td className="px-4 py-3">
+                      <div className="text-sm">{r.nick}</div>
+                      <div className="font-mono text-xs muted">{r.agent}</div>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs">{r.accHouse}</td>
+                    <td className="px-4 py-3 text-center text-xs muted">{r.currency}</td>
+                    <td className="px-4 py-3 text-right">{fmt(r.houseBalance)}</td>
+                    <td className="px-4 py-3 text-right">{fmt(r.platBalance)}</td>
+                    <td className="px-4 py-3 text-right">
+                      {r.diff === 0 ? <span className="muted">0</span> :
+                       <span className={r.diff>0?"danger":"warn"}>{r.diff>0?"+":""}{fmt(r.diff)}</span>}
+                    </td>
+                    <td className="px-4 py-3 text-xs muted">{r.lastSync}</td>
+                    <td className="px-4 py-3 text-center">
+                      {r.status==="ok"      && <span className="chip chip-on">一致</span>}
+                      {r.status==="drift"   && <span className="chip chip-warn">偏差超阈值</span>}
+                      {r.status==="stopped" && <span className="chip chip-frozen">同步停止</span>}
+                    </td>
+                    <td className="px-4 py-3 text-right pr-6">
+                      <button className="btn-ghost">查看明细</button>
+                      {r.status!=="ok" && <button className="btn-ghost" style={{color:"#FFB547"}}>重试同步</button>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* =========================
+   Login
+========================= */
+function LoginPage({ onLogin }){
+  const [user, setUser] = useState("admin@platform");
+  const [pwd, setPwd]   = useState("");
+  const [err, setErr]   = useState("");
+  const submit = ()=>{
+    if (!user || !pwd) { setErr("账号和密码不能为空"); return; }
+    if (pwd !== "123456") { setErr("密码错误(Mock: 123456)"); return; }
+    onLogin();
+  };
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="bg-card bd border rounded-lg p-8 w-[400px]" style={{borderColor:"#1F2730"}}>
+        <div className="text-center mb-6">
+          <div className="inline-flex w-12 h-12 rounded-lg bg-accent items-center justify-center font-bold text-xl mb-3">S</div>
+          <h1 className="font-semibold">体育游戏总控后台</h1>
+          <div className="text-xs muted mt-1">Platform Control · Internal Only</div>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs muted block mb-1">账号</label>
+            <input className="input w-full" value={user} onChange={e=>setUser(e.target.value)}/>
+          </div>
+          <div>
+            <label className="text-xs muted block mb-1">密码</label>
+            <input className="input w-full" type="password" value={pwd} onChange={e=>setPwd(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}/>
+          </div>
+          {err && <div className="danger text-xs">{err}</div>}
+          <button className="btn-primary w-full mt-2" onClick={submit}>登录</button>
+          <div className="text-xs muted text-center mt-3 leading-relaxed">
+            💡 测试 Tips:Mock 密码 123456;连续 5 次错误锁定 10 分钟<br/>
+            角色切换在登录后头部右侧,可模拟 operator / risk / finance 三种权限视图
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   App Root
+========================= */
+function App(){
+  const [logged, setLogged] = useState(false);
+  const [role, setRole] = useState("operator");
+  const [active, setActive] = useState("dashboard");
+
+  // 切角色时,若当前菜单对该角色不可见,自动落回 dashboard
+  useEffect(()=>{
+    if (!ROLES[role].menus.includes(active)) setActive("dashboard");
+  },[role]);
+
+  if (!logged) return <LoginPage onLogin={()=>setLogged(true)} />;
+
+  return (
+    <div>
+      <TopBar role={role} setRole={setRole} onLogout={()=>setLogged(false)} />
+      <div className="flex">
+        <Sidebar active={active} setActive={setActive} role={role} />
+        <main className="flex-1 min-w-0 overflow-auto" style={{minHeight:"calc(100vh - 56px)"}}>
+          {active==="dashboard" && <Dashboard />}
+          {active==="agents"    && <AgentsPage role={role} />}
+          {active==="ledger"    && <LedgerPage />}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

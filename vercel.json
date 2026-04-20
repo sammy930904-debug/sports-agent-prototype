@@ -10,6 +10,8 @@
     { "source": "/体育后台原型", "destination": "/体育后台原型/index.html" },
     { "source": "/体育后台原型/", "destination": "/体育后台原型/index.html" },
     { "source": "/游戏端原型", "destination": "/游戏端原型/index.html" },
-    { "source": "/游戏端原型/", "destination": "/游戏端原型/index.html" }
+    { "source": "/游戏端原型/", "destination": "/游戏端原型/index.html" },
+    { "source": "/总控后台原型", "destination": "/总控后台原型/index.html" },
+    { "source": "/总控后台原型/", "destination": "/总控后台原型/index.html" }
   ]
 }

@@ -12,10 +12,15 @@
     .brand .star{font-size:56px;color:#F0B93A;line-height:1;margin-bottom:12px}
     .brand h1{margin:0 0 8px;font-size:22px;font-weight:600;letter-spacing:4px;color:#F0B93A}
     .brand p{margin:0;font-size:13px;color:#8E8E93}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:960px;width:100%}
-    @media (max-width: 720px){ .grid{grid-template-columns:1fr} }
+    .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;max-width:1280px;width:100%}
+    @media (max-width: 980px){ .grid{grid-template-columns:1fr 1fr} }
+    @media (max-width: 680px){ .grid{grid-template-columns:1fr} }
     .card{background:#1A1A1C;border:1px solid #2A2A2D;border-radius:14px;padding:28px 24px;text-decoration:none;color:inherit;display:block;transition:transform .15s ease, border-color .15s ease, box-shadow .15s ease}
     .card:hover{transform:translateY(-2px);border-color:#F0B93A;box-shadow:0 8px 24px rgba(240,185,58,0.12)}
+    .card.s-end:hover{border-color:#4A9EFF;box-shadow:0 8px 24px rgba(74,158,255,0.15)}
+    .card.s-end .tag{background:#0F1B2A;color:#4A9EFF}
+    .card.s-end li::before{color:#4A9EFF}
+    .card.s-end .cta{color:#4A9EFF}
     .tag{display:inline-block;font-size:11px;padding:3px 10px;border-radius:999px;background:#2A2A2D;color:#F0B93A;letter-spacing:1px;margin-bottom:14px}
     .card h2{margin:0 0 6px;font-size:20px;font-weight:600;color:#E8E8EA}
     .card .sub{margin:0 0 14px;font-size:13px;color:#8E8E93}
@@ -56,6 +61,17 @@
         <li>三语 VIP 敬语文案 · Seamless Wallet</li>
       </ul>
       <span class="cta">进入游戏端原型</span>
+    </a>
+    <a class="card s-end" href="总控后台原型/体育总控后台-原型.html">
+      <span class="tag">S 端</span>
+      <h2>体育游戏总控后台</h2>
+      <p class="sub">平台运营 + 风控 · 顶代账号 · 对账看板</p>
+      <ul>
+        <li>数据看板(KPI / 币种池 / 异常告警)</li>
+        <li>顶代账号管理(新增 / 冻结 / 账房映射)</li>
+        <li>流水与对账(内部流水 + 账房双向对账)</li>
+      </ul>
+      <span class="cta">进入总控后台原型</span>
     </a>
   </div>
   <footer>© 2026 体育代理 · 原型仅供评审使用</footer>
