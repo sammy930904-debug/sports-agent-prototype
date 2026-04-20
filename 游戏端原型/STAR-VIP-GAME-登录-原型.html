@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>STAR VIP GAME · 登录 原型 V0.1</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  html,body { background:#0F0F10; color:#FFFFFF; font-family: -apple-system, "Microsoft YaHei", system-ui, sans-serif; min-height:100vh; }
+  .gold { color:#F0B93A; }
+  .bg-gold { background:#F0B93A; color:#1F1F1F; }
+  .bg-card { background:#1A1A1C; }
+  .bg-elev { background:#0F0F10; }
+  .bd { border-color:#2A2A2C; }
+  .bd-gold { border-color:#F0B93A; }
+  .muted { color:#8E8E93; }
+  .input { background:rgba(15,15,16,.85); border:1px solid #2A2A2C; color:#fff; padding:8px 14px; border-radius:6px; outline:none; height:44px; width:100%; }
+  .input:focus { border-color:#F0B93A; }
+  .btn-primary { background:#F0B93A; color:#1F1F1F; font-weight:600; padding:0 16px; height:44px; border-radius:6px; width:100%; }
+  .btn-primary:disabled { opacity:.4; cursor:not-allowed; }
+  .btn-secondary { background:#3A3A3C; color:#fff; padding:0 16px; height:40px; border-radius:6px; }
+  .btn-ghost { color:#F0B93A; padding:0 8px; }
+  .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.72); z-index:50; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .modal { background:#1A1A1C; border:1px solid #2A2A2C; border-radius:12px; width:100%; max-width:920px; max-height:90vh; overflow:hidden; display:flex; flex-direction:column; }
+  .scheme-card { background:#0F0F10; border:1px solid #2A2A2C; border-radius:10px; padding:18px 16px; cursor:pointer; transition:border-color .15s, box-shadow .15s; display:flex; flex-direction:column; gap:10px; }
+  .scheme-card:hover { border-color:#F0B93A; }
+  .scheme-card.selected { border-color:#F0B93A; box-shadow:0 0 0 1px #F0B93A inset; background:linear-gradient(180deg, rgba(240,185,58,.08), rgba(240,185,58,.02)); }
+  .flag { display:inline-flex; width:28px; height:20px; border-radius:3px; overflow:hidden; align-items:center; justify-content:center; font-size:14px; background:#2A2A2C; }
+  .chip { display:inline-block; padding:2px 10px; border-radius:9999px; font-size:12px; }
+  .chip-gold { background:rgba(240,185,58,.15); color:#F0B93A; border:1px solid rgba(240,185,58,.4); }
+  .scroll::-webkit-scrollbar { width:8px; height:8px; }
+  .scroll::-webkit-scrollbar-thumb { background:#3a3a3c; border-radius:4px; }
+
+  /* 登录页背景 — 体育场风格占位(径向+线性渐变,不引外部图片) */
+  .stadium-bg {
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(240,185,58,.18), transparent 55%),
+      radial-gradient(ellipse at 50% 100%, rgba(240,185,58,.06), transparent 60%),
+      linear-gradient(180deg, #0a0a0b 0%, #141416 55%, #0a0a0b 100%);
+    position:relative;
+  }
+  .stadium-bg::before {
+    content:"";
+    position:absolute; inset:0;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 2px, transparent 2px 80px),
+      repeating-linear-gradient(180deg, rgba(255,255,255,.02) 0 2px, transparent 2px 120px);
+    pointer-events:none;
+  }
+  .logo-glow { filter: drop-shadow(0 0 24px rgba(240,185,58,.35)); }
+
+  /* 三方游戏占位页 */
+  .third-party-bg {
+    background:
+      radial-gradient(ellipse at 50% 50%, rgba(240,185,58,.08), transparent 70%),
+      #0F0F10;
+  }
+
+  /* 顶代开关 — 开发辅助工具栏 */
+  .dev-bar {
+    position:fixed; top:12px; left:12px; z-index:9999;
+    background:rgba(26,26,28,.92); border:1px solid #2A2A2C; border-radius:8px;
+    padding:8px 12px; font-size:12px; color:#8E8E93; backdrop-filter: blur(8px);
+  }
+  .dev-bar button { padding:4px 10px; border-radius:4px; margin-left:6px; }
+  .dev-bar button.on { background:#F0B93A; color:#1F1F1F; font-weight:600; }
+  .dev-bar button.off { background:#2A2A2C; color:#8E8E93; }
+
+  .lang-btn { padding:4px 10px; font-size:12px; border-radius:4px; color:#8E8E93; }
+  .lang-btn.active { color:#F0B93A; background:rgba(240,185,58,.08); border:1px solid rgba(240,185,58,.4); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useMemo, useEffect } = React;
+
+/* =========================
+   i18n(与代理后台保留同一套命名风格;后续合并共用词典)
+========================= */
+const I18N = {
+  "zh-CN": {
+    _name:"中文", _short:"中",
+    brand:"STAR VIP GAME",
+    tagline:"体育 · 游戏 · 贵宾",
+    agent_portal:"代理网",
+    login_title:"账号登录",
+    account_label:"账号",
+    account_ph:"请输入账号",
+    pwd_label:"密码",
+    pwd_ph:"请输入密码",
+    btn_login:"登录",
+    err_empty:"请填写账号和密码",
+    err_auth:"账号或密码错误",
+    hint_demo:"演示账号:顶代 top / 非顶代 player / 密码任意",
+    scheme_title:"请选择币种方案",
+    scheme_desc:"您当前持有多个币种的交收方案,请选择一个进入游戏",
+    scheme_balance:"余额",
+    scheme_rate:"佣金率",
+    scheme_current:"当前选中",
+    btn_cancel:"取消",
+    btn_enter:"进入游戏",
+    third_party_title:"已进入第三方游戏",
+    third_party_desc:"此页面由第三方游戏商提供,本原型仅演示到此;账号余额已通过 seamless wallet 接口实时桥接。",
+    third_party_player:"玩家",
+    third_party_scheme:"当前方案",
+    third_party_balance:"带入余额",
+    btn_logout:"退出游戏",
+    dev_label:"演示模式",
+    dev_top:"顶代",
+    dev_sub:"非顶代",
+    currency_PHP:"菲律宾比索",
+    currency_USD:"美元",
+    currency_CNY:"人民币",
+    currency_KRW:"韩元"
+  },
+  "en-US": {
+    _name:"English", _short:"EN",
+    brand:"STAR VIP GAME",
+    tagline:"Sports · Games · VIP",
+    agent_portal:"Agent Portal",
+    login_title:"Sign In",
+    account_label:"Account",
+    account_ph:"Enter your account",
+    pwd_label:"Password",
+    pwd_ph:"Enter your password",
+    btn_login:"Login",
+    err_empty:"Please enter account and password",
+    err_auth:"Incorrect account or password",
+    hint_demo:"Demo: top-agent `top` / sub `player` / any password",
+    scheme_title:"Select a Settlement Scheme",
+    scheme_desc:"You hold schemes in multiple currencies. Please select one to enter the game.",
+    scheme_balance:"Balance",
+    scheme_rate:"Commission",
+    scheme_current:"Selected",
+    btn_cancel:"Cancel",
+    btn_enter:"Enter Game",
+    third_party_title:"Entered Third-Party Game",
+    third_party_desc:"This page is served by a third-party provider. Prototype ends here; balance is bridged via the seamless wallet API in real time.",
+    third_party_player:"Player",
+    third_party_scheme:"Active Scheme",
+    third_party_balance:"Carried Balance",
+    btn_logout:"Log Out",
+    dev_label:"Demo Mode",
+    dev_top:"Top Agent",
+    dev_sub:"Sub",
+    currency_PHP:"Philippine Peso",
+    currency_USD:"US Dollar",
+    currency_CNY:"Chinese Yuan",
+    currency_KRW:"Korean Won"
+  },
+  "ko-KR": {
+    _name:"한국어", _short:"한",
+    brand:"STAR VIP GAME",
+    tagline:"스포츠 · 게임 · VIP",
+    agent_portal:"에이전트 포털",
+    login_title:"로그인",
+    account_label:"계정",
+    account_ph:"계정을 입력하세요",
+    pwd_label:"비밀번호",
+    pwd_ph:"비밀번호를 입력하세요",
+    btn_login:"로그인",
+    err_empty:"계정과 비밀번호를 입력하세요",
+    err_auth:"계정 또는 비밀번호가 올바르지 않습니다",
+    hint_demo:"데모: 상위 대리 top / 하위 player / 비밀번호 자유",
+    scheme_title:"통화 결제 방식 선택",
+    scheme_desc:"여러 통화의 결제 방식을 보유하고 있습니다. 하나를 선택하여 게임에 입장하세요.",
+    scheme_balance:"잔액",
+    scheme_rate:"수수료율",
+    scheme_current:"선택됨",
+    btn_cancel:"취소",
+    btn_enter:"게임 입장",
+    third_party_title:"서드파티 게임 입장 완료",
+    third_party_desc:"이 페이지는 서드파티 게임 제공자에 의해 제공됩니다. 프로토타입은 여기까지이며, 잔액은 seamless wallet API 를 통해 실시간 연동됩니다.",
+    third_party_player:"플레이어",
+    third_party_scheme:"활성 방식",
+    third_party_balance:"이관 잔액",
+    btn_logout:"로그아웃",
+    dev_label:"데모 모드",
+    dev_top:"상위 대리",
+    dev_sub:"하위",
+    currency_PHP:"필리핀 페소",
+    currency_USD:"미국 달러",
+    currency_CNY:"중국 위안",
+    currency_KRW:"한국 원"
+  }
+};
+
+/* =========================
+   Mock 数据 — 与代理后台 TOP_SCHEMES 结构一致
+========================= */
+// 顶代:多币种方案(演示 4 个币种;实际数量动态)
+const TOP_SCHEMES = [
+  { id:"S_PHP", currency:"PHP", flag:"🇵🇭", rate:1.5, balance:6000000 },
+  { id:"S_USD", currency:"USD", flag:"🇺🇸", rate:0.8, balance:120000  },
+  { id:"S_CNY", currency:"CNY", flag:"🇨🇳", rate:1.2, balance:800000  },
+  { id:"S_KRW", currency:"KRW", flag:"🇰🇷", rate:1.0, balance:2500000 }
+];
+
+// 非顶代:只有单方案(继承上级,不可切换,因此不弹窗)
+const SUB_SCHEME = { id:"S_PHP", currency:"PHP", flag:"🇵🇭", rate:0.3, balance:8000 };
+
+// Mock 账号
+const DEMO_USERS = {
+  "top":    { nick:"qweqwe", topAgent:true,  schemes:TOP_SCHEMES, balance:null },
+  "player": { nick:"Eva",    topAgent:false, schemes:[SUB_SCHEME], balance:SUB_SCHEME.balance }
+};
+
+/* 工具 */
+function fmt(n, currency){
+  if(n==null) return "-";
+  try { return new Intl.NumberFormat("en-US").format(n) + " " + currency; }
+  catch(e){ return n + " " + currency; }
+}
+
+/* =========================
+   语言切换器
+========================= */
+function LangSwitcher({ lang, setLang }){
+  const list = Object.keys(I18N);
+  return (
+    <div className="flex items-center gap-1">
+      {list.map(k=>(
+        <button key={k}
+                className={`lang-btn ${lang===k?"active":""}`}
+                onClick={()=>setLang(k)}>
+          {I18N[k]._short}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* =========================
+   开发辅助工具栏 — 顶代 / 非顶代 切换
+========================= */
+function DevBar({ role, setRole, lang, onReset }){
+  const t = I18N[lang];
+  return (
+    <div className="dev-bar">
+      <span>{t.dev_label}:</span>
+      <button className={role==="top"?"on":"off"} onClick={()=>{setRole("top"); onReset();}}>{t.dev_top}</button>
+      <button className={role==="sub"?"on":"off"} onClick={()=>{setRole("sub"); onReset();}}>{t.dev_sub}</button>
+    </div>
+  );
+}
+
+/* =========================
+   登录页
+========================= */
+function LoginPage({ lang, setLang, devRole, onLoggedIn }){
+  const t = I18N[lang];
+  const [account, setAccount] = useState(devRole==="top" ? "top" : "player");
+  const [pwd, setPwd] = useState("");
+  const [err, setErr] = useState("");
+
+  // devRole 切换时,同步默认账号,方便演示
+  useEffect(()=>{
+    setAccount(devRole==="top" ? "top" : "player");
+    setErr("");
+  }, [devRole]);
+
+  const submit = ()=>{
+    if(!account || !pwd){ setErr(t.err_empty); return; }
+    const u = DEMO_USERS[account];
+    if(!u){ setErr(t.err_auth); return; }
+    onLoggedIn(u);
+  };
+
+  return (
+    <div className="stadium-bg min-h-screen flex flex-col">
+      {/* 顶部栏 */}
+      <div className="flex items-center justify-between px-6 py-4 relative z-10">
+        <div className="flex items-center gap-2">
+          <span className="gold text-xl font-bold tracking-wider">★</span>
+          <span className="font-semibold tracking-wider">{t.brand}</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <LangSwitcher lang={lang} setLang={setLang}/>
+          <a href="#" className="btn-ghost text-sm border bd rounded px-3 py-1 hover:bd-gold"
+             onClick={e=>e.preventDefault()}>
+            {t.agent_portal}
+          </a>
+        </div>
+      </div>
+
+      {/* 中央登录区 */}
+      <div className="flex-1 flex items-center justify-center px-6 relative z-10">
+        <div className="w-full max-w-md">
+          {/* Logo */}
+          <div className="text-center mb-10 logo-glow">
+            <div className="text-6xl gold leading-none">★</div>
+            <div className="text-3xl font-bold tracking-widest mt-3 gold">{t.brand}</div>
+            <div className="text-sm muted mt-2 tracking-wider">{t.tagline}</div>
+          </div>
+
+          {/* 表单卡片 */}
+          <div className="bg-card bd border rounded-xl p-6 shadow-2xl">
+            <div className="text-base font-semibold mb-5">{t.login_title}</div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs muted mb-1">{t.account_label}</label>
+                <input className="input"
+                       placeholder={t.account_ph}
+                       value={account}
+                       onChange={e=>{ setAccount(e.target.value); setErr(""); }}
+                       onKeyDown={e=>e.key==="Enter" && submit()}/>
+              </div>
+              <div>
+                <label className="block text-xs muted mb-1">{t.pwd_label}</label>
+                <input className="input"
+                       type="password"
+                       placeholder={t.pwd_ph}
+                       value={pwd}
+                       onChange={e=>{ setPwd(e.target.value); setErr(""); }}
+                       onKeyDown={e=>e.key==="Enter" && submit()}/>
+              </div>
+
+              {err && <div className="text-xs" style={{color:"#FF4D4F"}}>{err}</div>}
+
+              <button className="btn-primary mt-2" onClick={submit}>{t.btn_login}</button>
+
+              <div className="text-xs muted text-center pt-2">{t.hint_demo}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 底部留白 */}
+      <div className="h-8"></div>
+    </div>
+  );
+}
+
+/* =========================
+   交收方案选择弹窗 — 仅顶代登录后出现
+========================= */
+function SchemeModal({ lang, schemes, onCancel, onConfirm }){
+  const t = I18N[lang];
+  const [selectedId, setSelectedId] = useState(schemes[0]?.id || null);
+
+  return (
+    <div className="modal-backdrop">
+      <div className="modal">
+        {/* 标题 */}
+        <div className="px-6 pt-6 pb-3 border-b bd">
+          <div className="text-lg font-semibold gold">{t.scheme_title}</div>
+          <div className="text-xs muted mt-1">{t.scheme_desc}</div>
+        </div>
+
+        {/* 卡片网格 */}
+        <div className="flex-1 overflow-y-auto scroll px-6 py-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {schemes.map(s=>{
+              const sel = s.id===selectedId;
+              const currencyName = t["currency_"+s.currency] || s.currency;
+              return (
+                <div key={s.id}
+                     className={`scheme-card ${sel?"selected":""}`}
+                     onClick={()=>setSelectedId(s.id)}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="flag">{s.flag}</span>
+                      <span className="font-semibold tracking-wide">{s.currency}</span>
+                    </div>
+                    {sel && <span className="chip chip-gold">{t.scheme_current}</span>}
+                  </div>
+                  <div className="text-xs muted">{currencyName}</div>
+                  <div className="border-t bd pt-2 space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="muted">{t.scheme_balance}</span>
+                      <span className="gold font-semibold">{fmt(s.balance, s.currency)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="muted">{t.scheme_rate}</span>
+                      <span>{s.rate}%</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 底部按钮 */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bd">
+          <button className="btn-secondary" onClick={onCancel}>{t.btn_cancel}</button>
+          <button className="btn-primary" style={{width:"auto", padding:"0 24px"}}
+                  disabled={!selectedId}
+                  onClick={()=>onConfirm(schemes.find(s=>s.id===selectedId))}>
+            {t.btn_enter}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   三方游戏占位页
+========================= */
+function ThirdPartyGame({ lang, user, scheme, onLogout }){
+  const t = I18N[lang];
+  return (
+    <div className="third-party-bg min-h-screen flex flex-col">
+      <div className="flex items-center justify-between px-6 py-4 border-b bd">
+        <div className="flex items-center gap-2">
+          <span className="gold text-xl">★</span>
+          <span className="font-semibold tracking-wider">{t.brand}</span>
+        </div>
+        <button className="btn-secondary" onClick={onLogout}>{t.btn_logout}</button>
+      </div>
+
+      <div className="flex-1 flex items-center justify-center px-6">
+        <div className="bg-card bd border rounded-xl p-8 max-w-xl w-full text-center">
+          <div className="text-5xl gold mb-4">🎮</div>
+          <div className="text-xl font-semibold mb-3">{t.third_party_title}</div>
+          <div className="text-sm muted mb-6 leading-relaxed">{t.third_party_desc}</div>
+
+          <div className="text-left bg-elev bd border rounded-lg p-4 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="muted">{t.third_party_player}</span>
+              <span>{user.nick}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="muted">{t.third_party_scheme}</span>
+              <span>
+                <span className="mr-1">{scheme.flag}</span>
+                {scheme.currency}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="muted">{t.third_party_balance}</span>
+              <span className="gold font-semibold">{fmt(scheme.balance, scheme.currency)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   根组件 — 驱动三种视图 + 演示顶代/非顶代分支
+========================= */
+function App(){
+  const [lang, setLang] = useState("zh-CN");
+  const [devRole, setDevRole] = useState("top"); // top | sub
+  // stage: login | scheme | game
+  const [stage, setStage] = useState("login");
+  const [user, setUser] = useState(null);
+  const [scheme, setScheme] = useState(null);
+
+  const reset = ()=>{ setStage("login"); setUser(null); setScheme(null); };
+
+  const onLoggedIn = (u)=>{
+    setUser(u);
+    if(u.topAgent){
+      setStage("scheme");
+    } else {
+      // 非顶代:方案继承,直接进入游戏
+      setScheme(u.schemes[0]);
+      setStage("game");
+    }
+  };
+
+  const onSchemeCancel = ()=>{
+    // 取消 → 回到登录页
+    reset();
+  };
+
+  const onSchemeConfirm = (s)=>{
+    setScheme(s);
+    setStage("game");
+  };
+
+  return (
+    <div>
+      <DevBar role={devRole} setRole={setDevRole} lang={lang} onReset={reset}/>
+
+      {stage==="login" && (
+        <LoginPage lang={lang} setLang={setLang}
+                   devRole={devRole}
+                   onLoggedIn={onLoggedIn}/>
+      )}
+
+      {stage==="scheme" && user && (
+        <>
+          {/* 弹窗同时保留登录页背景更接近真实体验 */}
+          <LoginPage lang={lang} setLang={setLang}
+                     devRole={devRole}
+                     onLoggedIn={()=>{}}/>
+          <SchemeModal lang={lang}
+                       schemes={user.schemes}
+                       onCancel={onSchemeCancel}
+                       onConfirm={onSchemeConfirm}/>
+        </>
+      )}
+
+      {stage==="game" && user && scheme && (
+        <ThirdPartyGame lang={lang} user={user} scheme={scheme} onLogout={reset}/>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
