@@ -1,0 +1,12 @@
+node_modules
+.env.test
+.DS_Store
+src
+public
+craco.config.js
+commitlint.config.cjs
+i18n.langMap.json
+package.json
+pnpm-lock.yaml
+tsconfig.json
+windi.config.ts
