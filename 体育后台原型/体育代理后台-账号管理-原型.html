@@ -847,12 +847,26 @@ function CreditModal({dir, account, parent, onClose, onSubmit, toast}){
       </Section>
       <Section title="② 下级信息">
         <div>{account.nick}({account.id})</div>
-        <div className="muted text-sm mt-1">币种:{sc?.currency} · 佣金率:{account.rate}%</div>
+        <div className="muted text-sm mt-1">币种:{sc?.currency} · 佣金率:{account.rate}% · 额度:{fmt(account.balance)}</div>
       </Section>
       <Section title={"③ 金额输入 "+(dir==="up"?"(上分额度)":"(下级额度)")}>
         <FieldLabel req>{dir==="up"?"上分额度":"下级额度"}</FieldLabel>
         <input type="number" step="0.01" className="input w-80" value={amount} onChange={e=>setAmount(e.target.value)}/>
         <div className="muted text-xs mt-1">不设单笔上限;真实钱流由账房侧关卡管控</div>
+        {(() => {
+          const a = parseFloat(amount);
+          if(!a || isNaN(a) || a<=0) return null;
+          const sign = dir==="up" ? 1 : -1;
+          const nextParent = parentBalance - sign*a;
+          const nextChild  = account.balance + sign*a;
+          const bad = nextParent < 0 || nextChild < 0;
+          return (
+            <div className={"text-xs mt-2 " + (bad?"danger":"muted")}>
+              调整后预览:上级 {fmt(parentBalance)} → <span className="gold">{fmt(nextParent)}</span>
+              &nbsp;·&nbsp;下级 {fmt(account.balance)} → <span className="gold">{fmt(nextChild)}</span>
+            </div>
+          );
+        })()}
         {err.amount && <div className="danger text-xs mt-1">{err.amount}</div>}
       </Section>
       <Section title="④ 安全校验">
