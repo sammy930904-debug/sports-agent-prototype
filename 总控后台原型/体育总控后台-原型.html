@@ -83,6 +83,31 @@ const TOP_AGENTS = [
   { id:"sapphire", nick:"Sapphire",accHouse:"AH-045", scheme:"USDT 1.0% / 85,000",   currency:"USDT", rate:1.0, balance:85000,     subCount:9,  status:"active",  driftSec:2,   createdAt:"2026-03-11 10:28" }
 ];
 
+// 下线数据 Mock (父 id → 直接下线数组;懒加载,每次只展开一级)
+// 下线继承顶代的币种,方案格式与顶代一致,但没有账房户/对账偏差(这些只在顶代层有意义)
+const DOWNLINES = {
+  "qweqwe": [
+    { id:"qweqwe-1",  nick:"Alpha-1",  parent:"qweqwe",   topAgent:"qweqwe",  currency:"PHP",  rate:1.2, balance:1_200_000, scheme:"PHP 1.2% / 5,000,000",  subCount:2, status:"active" },
+    { id:"qweqwe-2",  nick:"Alpha-2",  parent:"qweqwe",   topAgent:"qweqwe",  currency:"PHP",  rate:1.3, balance:850_000,   scheme:"PHP 1.3% / 3,000,000",  subCount:0, status:"active" },
+    { id:"qweqwe-3",  nick:"Alpha-3",  parent:"qweqwe",   topAgent:"qweqwe",  currency:"PHP",  rate:1.0, balance:0,         scheme:"PHP 1.0% / 2,000,000",  subCount:0, status:"frozen" }
+  ],
+  "qweqwe-1": [
+    { id:"qweqwe-1-1", nick:"Alpha-1-1", parent:"qweqwe-1", topAgent:"qweqwe", currency:"PHP", rate:0.8, balance:320_000, scheme:"PHP 0.8% / 1,000,000", subCount:0, status:"active" },
+    { id:"qweqwe-1-2", nick:"Alpha-1-2", parent:"qweqwe-1", topAgent:"qweqwe", currency:"PHP", rate:0.9, balance:150_000, scheme:"PHP 0.9% / 800,000",   subCount:0, status:"active" }
+  ],
+  "diamond": [
+    { id:"diamond-2", nick:"Diamond-2", parent:"diamond", topAgent:"diamond", currency:"PHP", rate:0.9, balance:620_000, scheme:"PHP 0.9% / 2,500,000", subCount:0, status:"active" },
+    { id:"diamond-5", nick:"Diamond-5", parent:"diamond", topAgent:"diamond", currency:"PHP", rate:0.7, balance:0,       scheme:"PHP 0.7% / 1,500,000", subCount:0, status:"frozen" }
+  ],
+  "lucky88": [
+    { id:"lucky88-3", nick:"Lucky88-3", parent:"lucky88", topAgent:"lucky88", currency:"USDT", rate:0.5, balance:32_000, scheme:"USDT 0.5% / 60,000", subCount:0, status:"active" },
+    { id:"lucky88-7", nick:"Lucky88-7", parent:"lucky88", topAgent:"lucky88", currency:"USDT", rate:0.6, balance:8_500,  scheme:"USDT 0.6% / 25,000", subCount:0, status:"active" }
+  ],
+  "sapphire": [
+    { id:"sapphire-1", nick:"Sapphire-1", parent:"sapphire", topAgent:"sapphire", currency:"USDT", rate:0.6, balance:12_000, scheme:"USDT 0.6% / 30,000", subCount:0, status:"active" }
+  ]
+};
+
 // 今日异常告警
 const ALERTS = [
   { id:1, level:"critical", time:"14:22:05", agent:"diamond",  code:"RECON_DRIFT",     msg:"账房↔体育余额差额 ¥1,248(PHP),持续 94 秒未对齐,已超过 60s 阈值" },
@@ -303,19 +328,59 @@ function AgentsPage({ role }){
   const [statusFilter, setStatusFilter] = useState("all");
   const [showAdd, setShowAdd] = useState(false);
   const [freezeTarget, setFreezeTarget] = useState(null);
+  const [rateTarget, setRateTarget] = useState(null);
+  const [schemeTarget, setSchemeTarget] = useState(null);
+  const [expanded, setExpanded] = useState(new Set());
   const [toast, setToast] = useState("");
 
-  const rows = TOP_AGENTS.filter(a => {
+  const topRows = TOP_AGENTS.filter(a => {
     if (statusFilter !== "all" && a.status !== statusFilter) return false;
     if (q && !(a.id.includes(q) || a.nick.toLowerCase().includes(q.toLowerCase()) || a.accHouse.includes(q))) return false;
     return true;
   });
 
+  // 展开/收起一级
+  const toggleExpand = (id) => {
+    setExpanded(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  // 将 (筛选后的顶代 + 展开的下线) 扁平化为带 depth 的行序列
+  const flatten = () => {
+    const list = [];
+    const walk = (node, depth) => {
+      const kids = DOWNLINES[node.id] || [];
+      list.push({ ...node, depth, isTop: depth===0, hasChildren: kids.length>0 });
+      if (expanded.has(node.id)) kids.forEach(k => walk(k, depth+1));
+    };
+    topRows.forEach(a => walk(a, 0));
+    return list;
+  };
+  const rows = flatten();
+  const downlineShown = rows.filter(r => !r.isTop).length;
+
   const canOperate = role === "operator";
 
   const doFreeze = ()=>{
-    setToast(`已${freezeTarget.status==="frozen"?"解冻":"冻结"}顶代 ${freezeTarget.nick}(${freezeTarget.id}),相关下级操作已${freezeTarget.status==="frozen"?"恢复":"全部阻断"}`);
+    const t = freezeTarget;
+    const label = t.isTop ? "顶代" : "下线";
+    setToast(`已${t.status==="frozen"?"解冻":"冻结"}${label} ${t.nick}(${t.id})${t.isTop?`,相关下级操作已${t.status==="frozen"?"恢复":"全部阻断"}`:""}`);
     setFreezeTarget(null);
+    setTimeout(()=>setToast(""), 3000);
+  };
+  const doAdjustRate = (newRate)=>{
+    const t = rateTarget;
+    setToast(`已更新 ${t.nick}(${t.id}) 佣金率:${t.rate}% → ${newRate}%,变更已写入审计日志`);
+    setRateTarget(null);
+    setTimeout(()=>setToast(""), 3000);
+  };
+  const doAdjustScheme = (newScheme)=>{
+    const t = schemeTarget;
+    setToast(`已更新 ${t.nick}(${t.id}) 交收方案:${t.scheme} → ${newScheme},变更已写入审计日志`);
+    setSchemeTarget(null);
     setTimeout(()=>setToast(""), 3000);
   };
 
@@ -324,19 +389,19 @@ function AgentsPage({ role }){
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold">顶代账号管理</h1>
-          <div className="text-xs muted mt-1">共 {TOP_AGENTS.length} 个顶代 · 平台运营专属 · 变更即审计</div>
+          <div className="text-xs muted mt-1">共 {TOP_AGENTS.length} 个顶代 · 点击 ▸ 展开查看其下线 · 平台运营专属 · 变更即审计</div>
         </div>
         {canOperate && <button className="btn-primary" onClick={()=>setShowAdd(true)}>+ 新增顶代</button>}
       </div>
 
       <div className="flex items-center gap-3">
-        <input className="input w-72" placeholder="搜索系统户口号 / 昵称 / 账房户号" value={q} onChange={e=>setQ(e.target.value)}/>
+        <input className="input w-72" placeholder="搜索系统户口号 / 昵称 / 账房户号(仅筛选顶代)" value={q} onChange={e=>setQ(e.target.value)}/>
         <select className="input" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
           <option value="all">全部状态</option>
           <option value="active">活跃</option>
           <option value="frozen">已冻结</option>
         </select>
-        <div className="ml-auto text-xs muted">命中 {rows.length} 条</div>
+        <div className="ml-auto text-xs muted">命中顶代 {topRows.length} 条 · 展开下线 {downlineShown} 条</div>
       </div>
 
       <div className="bg-card bd border rounded-lg overflow-hidden" style={{borderColor:"#1F2730"}}>
@@ -345,7 +410,7 @@ function AgentsPage({ role }){
             <tr>
               <th className="text-left px-4 py-3">系统户口号</th>
               <th className="text-left px-4 py-3">昵称</th>
-              <th className="text-left px-4 py-3">账房户</th>
+              <th className="text-left px-4 py-3">账房户 / 上级</th>
               <th className="text-left px-4 py-3">交收方案</th>
               <th className="text-right px-4 py-3">可用余额</th>
               <th className="text-center px-4 py-3">下线数</th>
@@ -359,42 +424,66 @@ function AgentsPage({ role }){
             {rows.length===0 && (
               <tr><td colSpan="10" className="text-center py-10 muted text-sm">无匹配顶代,请调整筛选条件</td></tr>
             )}
-            {rows.map(a => (
-              <tr key={a.id} className="row-hover bd border-t" style={{borderColor:"#1F2730"}}>
-                <td className="px-4 py-3 font-mono text-xs">{a.id}</td>
-                <td className="px-4 py-3">{a.nick}</td>
-                <td className="px-4 py-3 font-mono text-xs muted">{a.accHouse}</td>
-                <td className="px-4 py-3 text-xs">{a.scheme}</td>
-                <td className="px-4 py-3 text-right">{fmt(a.balance)} <span className="muted text-xs">{a.currency}</span></td>
-                <td className="px-4 py-3 text-center">{a.subCount}</td>
-                <td className="px-4 py-3 text-center">
-                  {a.status==="frozen" ? <span className="muted text-xs">—</span> :
-                   a.driftSec > 60 ? <span className="chip chip-frozen">{fmtDrift(a.driftSec)} 超阈值</span> :
-                   <span className="chip chip-on">{fmtDrift(a.driftSec)}</span>}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  {a.status==="active" ? <span className="chip chip-on">活跃</span> : <span className="chip chip-frozen">已冻结</span>}
-                </td>
-                <td className="px-4 py-3 text-xs muted">{a.createdAt}</td>
-                <td className="px-4 py-3 text-right pr-6">
-                  {canOperate ? (
-                    <div className="flex gap-2 justify-end">
-                      <button className="btn-ghost">修改</button>
-                      <button className="btn-ghost" style={{color: a.status==="frozen" ? "#3DD68C" : "#FF5961"}}
-                        onClick={()=>setFreezeTarget(a)}>
-                        {a.status==="frozen" ? "解冻" : "冻结"}
-                      </button>
-                    </div>
-                  ) : <span className="muted text-xs">只读</span>}
-                </td>
-              </tr>
-            ))}
+            {rows.map(a => {
+              const indent = 8 + a.depth*20;
+              const caret = a.hasChildren
+                ? (expanded.has(a.id) ? "▾" : "▸")
+                : "·";
+              return (
+                <tr key={a.id} className="row-hover bd border-t" style={{borderColor:"#1F2730", background: a.depth>0 ? "rgba(74,158,255,0.03)" : "transparent"}}>
+                  <td className="px-4 py-3 font-mono text-xs" style={{paddingLeft: indent}}>
+                    <button
+                      onClick={()=> a.hasChildren && toggleExpand(a.id)}
+                      disabled={!a.hasChildren}
+                      title={a.hasChildren ? (expanded.has(a.id)?"收起":"展开一级下线") : "无下线"}
+                      style={{
+                        display:"inline-block", width:18, textAlign:"center",
+                        color: a.hasChildren ? "#4A9EFF" : "#3A4654",
+                        cursor: a.hasChildren ? "pointer" : "default",
+                        background:"transparent", border:"none", padding:0, marginRight:4, fontSize:12
+                      }}>{caret}</button>
+                    {a.id}
+                  </td>
+                  <td className="px-4 py-3">{a.nick}</td>
+                  <td className="px-4 py-3 font-mono text-xs muted">
+                    {a.isTop ? a.accHouse : <span>↳ {a.parent}</span>}
+                  </td>
+                  <td className="px-4 py-3 text-xs">{a.scheme}</td>
+                  <td className="px-4 py-3 text-right">{fmt(a.balance)} <span className="muted text-xs">{a.currency}</span></td>
+                  <td className="px-4 py-3 text-center">{a.subCount}</td>
+                  <td className="px-4 py-3 text-center">
+                    {!a.isTop ? <span className="muted text-xs">—</span> :
+                     a.status==="frozen" ? <span className="muted text-xs">—</span> :
+                     a.driftSec > 60 ? <span className="chip chip-frozen">{fmtDrift(a.driftSec)} 超阈值</span> :
+                     <span className="chip chip-on">{fmtDrift(a.driftSec)}</span>}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {a.status==="active" ? <span className="chip chip-on">活跃</span> : <span className="chip chip-frozen">已冻结</span>}
+                  </td>
+                  <td className="px-4 py-3 text-xs muted">{a.isTop ? a.createdAt : <span>继承顶代</span>}</td>
+                  <td className="px-4 py-3 text-right pr-6">
+                    {canOperate ? (
+                      <div className="flex gap-2 justify-end flex-wrap">
+                        <button className="btn-ghost" onClick={()=>setRateTarget(a)}>佣金率</button>
+                        <button className="btn-ghost" onClick={()=>setSchemeTarget(a)}>方案</button>
+                        <button className="btn-ghost" style={{color: a.status==="frozen" ? "#3DD68C" : "#FF5961"}}
+                          onClick={()=>setFreezeTarget(a)}>
+                          {a.status==="frozen" ? "解冻" : "冻结"}
+                        </button>
+                      </div>
+                    ) : <span className="muted text-xs">只读</span>}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
       {showAdd && <AddAgentModal onClose={()=>setShowAdd(false)} onDone={(msg)=>{ setShowAdd(false); setToast(msg); setTimeout(()=>setToast(""),3000); }} />}
       {freezeTarget && <FreezeModal agent={freezeTarget} onClose={()=>setFreezeTarget(null)} onConfirm={doFreeze} />}
+      {rateTarget && <AdjustRateModal agent={rateTarget} onClose={()=>setRateTarget(null)} onConfirm={doAdjustRate} />}
+      {schemeTarget && <AdjustSchemeModal agent={schemeTarget} onClose={()=>setSchemeTarget(null)} onConfirm={doAdjustScheme} />}
       {toast && <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-card bd border rounded px-4 py-2 text-sm z-50" style={{borderColor:"#1F2730"}}>{toast}</div>}
     </div>
   );
@@ -526,6 +615,133 @@ function FreezeModal({ agent, onClose, onConfirm }){
         <div className="flex justify-end gap-2 mt-5">
           <button className="btn-secondary" onClick={onClose}>取消</button>
           <button className={frozen?"btn-primary":"btn-danger"} onClick={submit}>{frozen?"确认解冻":"确认冻结"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdjustRateModal({ agent, onClose, onConfirm }){
+  const [newRate, setNewRate] = useState(String(agent.rate));
+  const [reason, setReason] = useState("");
+  const [opPwd, setOpPwd] = useState("");
+  const [err, setErr] = useState("");
+  const label = agent.isTop ? "顶代" : "下线";
+  const submit = ()=>{
+    const r = parseFloat(newRate);
+    if (!(r>0)) { setErr("佣金率必须大于 0"); return; }
+    if (r === agent.rate) { setErr("新佣金率与当前值相同,请修改"); return; }
+    if (!reason) { setErr("请填写操作原因以便审计"); return; }
+    if (!opPwd) { setErr("请输入操作密码"); return; }
+    if (opPwd !== "123456") { setErr("操作密码错误(Mock: 123456)"); return; }
+    onConfirm(r);
+  };
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="bg-card bd border rounded-lg p-6 w-[480px]" style={{borderColor:"#1F2730"}} onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold">调整佣金率 · {label}</h2>
+          <button className="muted text-xl" onClick={onClose}>×</button>
+        </div>
+        <div className="bg-warn-soft warn text-xs p-3 rounded mb-4 border" style={{borderColor:"rgba(255,181,71,.3)"}}>
+          ⚠ 正在修改 {agent.nick}({agent.id}) 的佣金率;此变更将立即对该账号生效,下线佣金率不会被联动修改,请核对后提交。
+        </div>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs muted block mb-1">当前佣金率</label>
+              <input className="input w-full" value={`${agent.rate}%`} disabled style={{opacity:.6}}/>
+            </div>
+            <div>
+              <label className="req text-xs muted block mb-1">新佣金率(%)</label>
+              <input className="input w-full" type="number" step="0.1" value={newRate} onChange={e=>setNewRate(e.target.value)}/>
+            </div>
+          </div>
+          <div>
+            <label className="req text-xs muted block mb-1">操作原因(审计必填)</label>
+            <textarea className="input w-full" style={{height:72}} value={reason} onChange={e=>setReason(e.target.value)}
+              placeholder="例:年度返佣结构调整 / 合作方协议变更"/>
+          </div>
+          <div>
+            <label className="req text-xs muted block mb-1">操作密码</label>
+            <input className="input w-full" type="password" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
+            <div className="text-xs muted mt-1">Mock 密码:123456</div>
+          </div>
+          {err && <div className="danger text-xs">{err}</div>}
+        </div>
+        <div className="flex justify-end gap-2 mt-5">
+          <button className="btn-secondary" onClick={onClose}>取消</button>
+          <button className="btn-primary" onClick={submit}>确认调整</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdjustSchemeModal({ agent, onClose, onConfirm }){
+  const [newCurrency, setNewCurrency] = useState(agent.currency);
+  const [newRate, setNewRate] = useState(String(agent.rate));
+  const [newCap, setNewCap] = useState("");
+  const [reason, setReason] = useState("");
+  const [opPwd, setOpPwd] = useState("");
+  const [err, setErr] = useState("");
+  const label = agent.isTop ? "顶代" : "下线";
+  const submit = ()=>{
+    const r = parseFloat(newRate);
+    const c = parseFloat(newCap);
+    if (!(r>0)) { setErr("佣金率必须大于 0"); return; }
+    if (!(c>0)) { setErr("额度上限必须大于 0"); return; }
+    if (!reason) { setErr("请填写操作原因以便审计"); return; }
+    if (!opPwd) { setErr("请输入操作密码"); return; }
+    if (opPwd !== "123456") { setErr("操作密码错误(Mock: 123456)"); return; }
+    onConfirm(`${newCurrency} ${r}% / ${c.toLocaleString("en-US")}`);
+  };
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="bg-card bd border rounded-lg p-6 w-[520px]" style={{borderColor:"#1F2730"}} onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold">调整交收方案 · {label}</h2>
+          <button className="muted text-xl" onClick={onClose}>×</button>
+        </div>
+        <div className="bg-danger-soft danger text-xs p-3 rounded mb-4 border" style={{borderColor:"rgba(255,89,97,.3)"}}>
+          ⚠ 高风险:交收方案决定该账号的币种、佣金率与额度上限;切换币种将导致历史余额无法直接沿用,请确认后操作。
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs muted block mb-1">当前方案</label>
+            <input className="input w-full" value={agent.scheme} disabled style={{opacity:.6}}/>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="req text-xs muted block mb-1">币种</label>
+              <select className="input w-full" value={newCurrency} onChange={e=>setNewCurrency(e.target.value)}>
+                {CURRENCIES.map(c=><option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="req text-xs muted block mb-1">佣金率(%)</label>
+              <input className="input w-full" type="number" step="0.1" value={newRate} onChange={e=>setNewRate(e.target.value)}/>
+            </div>
+            <div>
+              <label className="req text-xs muted block mb-1">额度上限</label>
+              <input className="input w-full" type="number" value={newCap} onChange={e=>setNewCap(e.target.value)}/>
+            </div>
+          </div>
+          <div>
+            <label className="req text-xs muted block mb-1">操作原因(审计必填)</label>
+            <textarea className="input w-full" style={{height:72}} value={reason} onChange={e=>setReason(e.target.value)}
+              placeholder="例:顶代申请升级方案 / 合规整改 / 币种迁移"/>
+          </div>
+          <div>
+            <label className="req text-xs muted block mb-1">操作密码</label>
+            <input className="input w-full" type="password" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
+            <div className="text-xs muted mt-1">Mock 密码:123456</div>
+          </div>
+          {err && <div className="danger text-xs">{err}</div>}
+        </div>
+        <div className="flex justify-end gap-2 mt-5">
+          <button className="btn-secondary" onClick={onClose}>取消</button>
+          <button className="btn-danger" onClick={submit}>确认切换方案</button>
         </div>
       </div>
     </div>
