@@ -1,0 +1,197 @@
+html,
+body {
+    width: 100%;
+    height: 100%;
+    background: #fff;
+}
+
+#root {
+    width: 100%;
+    height: 100%;
+}
+
+#nprogress .bar {
+    background: $primary-color !important; //自定义Nprogress颜色
+}
+
+//页面加载loading
+#html-loding {
+    width: 100%;
+    height: 100%;
+    @include flexCenter();
+
+    .loading {
+        display: block;
+        width: 82px;
+        height: 72px;
+        color: #f4cd75;
+        font-size: 0;
+    }
+
+    .loading,
+    .loading > div {
+        position: relative;
+        box-sizing: border-box;
+    }
+
+    .loading.la-dark {
+        color: #333;
+    }
+
+    .loading > div {
+        display: inline-block;
+        float: none;
+        background-color: currentColor;
+        border: 0 solid currentColor;
+    }
+
+    .loading > div:nth-child(1) {
+        position: absolute;
+        bottom: 32%;
+        left: 18%;
+        width: 24px;
+        height: 24px;
+        border-radius: 100%;
+        transform-origin: center bottom;
+        animation: ball-climbing-dot-jump 0.6s ease-in-out infinite;
+    }
+
+    .loading > div:not(:nth-child(1)) {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 24px;
+        height: 2px;
+        border-radius: 0;
+        transform: translate(60%, 0);
+        animation: ball-climbing-dot-steps 1.8s linear infinite;
+    }
+
+    .loading > div:not(:nth-child(1)):nth-child(2) {
+        animation-delay: 0ms;
+    }
+
+    .loading > div:not(:nth-child(1)):nth-child(3) {
+        animation-delay: -600ms;
+    }
+
+    .loading > div:not(:nth-child(1)):nth-child(4) {
+        animation-delay: -1200ms;
+    }
+
+    @keyframes ball-climbing-dot-jump {
+        0% {
+            transform: scale(1, 0.7);
+        }
+
+        20% {
+            transform: scale(0.7, 1.2);
+        }
+
+        40% {
+            transform: scale(1, 1);
+        }
+
+        50% {
+            bottom: 125%;
+        }
+
+        46% {
+            transform: scale(1, 1);
+        }
+
+        80% {
+            transform: scale(0.7, 1.2);
+        }
+
+        90% {
+            transform: scale(0.7, 1.2);
+        }
+
+        100% {
+            transform: scale(1, 0.7);
+        }
+    }
+
+    @keyframes ball-climbing-dot-steps {
+        0% {
+            top: 0;
+            right: 0;
+            opacity: 0;
+        }
+
+        50% {
+            opacity: 1;
+        }
+
+        100% {
+            top: 100%;
+            right: 100%;
+            opacity: 0;
+        }
+    }
+    @media (prefers-color-scheme: dark) {
+        html,
+        body {
+            background-color: #000;
+        }
+    }
+
+    @media (prefers-color-scheme: light) {
+        html,
+        body {
+            background-color: #fff;
+        }
+    }
+}
+
+.ant-pro-form-login-page {
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-size: cover !important;
+
+    .ant-pro-form-login-page-container {
+        background: linear-gradient(
+            180deg,
+            #0d0b1e 0%,
+            rgba(13, 11, 30, 0) 100%
+        ) !important;
+    }
+}
+
+.ant-pro-form-login-page-title {
+    color: #e5b559;
+    // background: linear-gradient(180deg, #f1da9a 17.24%, #e5b559 79.31%);
+    background-clip: text;
+}
+
+.login-page {
+    position: relative;
+}
+
+.lang-switcher {
+    position: absolute;
+    top: 20px;
+    right: 40px;
+    z-index: 1000;
+}
+
+.lang-btn {
+    padding: 6px 14px;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.45);
+    border-radius: 20px;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition: all 0.2s;
+}
+
+.lang-btn:hover {
+    background: rgba(0, 0, 0, 0.65);
+}
+
+.smallCard {
+    .ant-card-body {
+        padding: 12px !important;
+    }
+}

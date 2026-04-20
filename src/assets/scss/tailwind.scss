@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@tailwind variants;
+@tailwind screens;
+//tailwind 通用class
+
+.image-object-fit {
+    @apply w-full h-full object-cover;
+}
+
+.text-ellipsis {
+    @apply overflow-hidden overflow-ellipsis whitespace-nowrap;
+}
+
+.flex-between-center {
+    @apply flex justify-between items-center;
+}
+
+.flex-between-start-center {
+    @apply flex justify-start items-center;
+}
+
+.flex-col-center {
+    @apply flex justify-center items-center flex-col;
+}
+
+.flex-col-start-center {
+    @apply flex justify-center items-start flex-col;
+}
+
+.flex-col-center-start {
+    @apply flex justify-start items-center flex-col;
+}
+
+.flex-col-center-between {
+    @apply flex justify-between items-center flex-col;
+}
+
+.flex-col-end-center {
+    @apply flex justify-center items-end flex-col;
+}
+
+.flex-col-center-end {
+    @apply flex justify-end items-center flex-col;
+}
+
+.flex-row-center {
+    @apply flex justify-center items-center;
+}
+
+.flex-row-end-center {
+    @apply flex justify-end items-center;
+}
+
+.flex-row-start-center {
+    @apply flex justify-start items-center;
+}
+
+.flex-row-center-start {
+    @apply flex justify-center items-start;
+}

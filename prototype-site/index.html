@@ -1,0 +1,1278 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=1280"/>
+<title>体育代理后台 · 账号管理 原型 V1.8</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  html,body { background:#0F0F10; color:#FFFFFF; font-family: -apple-system, "Microsoft YaHei", system-ui, sans-serif; }
+  .gold { color:#F0B93A; }
+  .bg-gold { background:#F0B93A; color:#1F1F1F; }
+  .bg-card { background:#1A1A1C; }
+  .bg-elev { background:#0F0F10; }
+  .bd { border-color:#2A2A2C; }
+  .bd-gold { border-color:#F0B93A; }
+  .muted { color:#8E8E93; }
+  .danger { color:#FF4D4F; }
+  .good { color:#34C759; }
+  .input { background:#0F0F10; border:1px solid #2A2A2C; color:#fff; padding:8px 12px; border-radius:6px; outline:none; height:40px; }
+  .input:focus { border-color:#F0B93A; }
+  .btn-primary { background:#F0B93A; color:#1F1F1F; font-weight:600; padding:0 16px; height:40px; border-radius:6px; }
+  .btn-primary:disabled { opacity:.4; cursor:not-allowed; }
+  .btn-secondary { background:#3A3A3C; color:#fff; padding:0 16px; height:40px; border-radius:6px; }
+  .btn-ghost { color:#F0B93A; padding:0 8px; }
+  .chip { display:inline-block; padding:2px 10px; border-radius:9999px; font-size:12px; }
+  .chip-on { background:rgba(52,199,89,.15); color:#34C759; }
+  .chip-off { background:rgba(142,142,147,.2); color:#8E8E93; }
+  .table-head { background:#1A1A1C; color:#8E8E93; }
+  .row-hover:hover { background:#141416; }
+  .divider { border-top:1px solid #2A2A2C; }
+  .badge-title { background:linear-gradient(180deg,#2a2a2d,#1a1a1c); border:1px solid #F0B93A; color:#F0B93A; padding:6px 24px; border-radius:4px; font-weight:700; letter-spacing:2px; }
+  .scroll::-webkit-scrollbar { width:8px; height:8px; }
+  .scroll::-webkit-scrollbar-thumb { background:#3a3a3c; border-radius:4px; }
+  .req::before { content:"*"; color:#FF4D4F; margin-right:4px; }
+  .toast { position:fixed; top:24px; left:50%; transform:translateX(-50%); z-index:9999; background:#1A1A1C; border:1px solid #2A2A2C; color:#fff; padding:10px 18px; border-radius:6px; box-shadow:0 8px 28px rgba(0,0,0,.5); }
+  .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:50; display:flex; align-items:center; justify-content:center; }
+  details > summary { list-style:none; cursor:pointer; }
+  details > summary::-webkit-details-marker { display:none; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useMemo, useEffect, useCallback, useRef, Fragment } = React;
+
+// 通用:点外部即关闭
+function useClickOutside(ref, onClose, active){
+  useEffect(()=>{
+    if(!active) return;
+    const handler = (e)=>{
+      if(ref.current && !ref.current.contains(e.target)) onClose();
+    };
+    // 用 mousedown 比 click 更及时,避免新按下的按钮自己的 onClick 先触发一轮 open/close
+    document.addEventListener("mousedown", handler);
+    return ()=>document.removeEventListener("mousedown", handler);
+  },[active, onClose]);
+}
+
+/* =========================
+   Mock 数据
+========================= */
+const TOP_AGENT = { id:"qweqwe", nick:"qweqwe", type:"agent", topAgent:true };
+
+// 顶代持有的交收方案(多币种);非顶代下线永远单方案
+// 注:交收方案只有 币种 / 佣金率 / 可用余额,无"交收周期"字段
+const TOP_SCHEMES = [
+  { id:"S_PHP", currency:"PHP", rate:1.5, balance:6000000 },
+  { id:"S_USD", currency:"USD", rate:0.8, balance:120000  },
+  { id:"S_CNY", currency:"CNY", rate:1.2, balance:800000  }
+];
+
+// 初始下线树(平铺表示;每个账号绑定 schemeId)
+// winLoss 为本周期汇总输赢(玩家账号有数,代理账号聚合;此处为 mock 数值)
+// 户口号规则:child_id = {parent_id}-{父下递增序号};顶代为 "qweqwe",直属下线即 qweqwe-1 / qweqwe-2 / ...
+const INIT_ACCOUNTS = [
+  // PHP 线
+  { id:"qweqwe-1", parentId:"qweqwe", nick:"Carry",  user:"carry01",  type:"agent",  schemeId:"S_PHP", rate:0.5, balance:500000, totalBalance:708000, status:"on",  childCount:3, createdAt:"2026-02-10" }, // 50万 + Alice(20.5万 含Bob 0.5万) + Dave 0.3万 + Zoe 0 = 70.8万
+  { id:"qweqwe-1-1", parentId:"qweqwe-1", nick:"Alice", user:"alice88", type:"agent",  schemeId:"S_PHP", rate:0.3, balance:200000, totalBalance:205000, status:"on",  childCount:1, createdAt:"2026-02-28" },
+  { id:"qweqwe-1-1-1", parentId:"qweqwe-1-1", nick:"Bob", user:"bob_hi", type:"player", schemeId:"S_PHP", rate:0.1, balance:5000,   totalBalance:5000,   status:"on",  childCount:0, createdAt:"2026-03-15", winLoss:-1200, validBet:32000 },
+  { id:"qweqwe-1-2", parentId:"qweqwe-1", nick:"Dave",  user:"dave_y",  type:"player", schemeId:"S_PHP", rate:0.2, balance:3000,   totalBalance:3000,   status:"on",  childCount:0, createdAt:"2026-03-02", winLoss:800, validBet:12000 },
+  { id:"qweqwe-1-3", parentId:"qweqwe-1", nick:"Zoe",  user:"zoe_ph",  type:"player", schemeId:"S_PHP", rate:0.2, balance:0,      totalBalance:0,      status:"off", childCount:0, createdAt:"2026-02-15", winLoss:0, validBet:0 },
+  { id:"qweqwe-2", parentId:"qweqwe", nick:"Eva",    user:"eva_ph",   type:"player", schemeId:"S_PHP", rate:0.3, balance:8000,   totalBalance:8000,   status:"on",  childCount:0, createdAt:"2026-02-20", winLoss:-3500, validBet:80000 },
+  // USD 线
+  { id:"qweqwe-3", parentId:"qweqwe", nick:"Frank",  user:"frank_us", type:"agent",  schemeId:"S_USD", rate:0.4, balance:50000,  totalBalance:58000,  status:"on",  childCount:1, createdAt:"2026-03-01" },
+  { id:"qweqwe-3-1", parentId:"qweqwe-3", nick:"Gina", user:"gina_us", type:"player", schemeId:"S_USD", rate:0.2, balance:8000, totalBalance:8000, status:"on", childCount:0, createdAt:"2026-03-20", winLoss:320, validBet:4000 },
+  // CNY 线
+  { id:"qweqwe-4", parentId:"qweqwe", nick:"Hana",   user:"hana_cn",  type:"player", schemeId:"S_CNY", rate:0.5, balance:12000,  totalBalance:12000,  status:"on",  childCount:0, createdAt:"2026-04-05", winLoss:-200, validBet:6000 }
+];
+
+/* =========================
+   i18n
+========================= */
+const I18N = {
+  "zh-CN": {
+    _name:"中文", _short:"中",
+    header_menu:"账户管理中心", nav_account:"账号管理", nav_report:"数据报表", nav_finance:"财务管理", nav_notice:"公告管理",
+    hotline_vip:"STAR VIP 贵宾热线", hotline_agent:"STAR VIP 代理热线",
+    top_pwd:"修改密码", top_logout:"退出系统",
+    time_this_week:"本周", time_last_week:"上周", time_this_month:"本月", time_last_month:"上月",
+    btn_reset:"重置", btn_query:"查询",
+    summary_title:"币种汇总(按交收方案分组)",
+    col_currency:"币种", col_rate_top:"佣金率", col_win_loss:"输赢金额", col_valid_bet:"有效投注", col_balance_top:"可用余额", col_total_balance:"总线余额",
+    col_sys_id:"系统户口号", col_username:"用户账号", col_rate:"显示佣金率", col_balance:"可用余额", col_child:"下线数", col_status:"状态", col_type:"类型", col_action:"操作",
+    type_agent:"代理", type_player:"玩家",
+    st_on:"启用", st_off:"禁用",
+    btn_edit:"修改资料", btn_add:"新增下线", btn_credit_up:"上分", btn_credit_down:"下分", btn_more:"更多",
+    act_disable:"禁用账号", act_enable:"启用账号", act_scheme:"修改交收方案",
+    placeholder_search:"🔍 系统户口号(精确) 或 用户账号(模糊),两字段同时搜索",
+    btn_add_main:"+ 新增下线", empty:"暂无数据",
+    page_title:"账号管理", top_logged:"当前登录:qweqwe(qweqwe) · 顶级代理",
+    search_hits:n=>`搜索命中 ${n} 条,支持独立展开其子级`,
+    tips_title:"💡 测试 Tips:",
+    tips_pwd:"统一 Mock 操作密码 / 登录密码:",
+    tips_search:"搜索:单一输入框同时匹配两个独立字段 —— 系统户口号(精确) 与 用户账号(模糊)",
+    tips_add:"新增下线:顶代入口可选 3 条交收方案;代理行入口方案继承不可选",
+    tips_scheme:"FN-ACC-12 修改交收方案入口 → 顶代直属下线行尾「更多 ▾」→「修改交收方案」(刻意折叠一层防误触,属高危不可撤销动作);子树余额非 0 时第三步硬校验阻断",
+    tips_pwd_logout:"修改密码按入口区分:① 页内下拉菜单(默认)× / 取消 = 仅关闭;② 首次登录强制弹出 × / 取消 = 直接登出。两种场景修改成功后都会登出重登",
+    tips_pwd_force_sim:"模拟首次登录强制弹窗",
+    tips_i18n:"语言切换在右上角,中文下金额全量以「万」为单位展示(含小于 1 万的金额,例如 8,000 → 0.8 万、300 → 0.03 万)"
+  },
+  "en": {
+    _name:"English", _short:"EN",
+    header_menu:"Account Center", nav_account:"Accounts", nav_report:"Reports", nav_finance:"Finance", nav_notice:"Notices",
+    hotline_vip:"STAR VIP Hotline", hotline_agent:"Agent Hotline",
+    top_pwd:"Change Password", top_logout:"Log Out",
+    time_this_week:"This Week", time_last_week:"Last Week", time_this_month:"This Month", time_last_month:"Last Month",
+    btn_reset:"Reset", btn_query:"Query",
+    summary_title:"Currency Summary (by Settlement Scheme)",
+    col_currency:"Currency", col_rate_top:"Rate", col_win_loss:"Win/Loss", col_valid_bet:"Valid Bet", col_balance_top:"Available", col_total_balance:"Total Balance",
+    col_sys_id:"System Acct. No.", col_username:"Username", col_rate:"Display Rate", col_balance:"Available", col_child:"Subs", col_status:"Status", col_type:"Type", col_action:"Actions",
+    type_agent:"Agent", type_player:"Player",
+    st_on:"Active", st_off:"Disabled",
+    btn_edit:"Edit", btn_add:"Add Sub", btn_credit_up:"Top Up", btn_credit_down:"Top Down", btn_more:"More",
+    act_disable:"Disable", act_enable:"Enable", act_scheme:"Change Scheme",
+    placeholder_search:"🔍 System Acct. No. (exact) or Username (fuzzy) — both searched simultaneously",
+    btn_add_main:"+ Add Sub", empty:"No data",
+    page_title:"Account Management", top_logged:"Logged in: qweqwe (qweqwe) · Top Agent",
+    search_hits:n=>`${n} match(es) — expand sub-levels below`,
+    tips_title:"💡 Testing Tips:",
+    tips_pwd:"Unified mock operation / login password:",
+    tips_search:"Search: one input, simultaneously matches TWO independent fields — System Acct. No. (exact) and Username (fuzzy)",
+    tips_add:"Add Sub: from top-agent entry, 3 schemes selectable; from agent row entry, scheme inherited (read-only)",
+    tips_scheme:"FN-ACC-12 Change Scheme entry → direct-sub row's trailing 「More ▾」 menu → 「Change Scheme」 (intentionally nested one level as it is a high-risk, non-reversible action); step-3 hard check blocks when subtree has non-zero balance",
+    tips_pwd_logout:"Change Password depends on entry: ① top-bar menu (default) × / Cancel = close only; ② first-login forced prompt × / Cancel = logout. Both force re-login on success",
+    tips_pwd_force_sim:"Simulate first-login forced prompt",
+    tips_i18n:"Language switcher in the top-right corner. Chinese mode displays all amounts in 万 unit (including values below 10k, e.g. 8,000 → 0.8 万, 300 → 0.03 万). English / Korean modes keep the raw value with thousand separators."
+  },
+  "ko": {
+    _name:"한국어", _short:"한",
+    header_menu:"계정 관리 센터", nav_account:"계정 관리", nav_report:"데이터 리포트", nav_finance:"재무 관리", nav_notice:"공지 관리",
+    hotline_vip:"STAR VIP 핫라인", hotline_agent:"대리점 핫라인",
+    top_pwd:"비밀번호 변경", top_logout:"로그아웃",
+    time_this_week:"이번 주", time_last_week:"지난주", time_this_month:"이번 달", time_last_month:"지난달",
+    btn_reset:"초기화", btn_query:"조회",
+    summary_title:"통화 요약 (정산 방안별)",
+    col_currency:"통화", col_rate_top:"수수료율", col_win_loss:"손익", col_valid_bet:"유효 베팅", col_balance_top:"가용 잔액", col_total_balance:"총 잔액",
+    col_sys_id:"시스템 계좌번호", col_username:"사용자 계정", col_rate:"노출 수수료율", col_balance:"가용 잔액", col_child:"하위 수", col_status:"상태", col_type:"유형", col_action:"작업",
+    type_agent:"대리점", type_player:"플레이어",
+    st_on:"활성", st_off:"비활성",
+    btn_edit:"정보 수정", btn_add:"하위 추가", btn_credit_up:"포인트 지급", btn_credit_down:"포인트 회수", btn_more:"더보기",
+    act_disable:"계정 비활성", act_enable:"계정 활성", act_scheme:"정산 방안 변경",
+    placeholder_search:"🔍 시스템 계좌번호(정확) 또는 사용자 계정(부분) — 동시 검색",
+    btn_add_main:"+ 하위 추가", empty:"데이터 없음",
+    page_title:"계정 관리", top_logged:"로그인 중: qweqwe(qweqwe) · 최상위 대리",
+    search_hits:n=>`${n}건 조회됨 — 하위 수준 확장 가능`,
+    tips_title:"💡 테스트 팁:",
+    tips_pwd:"통합 목업 작업 / 로그인 비밀번호:",
+    tips_search:"검색: 하나의 입력창이 동시에 두 필드를 검색 — 시스템 계좌번호(정확) 및 사용자 계정(부분)",
+    tips_add:"하위 추가: 최상위 대리 진입 시 3개 방안 선택 가능; 대리 행 진입 시 방안 상속(읽기전용)",
+    tips_scheme:"FN-ACC-12 방안 변경 진입: 최상위 대리의 직속 하위 행 끝의 「더보기 ▾」 메뉴 → 「정산 방안 변경」 (고위험·되돌릴 수 없는 작업이므로 의도적으로 한 단계 접어둠); 하위 트리 잔액이 0이 아니면 3단계 하드 체크에서 차단",
+    tips_pwd_logout:"비밀번호 변경은 진입점에 따라 다름: ① 상단 메뉴(기본) × / 취소 = 단순 닫기; ② 최초 로그인 강제 팝업 × / 취소 = 바로 로그아웃. 성공 시 두 경우 모두 재로그인 강제",
+    tips_pwd_force_sim:"최초 로그인 강제 팝업 시뮬레이션",
+    tips_i18n:"우측 상단 언어 전환. 중문 모드는 1만 미만 포함 모든 금액을 「万」 단위로 표시(예: 8,000 → 0.8 万, 300 → 0.03 万). 영문 / 한국어 모드에서는 万 단위를 사용하지 않음."
+  }
+};
+const I18NCtx = React.createContext({lang:"zh-CN", t:I18N["zh-CN"]});
+const useT = ()=>React.useContext(I18NCtx);
+
+/* =========================
+   按语言格式化金额
+   - zh-CN: 全量以"万"为单位(无下限阈值),最多保留 4 位小数;
+            例如 8,000 → 0.8 万、300 → 0.03 万、0 → 0 万、-1,200 → -0.12 万
+   - en / ko: 国际千分位原值(最多 2 位小数),不使用"万"单位
+========================= */
+const fmtAmount = (lang, n) => {
+  if(n===undefined||n===null||isNaN(n)) return "-";
+  if(lang==="zh-CN"){
+    const v = n / 10000;
+    const s = v.toLocaleString("zh-CN", { maximumFractionDigits: 4 });
+    return s + " 万";
+  }
+  const locale = lang==="ko" ? "ko-KR" : "en-US";
+  return n.toLocaleString(locale, { maximumFractionDigits: 2 });
+};
+// 兼容旧调用:默认按 zh-CN(组件内会用 useT 获取 lang 再包一层)
+const fmt = n => fmtAmount("zh-CN", n);
+const uuid = () => Math.random().toString(36).slice(2,10);
+
+/* =========================
+   通用组件
+========================= */
+function Badge({children}) {
+  return <span className="badge-title">{children}</span>;
+}
+function FieldLabel({children, req}) {
+  return <label className={"block text-sm mb-1 "+(req?"req":"")}>{children}</label>;
+}
+function Modal({title, width=720, onClose, footer, children, warn=false}){
+  return (
+    <div className="modal-backdrop">
+      <div className="bg-card bd border rounded-lg shadow-2xl flex flex-col" style={{width, maxHeight:"90vh"}}>
+        <div className="flex items-center justify-between px-6 py-4 border-b bd">
+          <div className="flex-1 text-center">
+            <Badge>{warn?<span className="text-red-400">⚠ {title}</span>:title}</Badge>
+          </div>
+          <button onClick={onClose} className="muted hover:text-white text-xl leading-none">×</button>
+        </div>
+        <div className="flex-1 overflow-auto scroll px-6 py-5">{children}</div>
+        {footer && <div className="px-6 py-4 border-t bd flex justify-end gap-3">{footer}</div>}
+      </div>
+    </div>
+  );
+}
+function Toast({msg, onDone}){
+  useEffect(()=>{ const t = setTimeout(onDone, 2000); return ()=>clearTimeout(t); },[msg]);
+  return <div className="toast">{msg}</div>;
+}
+
+/* =========================
+   顶部 Bar
+========================= */
+function TopBar({onMenu, lang, setLang}){
+  const [open, setOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef(null);
+  const userRef = useRef(null);
+  useClickOutside(langRef, useCallback(()=>setLangOpen(false),[]), langOpen);
+  useClickOutside(userRef, useCallback(()=>setOpen(false),[]), open);
+  const {t} = useT();
+  return (
+    <div className="flex items-center justify-between bg-elev px-6" style={{height:56, borderBottom:"1px solid #2A2A2C"}}>
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded bg-gold flex items-center justify-center font-bold">体</div>
+        <div className="font-bold text-lg">体育代理后台</div>
+      </div>
+      <div className="flex items-center gap-10 text-sm muted">
+        <div>{t.hotline_vip} <span className="gold">400-000-0001</span></div>
+        <div>{t.hotline_agent} <span className="gold">400-000-0002</span></div>
+      </div>
+      <div className="flex items-center gap-5 text-sm">
+        <div className="relative" ref={langRef}>
+          <button onClick={()=>{ setLangOpen(v=>!v); setOpen(false); }} className="muted hover:text-white flex items-center gap-1">
+            🌐 {I18N[lang]._name} ▾
+          </button>
+          {langOpen && (
+            <div className="absolute right-0 top-8 bg-card bd border rounded shadow-xl w-36 z-40">
+              {Object.keys(I18N).map(k=>(
+                <button key={k}
+                        className={"w-full text-left px-4 py-2 row-hover text-sm "+(lang===k?"gold":"")}
+                        onClick={()=>{ setLang(k); setLangOpen(false); }}>
+                  <span className="mr-2 inline-block w-6 text-center font-bold">{I18N[k]._short}</span>
+                  {I18N[k]._name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="relative" ref={userRef}>
+          <button onClick={()=>{ setOpen(v=>!v); setLangOpen(false); }} className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-gold text-black flex items-center justify-center font-bold">q</div>
+            <span>qweqwe ▾</span>
+          </button>
+          {open && (
+            <div className="absolute right-0 top-10 bg-card bd border rounded shadow-xl w-44 z-40">
+              <button className="w-full text-left px-4 py-2 row-hover text-sm" onClick={()=>{setOpen(false); onMenu("changePwd")}}>{t.top_pwd}</button>
+              <div className="divider"></div>
+              <button className="w-full text-left px-4 py-2 row-hover text-sm" onClick={()=>{setOpen(false); onMenu("logout")}}>{t.top_logout}</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   左侧菜单
+========================= */
+function SideMenu(){
+  const {t} = useT();
+  return (
+    <div className="bg-elev" style={{width:220, minHeight:"calc(100vh - 56px)", borderRight:"1px solid #2A2A2C"}}>
+      <div className="px-4 py-5 text-sm muted">{t.header_menu}</div>
+      <div className="px-3">
+        <div className="px-4 py-3 rounded bg-card bd border-l-4 bd-gold font-semibold">{t.nav_account}</div>
+        <div className="px-4 py-3 muted text-sm mt-1">{t.nav_report}</div>
+        <div className="px-4 py-3 muted text-sm mt-1">{t.nav_finance}</div>
+        <div className="px-4 py-3 muted text-sm mt-1">{t.nav_notice}</div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   时间筛选区
+========================= */
+function TimeFilter({value, onChange, start, end, setStart, setEnd}){
+  const {t} = useT();
+  const btns = [["thisWeek",t.time_this_week],["lastWeek",t.time_last_week],["thisMonth",t.time_this_month],["lastMonth",t.time_last_month]];
+  return (
+    <div className="bg-card bd border rounded-lg p-5 flex items-center gap-3">
+      {btns.map(([k,l])=>(
+        <button key={k} onClick={()=>onChange(k)}
+          className={"h-9 px-5 rounded text-sm "+(value===k?"bg-gold":"bd border muted hover:text-white")}>
+          {l}
+        </button>
+      ))}
+      <div className="mx-3 muted">|</div>
+      <input type="date" value={start} onChange={e=>setStart(e.target.value)} className="input" style={{width:180}}/>
+      <span className="muted">→</span>
+      <input type="date" value={end} onChange={e=>setEnd(e.target.value)} className="input" style={{width:180}}/>
+      <button className="btn-secondary ml-auto">{t.btn_reset}</button>
+      <button className="btn-primary">{t.btn_query}</button>
+    </div>
+  );
+}
+
+/* =========================
+   币种汇总表
+========================= */
+function CurrencySummary({accounts}){
+  const {t, lang} = useT();
+  // 按 schemeId 聚合
+  // 规则:总线余额 = 顶代方案可用余额 + Σ 直属下线 totalBalance
+  //      (每个下线的 totalBalance 已递归包含自身可用余额与其所有子孙总线余额,
+  //       因此只加"直属下线"即可,不可平铺累加全树以免重复计算)
+  //      输赢 / 有效投注是玩家叶子节点的实际流水,全树汇总即可
+  const rows = TOP_SCHEMES.map(s=>{
+    const list = accounts.filter(a=>a.schemeId===s.id);
+    const directSubs = list.filter(a=>a.parentId==="qweqwe");
+    const winLoss = list.reduce((n,a)=>n+(a.winLoss||0),0);
+    const validBet = list.reduce((n,a)=>n+(a.validBet||0),0);
+    const totalBalance = s.balance + directSubs.reduce((n,a)=>n+(a.totalBalance||0),0);
+    return { ...s, winLoss, validBet, totalBalance };
+  });
+  return (
+    <div className="bg-card bd border rounded-lg mt-5 overflow-hidden">
+      <div className="px-5 py-3 text-sm muted border-b bd">{t.summary_title}</div>
+      <table className="w-full text-sm">
+        <thead className="table-head">
+          <tr className="text-center">
+            <th className="py-3 px-3 font-normal">{t.col_currency}</th>
+            <th className="py-3 px-3 font-normal">{t.col_rate_top}</th>
+            <th className="py-3 px-3 font-normal">{t.col_win_loss}</th>
+            <th className="py-3 px-3 font-normal">{t.col_valid_bet}</th>
+            <th className="py-3 px-3 font-normal">{t.col_balance_top}</th>
+            <th className="py-3 px-3 font-normal">{t.col_total_balance}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r=>(
+            <tr key={r.id} className="text-center row-hover" style={{borderTop:"1px solid #2A2A2C"}}>
+              <td className="py-3 px-3 font-semibold gold">{r.currency}</td>
+              <td className="py-3 px-3">{r.rate}%</td>
+              <td className={"py-3 px-3 "+(r.winLoss<0?"danger":r.winLoss>0?"good":"")}>{fmtAmount(lang, r.winLoss)}</td>
+              <td className="py-3 px-3">{fmtAmount(lang, r.validBet)}</td>
+              <td className="py-3 px-3">{fmtAmount(lang, r.balance)}</td>
+              <td className="py-3 px-3">{fmtAmount(lang, r.totalBalance)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* =========================
+   下线列表(树)
+========================= */
+function DownlineTable({accounts, expanded, toggle, openModal, searchHits}){
+  const {t, lang} = useT();
+  // 当前哪一行的 更多 ▾ 下拉是打开状态;null = 全部收起
+  const [moreOpenId, setMoreOpenId] = useState(null);
+  const moreRef = useRef(null);
+  useClickOutside(moreRef, useCallback(()=>setMoreOpenId(null),[]), moreOpenId !== null);
+  // 构建 parentId -> children
+  const map = useMemo(()=>{
+    const m = {};
+    accounts.forEach(a=>{ (m[a.parentId] = m[a.parentId]||[]).push(a); });
+    return m;
+  },[accounts]);
+
+  // 搜索模式:只渲染命中集合;命中 + 顶代
+  const searchMode = searchHits !== null;
+
+  const rowsToRender = [];
+  const walk = (parentId, depth) => {
+    const kids = map[parentId] || [];
+    kids.forEach(a=>{
+      rowsToRender.push({a, depth});
+      if(expanded.has(a.id) && a.type==="agent") walk(a.id, depth+1);
+    });
+  };
+  if(!searchMode){
+    walk("qweqwe", 0);
+  } else {
+    // 搜索:扁平渲染命中的账号;点击展开也同样可以
+    searchHits.forEach(a=>{
+      rowsToRender.push({a, depth:0, flat:true});
+      if(expanded.has(a.id) && a.type==="agent") walk(a.id, 1);
+    });
+  }
+
+  const schemeOf = id => TOP_SCHEMES.find(s=>s.id===id);
+
+  return (
+    <div className="bg-card bd border rounded-lg mt-5" style={{overflow:"visible"}}>
+      <table className="w-full text-sm">
+        <thead className="table-head">
+          <tr>
+            <th className="py-3 px-3 font-normal text-left" style={{width:"18%"}}>{t.col_sys_id}</th>
+            <th className="py-3 px-3 font-normal text-left" style={{width:"15%"}}>{t.col_username}</th>
+            <th className="py-3 px-3 font-normal">{t.col_currency}</th>
+            <th className="py-3 px-3 font-normal">{t.col_balance}</th>
+            <th className="py-3 px-3 font-normal">{t.col_total_balance}</th>
+            <th className="py-3 px-3 font-normal">{t.col_child}</th>
+            <th className="py-3 px-3 font-normal">{t.col_status}</th>
+            <th className="py-3 px-3 font-normal">{t.col_type}</th>
+            <th className="py-3 px-3 font-normal text-right">{t.col_action}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rowsToRender.length===0 && (
+            <tr><td colSpan="9" className="text-center muted py-10">{t.empty}</td></tr>
+          )}
+          {rowsToRender.map(({a,depth,flat},i)=>{
+            const sc = schemeOf(a.schemeId);
+            const isAgent = a.type==="agent";
+            const isExpanded = expanded.has(a.id);
+            return (
+              <tr key={a.id+i} className="row-hover" style={{borderTop:"1px solid #2A2A2C"}}>
+                <td className="py-3 px-3">
+                  <div className="flex items-center" style={{paddingLeft: depth*24}}>
+                    {isAgent ? (
+                      <button onClick={()=>toggle(a.id)} className="mr-2 gold w-4">
+                        {isExpanded ? "▼" : "▶"}
+                      </button>
+                    ) : <span className="mr-2 inline-block w-4"></span>}
+                    <div>
+                      <div className="gold font-mono">{a.id}{flat?<span className="ml-2 gold">★</span>:null}</div>
+                    </div>
+                  </div>
+                </td>
+                <td className="py-3 px-3">
+                  <div className="font-mono">{a.user}</div>
+                </td>
+                <td className="py-3 px-3 text-center">{sc?.currency}</td>
+                <td className="py-3 px-3 text-center">{fmtAmount(lang, a.balance)}</td>
+                <td className="py-3 px-3 text-center">{fmtAmount(lang, a.totalBalance)}</td>
+                <td className="py-3 px-3 text-center">{isAgent?a.childCount:"-"}</td>
+                <td className="py-3 px-3 text-center">
+                  <span className={"chip "+(a.status==="on"?"chip-on":"chip-off")}>{a.status==="on"?t.st_on:t.st_off}</span>
+                </td>
+                <td className="py-3 px-3 text-center">{isAgent?t.type_agent:t.type_player}</td>
+                <td className="py-3 px-3 text-right whitespace-nowrap">
+                  {isAgent && <button className="btn-ghost" onClick={()=>openModal({type:"add", parent:a})}>{t.btn_add}</button>}
+                  <button className="btn-ghost" onClick={()=>openModal({type:"edit", account:a})}>{t.btn_edit}</button>
+                  <button className="btn-ghost" onClick={()=>openModal({type:"credit-up", account:a})}>{t.btn_credit_up}</button>
+                  <button className="btn-ghost" onClick={()=>openModal({type:"credit-down", account:a})}>{t.btn_credit_down}</button>
+                  <span className="inline-block relative align-middle" ref={moreOpenId===a.id ? moreRef : null}>
+                    <button className="btn-ghost" onClick={()=>setMoreOpenId(id=>id===a.id?null:a.id)}>{t.btn_more} ▾</button>
+                    {moreOpenId===a.id && (
+                      <div className="absolute right-0 top-7 bg-card bd border rounded shadow-xl w-44 z-40 text-sm" style={{whiteSpace:"normal"}}>
+                        <button className="block w-full text-left px-4 py-2 row-hover" onClick={()=>{setMoreOpenId(null); openModal({type:"toggle", account:a});}}>
+                          {a.status==="on"?t.act_disable:t.act_enable}
+                        </button>
+                        {a.parentId==="qweqwe" && (
+                          <button className="block w-full text-left px-4 py-2 row-hover" onClick={()=>{setMoreOpenId(null); openModal({type:"scheme", account:a});}}>
+                            {t.act_scheme}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* =========================
+   新增下线弹窗(FN-ACC-04)
+========================= */
+function AddSubModal({parent, onClose, onSubmit, toast}){
+  const {lang} = useT();
+  const isTopAgent = parent.id === "qweqwe";
+  const parentRate = parent.rate ?? 1.5; // 顶代用方案上限;此处为 mock
+  // 预生成下一个序号
+  const nextSeq = useMemo(()=>{
+    // 查找 mock 中 parentId===parent.id 的最大序号
+    const prefix = parent.id+"-";
+    const seqs = INIT_ACCOUNTS.filter(a=>a.id.startsWith(prefix)).map(a=>parseInt(a.id.slice(prefix.length).split("-")[0],10));
+    return Math.max(0, ...seqs) + 1;
+  },[parent]);
+  const newId = parent.id + "-" + nextSeq;
+
+  const [form, setForm] = useState({
+    user:"", nick:"", pwd:"", pwdConfirm:"", phone:"", phone2:"",
+    type:"agent", status:"on",
+    schemeId: isTopAgent ? "" : parent.schemeId,
+    rate:"", opPwd:""
+  });
+  const [errors, setErrors] = useState({});
+
+  const scheme = TOP_SCHEMES.find(s=>s.id===form.schemeId);
+  const rateUpper = isTopAgent ? (scheme?.rate ?? 0) : parentRate;
+
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const validate = () => {
+    const e = {};
+    if(!/^[A-Za-z0-9]{6,20}$/.test(form.user)) e.user = "仅支持英文及数字,6~20 位";
+    if(!form.nick) e.nick = "请输入账户昵称";
+    if(!form.pwd) e.pwd = "请输入密码";
+    if(form.pwd !== form.pwdConfirm) e.pwdConfirm = "两次密码不一致";
+    if(!form.schemeId) e.scheme = "请选择一条交收方案";
+    if(form.rate === "" || isNaN(+form.rate)) e.rate = "请输入显示佣金率";
+    else if(+form.rate > rateUpper) e.rate = `不可超过上限 ${rateUpper}%`;
+    if(!form.opPwd) e.opPwd = "请输入操作密码";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const submit = () => {
+    if(!validate()) return;
+    if(form.opPwd !== "123456"){
+      setErrors(x=>({...x, opPwd:"操作密码错误"}));
+      return;
+    }
+    onSubmit({
+      id:newId, parentId:parent.id, nick:form.nick, user:form.user,
+      type:form.type, schemeId:form.schemeId, rate:+form.rate,
+      balance:0, totalBalance:0, status:form.status, childCount:0,
+      createdAt:new Date().toISOString().slice(0,10),
+      winLoss:0, validBet:0
+    });
+    toast(`新增成功:${newId}`);
+    onClose();
+  };
+
+  return (
+    <Modal title="新增下线" onClose={onClose} footer={
+      <>
+        <button className="btn-secondary" onClick={onClose}>取消</button>
+        <button className="btn-primary" onClick={submit}>确认</button>
+      </>
+    }>
+      {/* ① 关联信息 */}
+      <Section title="① 关联信息">
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div><span className="muted">上级信息:</span> {parent.nick}({parent.id})</div>
+          <div><span className="muted">系统户口号:</span> <span className="gold font-mono">{newId}</span></div>
+        </div>
+        <div className="muted text-xs mt-2">系统户口号永不回收、永不复用、永不变更</div>
+      </Section>
+
+      {/* ② 基本信息 */}
+      <Section title="② 基本信息">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <FieldLabel req>用户账号</FieldLabel>
+            <input className="input w-full" value={form.user} onChange={e=>set("user",e.target.value)} placeholder="6~20 位英文数字"/>
+            {errors.user && <div className="danger text-xs mt-1">{errors.user}</div>}
+          </div>
+          <div>
+            <FieldLabel req>账户昵称</FieldLabel>
+            <input className="input w-full" value={form.nick} onChange={e=>set("nick",e.target.value)}/>
+            {errors.nick && <div className="danger text-xs mt-1">{errors.nick}</div>}
+          </div>
+          <div>
+            <FieldLabel req>密码</FieldLabel>
+            <input type="password" className="input w-full" value={form.pwd} onChange={e=>set("pwd",e.target.value)}/>
+            {errors.pwd && <div className="danger text-xs mt-1">{errors.pwd}</div>}
+          </div>
+          <div>
+            <FieldLabel req>确认密码</FieldLabel>
+            <input type="password" className="input w-full" value={form.pwdConfirm} onChange={e=>set("pwdConfirm",e.target.value)}/>
+            {errors.pwdConfirm && <div className="danger text-xs mt-1">{errors.pwdConfirm}</div>}
+          </div>
+          <div>
+            <FieldLabel>电话号码</FieldLabel>
+            <input className="input w-full" value={form.phone} onChange={e=>set("phone",e.target.value)}/>
+          </div>
+          <div>
+            <FieldLabel>备用电话</FieldLabel>
+            <input className="input w-full" value={form.phone2} onChange={e=>set("phone2",e.target.value)}/>
+          </div>
+        </div>
+      </Section>
+
+      {/* ③ 账号属性 */}
+      <Section title="③ 账号属性">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <FieldLabel req>账号类型</FieldLabel>
+            <Radio value={form.type} onChange={v=>set("type",v)} options={[["agent","代理"],["player","游戏(玩家)"]]}/>
+          </div>
+          <div>
+            <FieldLabel req>账号状态</FieldLabel>
+            <Radio value={form.status} onChange={v=>set("status",v)} options={[["on","启用"],["off","禁用该账号及所有下线"]]}/>
+          </div>
+        </div>
+      </Section>
+
+      {/* ④ 交收方案 */}
+      <Section title="④ 交收方案(单选)">
+        {!isTopAgent ? (
+          <div className="bg-elev bd border rounded p-3 text-sm">
+            <div>下线账号继承上级交收方案,不可更换(币种 = {TOP_SCHEMES.find(s=>s.id===parent.schemeId)?.currency})</div>
+            <div className="muted text-xs mt-1">如需更换,走 FN-ACC-12 修改交收方案高危流程</div>
+          </div>
+        ) : (
+          <>
+            {errors.scheme && <div className="danger text-xs mb-2">{errors.scheme}</div>}
+            <table className="w-full text-sm bg-elev bd border rounded overflow-hidden">
+              <thead className="table-head">
+                <tr>
+                  <th className="py-2 px-3 w-10"></th>
+                  <th className="py-2 px-3">币种</th>
+                  <th className="py-2 px-3">佣金率</th>
+                  <th className="py-2 px-3">可用余额</th>
+                </tr>
+              </thead>
+              <tbody>
+                {TOP_SCHEMES.map(s=>(
+                  <tr key={s.id} className={"text-center row-hover "+(form.schemeId===s.id?"bd-gold":"")} style={{borderTop:"1px solid #2A2A2C"}} onClick={()=>set("schemeId",s.id)}>
+                    <td className="py-3 px-3"><input type="radio" checked={form.schemeId===s.id} onChange={()=>set("schemeId",s.id)}/></td>
+                    <td className="py-3 px-3 gold font-semibold">{s.currency}</td>
+                    <td className="py-3 px-3">{s.rate}%</td>
+                    <td className="py-3 px-3">{fmtAmount(lang, s.balance)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="muted text-xs mt-2">下线创建后终身单一币种 / 单一交收方案,切换须走 FN-ACC-12。</div>
+          </>
+        )}
+      </Section>
+
+      {/* ⑤ 游戏条件 */}
+      <Section title="⑤ 游戏条件(显示佣金率)">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <FieldLabel req>显示佣金率</FieldLabel>
+            <div className="flex items-center gap-2">
+              <input type="number" step="0.01" className="input flex-1" value={form.rate} onChange={e=>set("rate",e.target.value)}/>
+              <span className="muted">%</span>
+            </div>
+            <div className="muted text-xs mt-1">上限 {rateUpper}%;代理与玩家均必填</div>
+            {errors.rate && <div className="danger text-xs mt-1">{errors.rate}</div>}
+          </div>
+        </div>
+      </Section>
+
+      {/* ⑥ 安全校验 */}
+      <Section title="⑥ 安全校验">
+        <div>
+          <FieldLabel req>操作密码</FieldLabel>
+          <input type="password" className="input w-80" value={form.opPwd} onChange={e=>set("opPwd",e.target.value)} placeholder="当前登录代理的登录密码"/>
+          <div className="muted text-xs mt-1">Mock 密码:123456;连续 5 次错误锁定 10 分钟</div>
+          {errors.opPwd && <div className="danger text-xs mt-1">{errors.opPwd}</div>}
+        </div>
+      </Section>
+    </Modal>
+  );
+}
+
+function Section({title, children}){
+  return (
+    <div className="mb-5 bg-elev bd border rounded-lg p-4">
+      <div className="gold font-semibold mb-3">{title}</div>
+      {children}
+    </div>
+  );
+}
+function Radio({value, onChange, options}){
+  return (
+    <div className="flex items-center gap-5 h-10">
+      {options.map(([k,l])=>(
+        <label key={k} className="flex items-center gap-2 cursor-pointer">
+          <input type="radio" checked={value===k} onChange={()=>onChange(k)}/> {l}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+/* =========================
+   修改资料弹窗(FN-ACC-05)
+========================= */
+function EditProfileModal({account, onClose, onSubmit, toast}){
+  const parentRate = 1.5; // mock:简化为上级方案佣金率上限
+  const [form, setForm] = useState({
+    nick:account.nick, phone:"", phone2:"", remark:"",
+    rate:account.rate, resetPwd:"", status:account.status
+  });
+  const [errors, setErrors] = useState({});
+
+  const set = (k,v)=>setForm(f=>({...f,[k]:v}));
+
+  // 高敏感字段是否被修改
+  const highSensitive = form.rate !== account.rate || form.resetPwd !== "" || form.status !== account.status;
+
+  const [opPwd, setOpPwd] = useState("");
+
+  const submit = () => {
+    const e = {};
+    if(!form.nick) e.nick = "请输入账户昵称";
+    if(form.rate !== "" && (+form.rate > parentRate)) e.rate = `不可超过上级上限 ${parentRate}%`;
+    if(highSensitive && !opPwd) e.opPwd = "请输入操作密码";
+    if(highSensitive && opPwd && opPwd !== "123456") e.opPwd = "操作密码错误";
+    setErrors(e);
+    if(Object.keys(e).length) return;
+    onSubmit({...account, ...form, rate:+form.rate});
+    toast("修改成功");
+    onClose();
+  };
+
+  return (
+    <Modal title="修改资料" onClose={onClose} footer={
+      <>
+        <button className="btn-secondary" onClick={onClose}>取消</button>
+        <button className="btn-primary" onClick={submit}>确认</button>
+      </>
+    }>
+      <Section title="只读信息">
+        <div className="grid grid-cols-3 gap-4 text-sm">
+          <div><span className="muted">系统户口号:</span> <span className="gold font-mono">{account.id}</span></div>
+          <div><span className="muted">用户账号:</span> {account.user}</div>
+          <div><span className="muted">币种:</span> {TOP_SCHEMES.find(s=>s.id===account.schemeId)?.currency}</div>
+          <div><span className="muted">创建时间:</span> {account.createdAt}</div>
+          <div><span className="muted">账号类型:</span> {account.type==="agent"?"代理":"玩家"}</div>
+        </div>
+      </Section>
+
+      <Section title="低敏感字段(无需操作密码)">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <FieldLabel>账户昵称</FieldLabel>
+            <input className="input w-full" value={form.nick} onChange={e=>set("nick",e.target.value)}/>
+            {errors.nick && <div className="danger text-xs mt-1">{errors.nick}</div>}
+          </div>
+          <div>
+            <FieldLabel>电话号码</FieldLabel>
+            <input className="input w-full" value={form.phone} onChange={e=>set("phone",e.target.value)}/>
+          </div>
+          <div>
+            <FieldLabel>备用电话</FieldLabel>
+            <input className="input w-full" value={form.phone2} onChange={e=>set("phone2",e.target.value)}/>
+          </div>
+          <div>
+            <FieldLabel>备注(代理内部,最长 200 字)</FieldLabel>
+            <input className="input w-full" value={form.remark} onChange={e=>set("remark",e.target.value)} maxLength={200}/>
+          </div>
+        </div>
+      </Section>
+
+      <Section title="高敏感字段(触发操作密码)">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <FieldLabel>显示佣金率</FieldLabel>
+            <div className="flex items-center gap-2">
+              <input type="number" step="0.01" className="input flex-1" value={form.rate} onChange={e=>set("rate",e.target.value)}/>
+              <span className="muted">%</span>
+            </div>
+            <div className="muted text-xs mt-1">上级上限 {parentRate}%;下线最大值 0.3%(mock)</div>
+            {errors.rate && <div className="danger text-xs mt-1">{errors.rate}</div>}
+          </div>
+          <div>
+            <FieldLabel>重置登录密码(选填)</FieldLabel>
+            <input type="password" className="input w-full" value={form.resetPwd} onChange={e=>set("resetPwd",e.target.value)} placeholder="留空表示不重置"/>
+            <div className="muted text-xs mt-1">填写则强制下线下次登录修改</div>
+          </div>
+          <div>
+            <FieldLabel>账号状态</FieldLabel>
+            <Radio value={form.status} onChange={v=>set("status",v)} options={[["on","启用"],["off","禁用"]]}/>
+          </div>
+        </div>
+      </Section>
+
+      {highSensitive && (
+        <Section title="安全校验(仅因高敏感字段被修改而出现)">
+          <div>
+            <FieldLabel req>操作密码</FieldLabel>
+            <input type="password" className="input w-80" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
+            <div className="muted text-xs mt-1">Mock 密码:123456</div>
+            {errors.opPwd && <div className="danger text-xs mt-1">{errors.opPwd}</div>}
+          </div>
+        </Section>
+      )}
+    </Modal>
+  );
+}
+
+/* =========================
+   上分 / 下分弹窗
+========================= */
+function CreditModal({dir, account, parent, onClose, onSubmit, toast}){
+  const [amount, setAmount] = useState("");
+  const [opPwd, setOpPwd] = useState("");
+  const [err, setErr] = useState({});
+  const sc = TOP_SCHEMES.find(s=>s.id===account.schemeId);
+  const parentBalance = parent.balance ?? (sc?.balance ?? 0);
+  const submit = ()=>{
+    const e={};
+    const a = parseFloat(amount);
+    if(!a || a<=0 || isNaN(a)) e.amount = "请输入正确金额";
+    else if(!/^\d+(\.\d{1,2})?$/.test(amount)) e.amount = "小数最多 2 位";
+    else if(dir==="up" && a > parentBalance) e.amount = `上级余额不足,当前可用 ${fmt(parentBalance)}`;
+    else if(dir==="down" && a > account.balance) e.amount = `下级余额不足`;
+    if(!opPwd) e.opPwd = "请输入操作密码";
+    else if(opPwd !== "123456") e.opPwd = "操作密码错误";
+    setErr(e);
+    if(Object.keys(e).length) return;
+    onSubmit(dir, account, a);
+    toast(dir==="up"?"上分成功":"下分成功");
+    onClose();
+  };
+  return (
+    <Modal title={dir==="up"?"为下线上分":"从下线下分"} onClose={onClose} footer={
+      <>
+        <button className="btn-secondary" onClick={onClose}>取消</button>
+        <button className="btn-primary" onClick={submit}>确认</button>
+      </>
+    } width={640}>
+      <Section title="① 上级信息">
+        <div>{parent.nick}({parent.id}) <span className="muted ml-3">代理线</span></div>
+        <div className="muted text-sm mt-1">币种:{sc?.currency} · 佣金率:{parent.rate ?? sc?.rate}% · 额度:{fmt(parentBalance)}</div>
+      </Section>
+      <Section title="② 下级信息">
+        <div>{account.nick}({account.id})</div>
+        <div className="muted text-sm mt-1">币种:{sc?.currency} · 佣金率:{account.rate}%</div>
+      </Section>
+      <Section title={"③ 金额输入 "+(dir==="up"?"(上分额度)":"(下级额度)")}>
+        <FieldLabel req>{dir==="up"?"上分额度":"下级额度"}</FieldLabel>
+        <input type="number" step="0.01" className="input w-80" value={amount} onChange={e=>setAmount(e.target.value)}/>
+        <div className="muted text-xs mt-1">不设单笔上限;真实钱流由账房侧关卡管控</div>
+        {err.amount && <div className="danger text-xs mt-1">{err.amount}</div>}
+      </Section>
+      <Section title="④ 安全校验">
+        <FieldLabel req>操作密码</FieldLabel>
+        <input type="password" className="input w-80" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
+        <div className="muted text-xs mt-1">Mock 密码:123456</div>
+        {err.opPwd && <div className="danger text-xs mt-1">{err.opPwd}</div>}
+      </Section>
+    </Modal>
+  );
+}
+
+/* =========================
+   启用 / 禁用 二次确认弹窗
+========================= */
+function ToggleModal({account, onClose, onSubmit, toast}){
+  const [opPwd, setOpPwd] = useState("");
+  const [err, setErr] = useState("");
+  const toOn = account.status !== "on";
+  const submit = ()=>{
+    if(!opPwd){ setErr("请输入操作密码"); return; }
+    if(opPwd !== "123456"){ setErr("操作密码错误"); return; }
+    onSubmit(account.id, toOn?"on":"off");
+    toast(toOn?"已启用":"已禁用(级联所有下线)");
+    onClose();
+  };
+  return (
+    <Modal title={toOn?"启用账号":"禁用账号"} onClose={onClose} warn={!toOn} width={540} footer={
+      <>
+        <button className="btn-secondary" onClick={onClose}>取消</button>
+        <button className="btn-primary" onClick={submit}>确认</button>
+      </>
+    }>
+      <div className="text-center text-lg mb-4">{toOn?"确认启用":"确认禁用"} <span className="gold">{account.nick}({account.id})</span></div>
+      {!toOn && (
+        <div className="bg-elev bd border rounded p-3 text-sm mb-4">
+          <div className="danger">⚠ 高危操作 · 默认级联禁用该账号及其所有下线</div>
+          <div className="muted mt-1">• 踢出已登录会话</div>
+          <div className="muted">• 禁止上分 / 下分 / 投注</div>
+          <div className="muted">• 下线数:{account.childCount} · 可用余额:{fmt(account.balance)}</div>
+        </div>
+      )}
+      <FieldLabel req>操作密码</FieldLabel>
+      <input type="password" className="input w-full" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
+      {err && <div className="danger text-xs mt-1">{err}</div>}
+    </Modal>
+  );
+}
+
+/* =========================
+   FN-ACC-12 修改交收方案(三步向导)
+========================= */
+function SchemeModal({account, accounts, onClose, onSubmit, toast}){
+  const {lang} = useT();
+  const [step, setStep] = useState(1);
+  const [ack, setAck] = useState(false);
+  const [newSchemeId, setNewSchemeId] = useState("");
+  const [newRate, setNewRate] = useState("");
+  const [opPwd, setOpPwd] = useState("");
+  const [confirmCheck, setConfirmCheck] = useState(false);
+  const [err, setErr] = useState("");
+
+  // 计算子树所有账号
+  const subtree = useMemo(()=>{
+    const result = [];
+    const walk = id=>{ accounts.filter(a=>a.parentId===id).forEach(a=>{ result.push(a); if(a.type==="agent") walk(a.id); }); };
+    walk(account.id);
+    return [account, ...result];
+  },[accounts, account]);
+
+  const hasBalance = subtree.some(a=>a.balance>0);
+  const curScheme = TOP_SCHEMES.find(s=>s.id===account.schemeId);
+  const targetScheme = TOP_SCHEMES.find(s=>s.id===newSchemeId);
+
+  const goNext = () => {
+    setErr("");
+    if(step===1){ if(!ack) return; setStep(2); return; }
+    if(step===2){ if(!newSchemeId) { setErr("请选择新方案"); return; } setStep(3); return; }
+    if(step===3){
+      if(hasBalance){ setErr("子树存在非零余额,无法切换(硬校验阻断)"); return; }
+      if(!newRate || +newRate<=0){ setErr("请输入新方案显示佣金率"); return; }
+      if(+newRate > (targetScheme?.rate ?? 100)){ setErr(`不可超过上限 ${targetScheme?.rate}%`); return; }
+      if(!opPwd){ setErr("请输入操作密码"); return; }
+      if(opPwd !== "123456"){ setErr("操作密码错误"); return; }
+      if(!confirmCheck){ setErr("请勾选确认项"); return; }
+      onSubmit(account.id, newSchemeId, +newRate, subtree.map(a=>a.id));
+      toast(`已切换至 ${targetScheme.currency};影响账号 ${subtree.length} 个`);
+      onClose();
+    }
+  };
+
+  return (
+    <Modal title={`修改交收方案 · 第 ${step} / 3 步`} onClose={onClose} warn={step===1} width={780} footer={
+      <>
+        <button className="btn-secondary" onClick={onClose}>取消</button>
+        {step>1 && <button className="btn-secondary" onClick={()=>{ setErr(""); setStep(step-1); }}>上一步</button>}
+        <button className={"btn-primary "+(step===1 && !ack ? "opacity-40 cursor-not-allowed":"")} onClick={goNext} disabled={step===1 && !ack}>
+          {step===3?"确认切换":"下一步"}
+        </button>
+      </>
+    }>
+      {step===1 && (
+        <div>
+          <div className="bg-elev bd border rounded p-4 mb-4">
+            <div className="danger text-lg font-semibold mb-2">⚠ 高危操作 · 一经执行不可撤销</div>
+            <div className="muted text-sm space-y-1">
+              <div>• 影响账号数:<span className="text-white">{subtree.length}</span>(本账号 + 子树全部后代)</div>
+              <div>• 当前方案:{curScheme?.currency}(佣金率 {curScheme?.rate}%)</div>
+              <div>• 切换后,整条线全部切换至新方案;旧方案下的余额、流水归档 ≥ 5 年</div>
+              <div>• 须满足前置条件:子树可用余额 = 0 / 无在途流水 / 无未结注单</div>
+              <div>• 子树当前余额检查:{hasBalance?<span className="danger">存在非零账号,将在硬校验阶段被拒绝</span>:<span className="good">全部为 0,通过</span>}</div>
+            </div>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={ack} onChange={e=>setAck(e.target.checked)}/>
+            <span>我已阅读并理解以上影响,点击继续</span>
+          </label>
+        </div>
+      )}
+      {step===2 && (
+        <div>
+          <Section title="当前方案(只读)">
+            <div>{curScheme?.currency} · 佣金率 {curScheme?.rate}%</div>
+          </Section>
+          <Section title="选择新方案(单选)">
+            <table className="w-full text-sm bg-elev bd border rounded overflow-hidden">
+              <thead className="table-head">
+                <tr><th className="py-2 px-3 w-10"></th><th className="py-2 px-3">币种</th><th className="py-2 px-3">佣金率</th><th className="py-2 px-3">可用余额</th></tr>
+              </thead>
+              <tbody>
+                {TOP_SCHEMES.filter(s=>s.id!==account.schemeId).map(s=>(
+                  <tr key={s.id} className={"text-center row-hover "+(newSchemeId===s.id?"bd-gold":"")} style={{borderTop:"1px solid #2A2A2C"}} onClick={()=>setNewSchemeId(s.id)}>
+                    <td className="py-3 px-3"><input type="radio" checked={newSchemeId===s.id} onChange={()=>setNewSchemeId(s.id)}/></td>
+                    <td className="py-3 px-3 gold font-semibold">{s.currency}</td>
+                    <td className="py-3 px-3">{s.rate}%</td>
+                    <td className="py-3 px-3">{fmtAmount(lang, s.balance)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Section>
+        </div>
+      )}
+      {step===3 && (
+        <div>
+          <div className="bg-elev bd border rounded p-4 mb-4 text-sm">
+            <div>将 <span className="gold">{account.nick}({account.id})</span> 及其 <span className="gold">{subtree.length-1}</span> 个下线</div>
+            <div>从 <span className="danger">{curScheme?.currency}</span> 切换至 <span className="good">{targetScheme?.currency}</span>(佣金率 {targetScheme?.rate}%)</div>
+          </div>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <FieldLabel req>新方案显示佣金率</FieldLabel>
+              <div className="flex items-center gap-2">
+                <input type="number" step="0.01" className="input flex-1" value={newRate} onChange={e=>setNewRate(e.target.value)}/>
+                <span className="muted">%</span>
+              </div>
+              <div className="muted text-xs mt-1">默认 = 该方案佣金率 {targetScheme?.rate}%;允许下调</div>
+            </div>
+            <div>
+              <FieldLabel req>操作密码</FieldLabel>
+              <input type="password" className="input w-full" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
+              <div className="muted text-xs mt-1">Mock 密码:123456</div>
+            </div>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer mb-3">
+            <input type="checkbox" checked={confirmCheck} onChange={e=>setConfirmCheck(e.target.checked)}/>
+            <span>我确认所有相关账户余额已清零且无在途订单</span>
+          </label>
+        </div>
+      )}
+      {err && <div className="danger text-sm mt-2">❌ {err}</div>}
+    </Modal>
+  );
+}
+
+/* =========================
+   修改密码弹窗
+========================= */
+function ChangePwdModal({onClose, forceLogout, toast, forced}){
+  const [oldP, setOldP] = useState("");
+  const [newP, setNewP] = useState("");
+  const [confP, setConfP] = useState("");
+  const [show, setShow] = useState([false,false,false]);
+  const [err, setErr] = useState({});
+  // 成功:两种场景都要清会话重登
+  const closeAndLogout = (msg)=>{ if(msg) toast(msg); onClose(); forceLogout(); };
+  // 取消 / × 的差异化:首次登录强制 → 登出;页内主动 → 仅关闭
+  const handleDismiss = ()=>{
+    if(forced){ toast("未修改密码,已退出登录"); onClose(); forceLogout(); }
+    else { onClose(); }
+  };
+  const submit = ()=>{
+    const e={};
+    if(!oldP) e.oldP = "请输入旧密码";
+    if(!/^\S{6,20}$/.test(newP)) e.newP = "6~20 位,不支持空格";
+    if(newP && newP===oldP) e.newP = "新密码不能与旧密码相同";
+    if(newP !== confP) e.confP = "两次新密码不一致";
+    setErr(e);
+    if(Object.keys(e).length) return;
+    // 后端业务错误:Toast 提示,弹窗保持打开,不登出(两场景一致,避免首登死循环)
+    if(oldP!=="123456"){ toast("旧密码错误,请重试"); setErr({oldP:"旧密码错误"}); return; }
+    // 成功:强制登出重登
+    closeAndLogout("密码修改成功,请重新登录");
+  };
+  return (
+    <div className="modal-backdrop">
+      <div className="bg-card bd border rounded-lg shadow-2xl" style={{width:560}}>
+        <div className="flex items-center justify-between px-6 py-4 border-b bd">
+          <div className="flex-1 text-center">
+            <Badge>修改密码{forced?<span className="ml-2 danger text-xs">· 首次登录强制</span>:null}</Badge>
+          </div>
+          <button onClick={handleDismiss} className="muted hover:text-white text-xl leading-none">×</button>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          {[["旧密码",oldP,setOldP,0,"oldP"],["新密码",newP,setNewP,1,"newP"],["确认新密码",confP,setConfP,2,"confP"]].map(([label,val,set,i,k])=>(
+            <div key={k}>
+              <FieldLabel req>请输入{label}</FieldLabel>
+              <div className="flex items-center gap-2">
+                <input type={show[i]?"text":"password"} className="input flex-1" value={val} onChange={e=>set(e.target.value)}/>
+                <button className="btn-secondary" onClick={()=>setShow(s=>{const n=[...s]; n[i]=!n[i]; return n;})}>{show[i]?"⊙":"⊘"}</button>
+              </div>
+              {err[k] && <div className="danger text-xs mt-1">{err[k]}</div>}
+            </div>
+          ))}
+          <div className="muted text-xs">
+            Mock 旧密码:<span className="gold">123456</span>。
+            {forced
+              ? "当前为「首次登录强制」场景:× / 取消 → 直接退出登录;修改成功 → 退出重登;旧密码错误 → 保持弹窗允许重试。"
+              : "当前为「页内主动」场景:× / 取消 → 仅关闭弹窗,会话保持;修改成功 → 仍强制重登;旧密码错误 → 保持弹窗允许重试。"}
+          </div>
+        </div>
+        <div className="px-6 py-4 border-t bd flex justify-end gap-3">
+          <button className="btn-secondary" onClick={handleDismiss}>取消</button>
+          <button className="btn-primary" onClick={submit}>确认</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   退出系统 确认弹窗
+========================= */
+function LogoutModal({onClose, forceLogout, toast}){
+  return (
+    <Modal title="退出" onClose={onClose} width={460} footer={
+      <>
+        <button className="btn-secondary" onClick={onClose}>取消</button>
+        <button className="btn-primary" onClick={()=>{ toast("已退出"); onClose(); forceLogout(); }}>确认</button>
+      </>
+    }>
+      <div className="text-center text-xl py-6">请确定是否退出代理系统</div>
+    </Modal>
+  );
+}
+
+/* =========================
+   登录页(退出后回到这里)
+========================= */
+function LoginPage({onLogin}){
+  const [user, setUser] = useState("qweqwe");
+  const [pwd, setPwd] = useState("");
+  const [err, setErr] = useState("");
+  const submit = ()=>{
+    if(!user || !pwd){ setErr("请输入账号与密码"); return; }
+    if(pwd !== "123456"){ setErr("密码错误(mock 为 123456)"); return; }
+    onLogin();
+  };
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="bg-card bd border rounded-xl shadow-2xl p-10 w-96">
+        <div className="text-center mb-6"><Badge>体育代理后台</Badge></div>
+        <FieldLabel req>账号</FieldLabel>
+        <input className="input w-full mb-4" value={user} onChange={e=>setUser(e.target.value)}/>
+        <FieldLabel req>密码</FieldLabel>
+        <input type="password" className="input w-full mb-4" value={pwd} onChange={e=>setPwd(e.target.value)} placeholder="Mock 密码:123456"/>
+        {err && <div className="danger text-xs mb-3">{err}</div>}
+        <button className="btn-primary w-full h-11" onClick={submit}>登录</button>
+        <div className="muted text-xs mt-4 text-center">原型版 · 仅用于走查 PRD V1.5</div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   App
+========================= */
+function App(){
+  const [logged, setLogged] = useState(true);
+  const [lang, setLang] = useState("zh-CN");
+  const t = I18N[lang] || I18N["zh-CN"];
+  const [accounts, setAccounts] = useState(INIT_ACCOUNTS);
+  const [timeRange, setTimeRange] = useState("thisMonth");
+  const [start, setStart] = useState("2026-04-01");
+  const [end, setEnd] = useState("2026-04-30");
+  const [keyword, setKeyword] = useState("");
+  const [expanded, setExpanded] = useState(new Set()); // 默认只展示当前登录账号(qweqwe)的直属下级,非直属下级收起;点击 ▶ 展开
+  const [modal, setModal] = useState(null);
+  const [toastMsg, setToastMsg] = useState(null);
+  const [searchHits, setSearchHits] = useState(null);
+  const toast = (m)=>setToastMsg(m);
+
+  const toggle = (id)=>setExpanded(s=>{ const n=new Set(s); n.has(id)?n.delete(id):n.add(id); return n; });
+
+  const doSearch = ()=>{
+    const q = keyword.trim();
+    if(!q){ setSearchHits(null); return; }
+    // 单一输入框,同时匹配两个独立字段:
+    //  - 系统户口号(id):精确匹配
+    //  - 用户账号(user):大小写不敏感的模糊匹配(contains)
+    const qLower = q.toLowerCase();
+    const hits = accounts.filter(a=>
+      a.id === q ||
+      (a.user && a.user.toLowerCase().includes(qLower))
+    );
+    setSearchHits(hits);
+  };
+  const reset = ()=>{ setKeyword(""); setSearchHits(null); setExpanded(new Set()); setTimeRange("thisMonth"); };
+
+  const openModal = m => setModal(m);
+  const closeModal = ()=>setModal(null);
+
+  const addAccount = a => setAccounts(list=>{
+    const next = [...list, a];
+    // 更新父级 childCount
+    return next.map(x=>x.id===a.parentId ? {...x, childCount:(x.childCount||0)+1} : x);
+  });
+  const updateAccount = a => setAccounts(list=> list.map(x=>x.id===a.id?{...x,...a}:x));
+  const transfer = (dir, account, amount) => setAccounts(list=> list.map(x=>{
+    if(x.id===account.id) return {...x, balance: x.balance + (dir==="up"?+amount:-amount)};
+    return x;
+  }));
+  const setStatus = (id, status) => setAccounts(list=>{
+    // 级联禁用:把 id 的整棵子树一起改;启用仅自己
+    if(status==="off"){
+      const hit = new Set([id]);
+      let changed = true;
+      while(changed){
+        changed = false;
+        list.forEach(a=>{ if(hit.has(a.parentId) && !hit.has(a.id)){ hit.add(a.id); changed=true; } });
+      }
+      return list.map(x=> hit.has(x.id) ? {...x, status} : x);
+    }
+    return list.map(x=>x.id===id?{...x,status}:x);
+  });
+  const changeScheme = (rootId, newSchemeId, newRate, affectedIds) => setAccounts(list=> list.map(x=>{
+    if(!affectedIds.includes(x.id)) return x;
+    return {...x, schemeId:newSchemeId, rate: x.id===rootId ? newRate : Math.min(x.rate, newRate)};
+  }));
+
+  if(!logged){
+    return (
+      <I18NCtx.Provider value={{lang, t, setLang}}>
+        <LoginPage onLogin={()=>setLogged(true)}/>
+      </I18NCtx.Provider>
+    );
+  }
+
+  return (
+    <I18NCtx.Provider value={{lang, t, setLang}}>
+    <div>
+      <TopBar onMenu={k=>openModal({type:k})} lang={lang} setLang={setLang}/>
+      <div className="flex">
+        <SideMenu/>
+        <div className="flex-1 p-6 scroll" style={{maxHeight:"calc(100vh - 56px)", overflow:"auto"}}>
+          <div className="flex items-center mb-4">
+            <div className="text-xl font-bold">{t.page_title}</div>
+            <div className="muted text-sm ml-3">{t.top_logged}</div>
+          </div>
+
+          <TimeFilter value={timeRange} onChange={setTimeRange} start={start} end={end} setStart={setStart} setEnd={setEnd}/>
+
+          <CurrencySummary accounts={accounts}/>
+
+          <div className="bg-card bd border rounded-lg mt-5 p-4 flex items-center gap-3">
+            <input className="input flex-1 max-w-sm" placeholder={t.placeholder_search} value={keyword} onChange={e=>setKeyword(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doSearch()}/>
+            <button className="btn-secondary" onClick={reset}>{t.btn_reset}</button>
+            <button className="btn-secondary" onClick={doSearch}>{t.btn_query}</button>
+            <div className="flex-1"></div>
+            <button className="btn-primary" onClick={()=>openModal({type:"add", parent:TOP_AGENT})}>{t.btn_add_main}</button>
+          </div>
+
+          {searchHits && <div className="muted text-xs mt-3">{t.search_hits(searchHits.length)}</div>}
+
+          <DownlineTable accounts={accounts} expanded={expanded} toggle={toggle} openModal={openModal} searchHits={searchHits}/>
+
+          <div className="muted text-xs mt-6 leading-6">
+            <div>{t.tips_title}</div>
+            <div>• {t.tips_pwd}<span className="gold">123456</span></div>
+            <div>• {t.tips_search}</div>
+            <div>• {t.tips_add}</div>
+            <div>• {t.tips_scheme}</div>
+            <div>• {t.tips_pwd_logout} <button className="btn-ghost ml-2" onClick={()=>openModal({type:"changePwd", forced:true})}>{t.tips_pwd_force_sim}</button></div>
+            <div>• {t.tips_i18n}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* 弹窗层 */}
+      {modal?.type==="add" && <AddSubModal parent={modal.parent} onClose={closeModal} onSubmit={addAccount} toast={toast}/>}
+      {modal?.type==="edit" && <EditProfileModal account={modal.account} onClose={closeModal} onSubmit={updateAccount} toast={toast}/>}
+      {(modal?.type==="credit-up" || modal?.type==="credit-down") && (
+        <CreditModal
+          dir={modal.type==="credit-up"?"up":"down"}
+          account={modal.account}
+          parent={accounts.find(a=>a.id===modal.account.parentId) || {...TOP_AGENT, rate:TOP_SCHEMES.find(s=>s.id===modal.account.schemeId)?.rate, balance:TOP_SCHEMES.find(s=>s.id===modal.account.schemeId)?.balance}}
+          onClose={closeModal} onSubmit={transfer} toast={toast}/>
+      )}
+      {modal?.type==="toggle" && <ToggleModal account={modal.account} onClose={closeModal} onSubmit={setStatus} toast={toast}/>}
+      {modal?.type==="scheme" && <SchemeModal account={modal.account} accounts={accounts} onClose={closeModal} onSubmit={changeScheme} toast={toast}/>}
+      {modal?.type==="changePwd" && <ChangePwdModal onClose={closeModal} forceLogout={()=>setLogged(false)} toast={toast} forced={!!modal.forced}/>}
+      {modal?.type==="logout" && <LogoutModal onClose={closeModal} forceLogout={()=>setLogged(false)} toast={toast}/>}
+
+      {toastMsg && <Toast msg={toastMsg} onDone={()=>setToastMsg(null)}/>}
+    </div>
+    </I18NCtx.Provider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
