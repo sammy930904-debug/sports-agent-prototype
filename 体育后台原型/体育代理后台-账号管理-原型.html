@@ -527,14 +527,14 @@ function AddSubModal({parent, onClose, onSubmit, toast}){
 
   const validate = () => {
     const e = {};
-    if(!/^[A-Za-z0-9]{6,20}$/.test(form.user)) e.user = "仅支持英文及数字,6~20 位";
-    if(!form.nick) e.nick = "请输入账户昵称";
-    if(!form.pwd) e.pwd = "请输入密码";
-    if(form.pwd !== form.pwdConfirm) e.pwdConfirm = "两次密码不一致";
-    if(!form.schemeId) e.scheme = "请选择一条交收方案";
-    if(form.rate === "" || isNaN(+form.rate)) e.rate = "请输入显示佣金率";
-    else if(+form.rate > rateUpper) e.rate = `不可超过上限 ${rateUpper}%`;
-    if(!form.opPwd) e.opPwd = "请输入操作密码";
+    if(!/^[A-Za-z0-9]{6,20}$/.test(form.user)) e.user = "用户账号仅支持英文及数字,长度 6~20 位";
+    if(!form.nick) e.nick = "请您输入账户昵称";
+    if(!form.pwd) e.pwd = "请您输入登录密码";
+    if(form.pwd !== form.pwdConfirm) e.pwdConfirm = "两次密码不一致,请您重新输入";
+    if(!form.schemeId) e.scheme = "请您选择一条交收方案";
+    if(form.rate === "" || isNaN(+form.rate)) e.rate = "请您输入显示佣金率";
+    else if(+form.rate > rateUpper) e.rate = `佣金率不能高于上级上限 ${rateUpper}%,请您调整后重试`;
+    if(!form.opPwd) e.opPwd = "请输入您的操作密码";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -542,7 +542,7 @@ function AddSubModal({parent, onClose, onSubmit, toast}){
   const submit = () => {
     if(!validate()) return;
     if(form.opPwd !== "123456"){
-      setErrors(x=>({...x, opPwd:"操作密码错误"}));
+      setErrors(x=>({...x, opPwd:"操作密码不正确,请您重新输入"}));
       return;
     }
     onSubmit({
@@ -552,7 +552,7 @@ function AddSubModal({parent, onClose, onSubmit, toast}){
       createdAt:new Date().toISOString().slice(0,10),
       winLoss:0, validBet:0
     });
-    toast(`新增成功:${newId}`);
+    toast(`已为您创建下线:${newId}`);
     onClose();
   };
 
@@ -675,7 +675,7 @@ function AddSubModal({parent, onClose, onSubmit, toast}){
         <div>
           <FieldLabel req>操作密码</FieldLabel>
           <input type="password" className="input w-80" value={form.opPwd} onChange={e=>set("opPwd",e.target.value)} placeholder="当前登录代理的登录密码"/>
-          <div className="muted text-xs mt-1">Mock 密码:123456;连续 5 次错误锁定 10 分钟</div>
+          <div className="muted text-xs mt-1">Mock 密码:123456;多次错误后操作会暂时受限</div>
           {errors.opPwd && <div className="danger text-xs mt-1">{errors.opPwd}</div>}
         </div>
       </Section>
@@ -723,14 +723,14 @@ function EditProfileModal({account, onClose, onSubmit, toast}){
 
   const submit = () => {
     const e = {};
-    if(!form.nick) e.nick = "请输入账户昵称";
-    if(form.rate !== "" && (+form.rate > parentRate)) e.rate = `不可超过上级上限 ${parentRate}%`;
-    if(highSensitive && !opPwd) e.opPwd = "请输入操作密码";
-    if(highSensitive && opPwd && opPwd !== "123456") e.opPwd = "操作密码错误";
+    if(!form.nick) e.nick = "请您输入账户昵称";
+    if(form.rate !== "" && (+form.rate > parentRate)) e.rate = `佣金率不能高于上级上限 ${parentRate}%,请您调整后重试`;
+    if(highSensitive && !opPwd) e.opPwd = "请输入您的操作密码";
+    if(highSensitive && opPwd && opPwd !== "123456") e.opPwd = "操作密码不正确,请您重新输入";
     setErrors(e);
     if(Object.keys(e).length) return;
     onSubmit({...account, ...form, rate:+form.rate});
-    toast("修改成功");
+    toast("修改已为您保存");
     onClose();
   };
 
@@ -822,16 +822,16 @@ function CreditModal({dir, account, parent, onClose, onSubmit, toast}){
   const submit = ()=>{
     const e={};
     const a = parseFloat(amount);
-    if(!a || a<=0 || isNaN(a)) e.amount = "请输入正确金额";
-    else if(!/^\d+(\.\d{1,2})?$/.test(amount)) e.amount = "小数最多 2 位";
-    else if(dir==="up" && a > parentBalance) e.amount = `上级余额不足,当前可用 ${fmt(parentBalance)}`;
-    else if(dir==="down" && a > account.balance) e.amount = `下级余额不足`;
-    if(!opPwd) e.opPwd = "请输入操作密码";
-    else if(opPwd !== "123456") e.opPwd = "操作密码错误";
+    if(!a || a<=0 || isNaN(a)) e.amount = "请您输入正确金额(最多 2 位小数)";
+    else if(!/^\d+(\.\d{1,2})?$/.test(amount)) e.amount = "请您输入正确金额(最多 2 位小数)";
+    else if(dir==="up" && a > parentBalance) e.amount = `上级余额不足,当前可用 ${fmt(parentBalance)},请您调整金额或先自账房补充`;
+    else if(dir==="down" && a > account.balance) e.amount = `下级当前余额不足,请您调整金额后重试`;
+    if(!opPwd) e.opPwd = "请输入您的操作密码";
+    else if(opPwd !== "123456") e.opPwd = "操作密码不正确,请您重新输入";
     setErr(e);
     if(Object.keys(e).length) return;
     onSubmit(dir, account, a);
-    toast(dir==="up"?"上分成功":"下分成功");
+    toast(dir==="up"?"已为您完成上分;最新余额已刷新":"已为您完成下分;最新余额已刷新");
     onClose();
   };
   return (
@@ -887,10 +887,10 @@ function ToggleModal({account, onClose, onSubmit, toast}){
   const [err, setErr] = useState("");
   const toOn = account.status !== "on";
   const submit = ()=>{
-    if(!opPwd){ setErr("请输入操作密码"); return; }
-    if(opPwd !== "123456"){ setErr("操作密码错误"); return; }
+    if(!opPwd){ setErr("请输入您的操作密码"); return; }
+    if(opPwd !== "123456"){ setErr("操作密码不正确,请您重新输入"); return; }
     onSubmit(account.id, toOn?"on":"off");
-    toast(toOn?"已启用":"已禁用(级联所有下线)");
+    toast(toOn?"账号已为您启用":"账号已为您暂停,同时级联停用所有下线");
     onClose();
   };
   return (
@@ -944,16 +944,16 @@ function SchemeModal({account, accounts, onClose, onSubmit, toast}){
   const goNext = () => {
     setErr("");
     if(step===1){ if(!ack) return; setStep(2); return; }
-    if(step===2){ if(!newSchemeId) { setErr("请选择新方案"); return; } setStep(3); return; }
+    if(step===2){ if(!newSchemeId) { setErr("请您选择一条新方案"); return; } setStep(3); return; }
     if(step===3){
-      if(hasBalance){ setErr("子树存在非零余额,无法切换(硬校验阻断)"); return; }
-      if(!newRate || +newRate<=0){ setErr("请输入新方案显示佣金率"); return; }
-      if(+newRate > (targetScheme?.rate ?? 100)){ setErr(`不可超过上限 ${targetScheme?.rate}%`); return; }
-      if(!opPwd){ setErr("请输入操作密码"); return; }
-      if(opPwd !== "123456"){ setErr("操作密码错误"); return; }
-      if(!confirmCheck){ setErr("请勾选确认项"); return; }
+      if(hasBalance){ setErr("该下线及其下属仍有余额,需全部清零后再切换;请您先完成余额归零"); return; }
+      if(!newRate || +newRate<=0){ setErr("请您输入新方案显示佣金率"); return; }
+      if(+newRate > (targetScheme?.rate ?? 100)){ setErr(`佣金率不能高于新方案上限 ${targetScheme?.rate}%,请您调整后重试`); return; }
+      if(!opPwd){ setErr("请输入您的操作密码"); return; }
+      if(opPwd !== "123456"){ setErr("操作密码不正确,请您重新输入"); return; }
+      if(!confirmCheck){ setErr("请您勾选最终确认项后再执行切换"); return; }
       onSubmit(account.id, newSchemeId, +newRate, subtree.map(a=>a.id));
-      toast(`已切换至 ${targetScheme.currency};影响账号 ${subtree.length} 个`);
+      toast(`已为您切换至 ${targetScheme.currency};本次影响账号 ${subtree.length} 个`);
       onClose();
     }
   };
@@ -1055,21 +1055,21 @@ function ChangePwdModal({onClose, forceLogout, toast, forced}){
   const closeAndLogout = (msg)=>{ if(msg) toast(msg); onClose(); forceLogout(); };
   // 取消 / × 的差异化:首次登录强制 → 登出;页内主动 → 仅关闭
   const handleDismiss = ()=>{
-    if(forced){ toast("未修改密码,已退出登录"); onClose(); forceLogout(); }
+    if(forced){ toast("未修改密码,已为您退出登录"); onClose(); forceLogout(); }
     else { onClose(); }
   };
   const submit = ()=>{
     const e={};
-    if(!oldP) e.oldP = "请输入旧密码";
-    if(!/^\S{6,20}$/.test(newP)) e.newP = "6~20 位,不支持空格";
-    if(newP && newP===oldP) e.newP = "新密码不能与旧密码相同";
-    if(newP !== confP) e.confP = "两次新密码不一致";
+    if(!oldP) e.oldP = "请您输入旧密码";
+    if(!/^\S{6,20}$/.test(newP)) e.newP = "新密码需 6~20 位,不支持空格";
+    if(newP && newP===oldP) e.newP = "新密码不能与旧密码相同,请您重新设置";
+    if(newP !== confP) e.confP = "两次新密码不一致,请您重新输入";
     setErr(e);
     if(Object.keys(e).length) return;
     // 后端业务错误:Toast 提示,弹窗保持打开,不登出(两场景一致,避免首登死循环)
-    if(oldP!=="123456"){ toast("旧密码错误,请重试"); setErr({oldP:"旧密码错误"}); return; }
+    if(oldP!=="123456"){ toast("旧密码不正确,请您重新输入"); setErr({oldP:"旧密码不正确,请您重新输入"}); return; }
     // 成功:强制登出重登
-    closeAndLogout("密码修改成功,请重新登录");
+    closeAndLogout("密码已为您更新,请您重新登录");
   };
   return (
     <div className="modal-backdrop">
@@ -1083,7 +1083,7 @@ function ChangePwdModal({onClose, forceLogout, toast, forced}){
         <div className="px-6 py-5 space-y-4">
           {[["旧密码",oldP,setOldP,0,"oldP"],["新密码",newP,setNewP,1,"newP"],["确认新密码",confP,setConfP,2,"confP"]].map(([label,val,set,i,k])=>(
             <div key={k}>
-              <FieldLabel req>请输入{label}</FieldLabel>
+              <FieldLabel req>请您输入{label}</FieldLabel>
               <div className="flex items-center gap-2">
                 <input type={show[i]?"text":"password"} className="input flex-1" value={val} onChange={e=>set(e.target.value)}/>
                 <button className="btn-secondary" onClick={()=>setShow(s=>{const n=[...s]; n[i]=!n[i]; return n;})}>{show[i]?"⊙":"⊘"}</button>
@@ -1094,8 +1094,8 @@ function ChangePwdModal({onClose, forceLogout, toast, forced}){
           <div className="muted text-xs">
             Mock 旧密码:<span className="gold">123456</span>。
             {forced
-              ? "当前为「首次登录强制」场景:× / 取消 → 直接退出登录;修改成功 → 退出重登;旧密码错误 → 保持弹窗允许重试。"
-              : "当前为「页内主动」场景:× / 取消 → 仅关闭弹窗,会话保持;修改成功 → 仍强制重登;旧密码错误 → 保持弹窗允许重试。"}
+              ? "当前为「首次登录强制」场景:× / 取消 → 直接退出登录;修改成功 → 退出重登;旧密码不正确 → 保持弹窗允许重试。"
+              : "当前为「页内主动」场景:× / 取消 → 仅关闭弹窗,会话保持;修改成功 → 仍强制重登;旧密码不正确 → 保持弹窗允许重试。"}
           </div>
         </div>
         <div className="px-6 py-4 border-t bd flex justify-end gap-3">
@@ -1115,7 +1115,7 @@ function LogoutModal({onClose, forceLogout, toast}){
     <Modal title="退出" onClose={onClose} width={460} footer={
       <>
         <button className="btn-secondary" onClick={onClose}>取消</button>
-        <button className="btn-primary" onClick={()=>{ toast("已退出"); onClose(); forceLogout(); }}>确认</button>
+        <button className="btn-primary" onClick={()=>{ toast("已为您退出代理后台,期待您再次使用"); onClose(); forceLogout(); }}>确认</button>
       </>
     }>
       <div className="text-center text-xl py-6">请确定是否退出代理系统</div>
@@ -1131,8 +1131,8 @@ function LoginPage({onLogin}){
   const [pwd, setPwd] = useState("");
   const [err, setErr] = useState("");
   const submit = ()=>{
-    if(!user || !pwd){ setErr("请输入账号与密码"); return; }
-    if(pwd !== "123456"){ setErr("密码错误(mock 为 123456)"); return; }
+    if(!user || !pwd){ setErr("请输入您的账号和密码"); return; }
+    if(pwd !== "123456"){ setErr("账号或密码不正确,请您再确认后输入"); return; }
     onLogin();
   };
   return (
