@@ -862,6 +862,7 @@ function CopyPreview({ lang }){
 /* =========================
    交收方案选择弹窗(桌面端) — 仅顶代登录后出现
    C 端 V0.3:卡片仅展示 余额 + 佣金率,去掉占成 / 洗码
+   V0.4:移除底部「取消」按钮,标题栏右上加「返回大厅」(与 H5 对齐)
 ========================= */
 function SchemeModal({ lang, schemes, onCancel, onConfirm }){
   const t = I18N[lang];
@@ -871,9 +872,16 @@ function SchemeModal({ lang, schemes, onCancel, onConfirm }){
     <div className="modal-backdrop">
       <div className="modal">
         {/* 标题 */}
-        <div className="px-6 pt-6 pb-3 border-b bd">
-          <div className="text-lg font-semibold gold">{t.scheme_title}</div>
-          <div className="text-xs muted mt-1">{t.scheme_desc}</div>
+        <div className="px-6 pt-6 pb-3 border-b bd flex items-start justify-between gap-4">
+          <div>
+            <div className="text-lg font-semibold gold">{t.scheme_title}</div>
+            <div className="text-xs muted mt-1">{t.scheme_desc}</div>
+          </div>
+          <button className="text-sm whitespace-nowrap"
+                  style={{color:"#F0B93A", padding:"6px 10px", borderRadius:8}}
+                  onClick={onCancel}>
+            {t.btn_back_to_lobby}
+          </button>
         </div>
 
         {/* 卡片网格 */}
@@ -910,9 +918,8 @@ function SchemeModal({ lang, schemes, onCancel, onConfirm }){
           </div>
         </div>
 
-        {/* 底部按钮 */}
+        {/* 底部按钮(V0.4:移除「取消」,仅留「进入游戏」;返回大厅走标题栏右上) */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bd">
-          <button className="btn-secondary" onClick={onCancel}>{t.btn_cancel}</button>
           <button className="btn-primary" style={{width:"auto", padding:"0 24px"}}
                   disabled={!selectedId}
                   onClick={()=>onConfirm(schemes.find(s=>s.id===selectedId))}>
@@ -970,9 +977,8 @@ function SchemePage({ lang, schemes, onCancel, onConfirm }){
         })}
       </div>
 
-      {/* 底部固定 CTA */}
+      {/* 底部固定 CTA(V0.4:移除「取消」,仅留「进入游戏」;返回大厅走右上角) */}
       <div className="sp-footer">
-        <button className="btn-secondary" onClick={onCancel}>{t.btn_cancel}</button>
         <button className="btn-primary-pill"
                 disabled={!selected}
                 onClick={()=>selected && onConfirm(selected)}>
