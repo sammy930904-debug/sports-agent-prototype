@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>STAR VIP GAME · 登录 原型 V0.3(含 H5)</title>
+<title>STAR VIP GAME · 原型 V0.3+(含 H5 / 大厅)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -190,6 +190,66 @@
     .mobile-only { display:flex; }
     .desktop-only { display:none; }
   }
+
+  /* ===== V0.4 大厅(静态版式) ===== */
+  .lobby-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 24px; border-bottom:1px solid rgba(42,42,44,.6);
+    position:relative; z-index:10;
+  }
+  .lobby-card {
+    position:relative;
+    border-radius:18px; padding:0;
+    border:2px solid rgba(255,255,255,.08);
+    cursor:pointer;
+    transition: border-color .15s, transform .08s, box-shadow .25s;
+    overflow:hidden;
+    display:block; text-align:left; width:100%;
+    min-height:220px;
+  }
+  .lobby-card:hover { transform: translateY(-3px); border-color:rgba(240,185,58,.55); }
+  .lobby-card.selected {
+    border-color:#F0B93A;
+    box-shadow: 0 0 0 3px rgba(240,185,58,.22), 0 12px 36px rgba(0,0,0,.55);
+    transform: translateY(-3px);
+  }
+  .lobby-card.selected:hover { transform: translateY(-3px); }
+  .lobby-card-inner {
+    position:relative;
+    height:100%; min-height:220px;
+    padding:28px 22px 22px;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.48) 100%);
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .lobby-card-icon {
+    font-size:56px; line-height:1;
+    filter: drop-shadow(0 6px 20px rgba(0,0,0,.55));
+  }
+  .lobby-card-name {
+    color:#FFFFFF; font-size:24px; font-weight:800;
+    letter-spacing:3px; margin-top:auto; text-shadow:0 2px 6px rgba(0,0,0,.5);
+  }
+  .lobby-card-desc {
+    color:rgba(255,255,255,.82); font-size:12.5px; letter-spacing:.5px;
+    text-shadow:0 1px 3px rgba(0,0,0,.4);
+  }
+  .lobby-card-check {
+    position:absolute; top:14px; right:14px;
+    width:34px; height:34px; border-radius:50%;
+    background:#F0B93A; color:#1F1F1F;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:18px;
+    box-shadow: 0 6px 16px rgba(240,185,58,.5);
+  }
+  /* H5 竖屏:卡片缩短一点 */
+  @media (max-width: 767px) {
+    .lobby-card, .lobby-card-inner { min-height:140px; }
+    .lobby-card-inner { padding:18px 16px 16px; gap:6px; }
+    .lobby-card-icon { font-size:40px; }
+    .lobby-card-name { font-size:20px; letter-spacing:2px; }
+    .lobby-card-desc { font-size:11.5px; }
+    .lobby-card-check { width:28px; height:28px; font-size:14px; top:10px; right:10px; }
+  }
 </style>
 </head>
 <body>
@@ -295,7 +355,18 @@ const I18N = {
     lang_pill:"中国", lang_flag:"🇨🇳",
     pwd_toggle_show:"显示密码", pwd_toggle_hide:"隐藏密码",
     clear_input:"清空",
-    exit_to_login:"退出登录"
+    exit_to_login:"退出登录",
+    // V0.4 大厅(静态版式)
+    lobby_title:"选择游戏",
+    lobby_desc:"请选择您要进入的游戏",
+    lobby_welcome_prefix:"欢迎,",
+    lobby_hint_unselected:"请先选择一款游戏",
+    cat_sports:"体育",
+    cat_sports_desc:"真人盘口 · 全球赛事",
+    cat_egame:"电子",
+    cat_egame_desc:"老虎机 · 捕鱼 · 电子桌游",
+    cat_lottery:"六合彩",
+    cat_lottery_desc:"官方开奖 · 多种玩法"
   },
   "en-US": {
     _name:"English", _short:"EN",
@@ -368,7 +439,18 @@ const I18N = {
     lang_pill:"English", lang_flag:"🇺🇸",
     pwd_toggle_show:"Show password", pwd_toggle_hide:"Hide password",
     clear_input:"Clear",
-    exit_to_login:"Sign out"
+    exit_to_login:"Sign out",
+    // V0.4 Lobby (static layout)
+    lobby_title:"Pick a Game",
+    lobby_desc:"Please choose the game you'd like to enter.",
+    lobby_welcome_prefix:"Welcome,",
+    lobby_hint_unselected:"Please pick a game first.",
+    cat_sports:"Sports",
+    cat_sports_desc:"Live odds · Global events",
+    cat_egame:"E-Games",
+    cat_egame_desc:"Slots · Fishing · Electronic table games",
+    cat_lottery:"Mark Six",
+    cat_lottery_desc:"Official draws · Multiple bets"
   },
   "ko-KR": {
     _name:"한국어", _short:"한",
@@ -441,7 +523,18 @@ const I18N = {
     lang_pill:"한국", lang_flag:"🇰🇷",
     pwd_toggle_show:"비밀번호 표시", pwd_toggle_hide:"비밀번호 숨기기",
     clear_input:"지우기",
-    exit_to_login:"로그아웃"
+    exit_to_login:"로그아웃",
+    // V0.4 로비(정적 레이아웃)
+    lobby_title:"게임 선택",
+    lobby_desc:"입장하실 게임을 선택해 주세요.",
+    lobby_welcome_prefix:"환영합니다,",
+    lobby_hint_unselected:"먼저 게임을 선택해 주세요.",
+    cat_sports:"스포츠",
+    cat_sports_desc:"라이브 배당 · 글로벌 경기",
+    cat_egame:"e-게임",
+    cat_egame_desc:"슬롯 · 피싱 · 전자 테이블 게임",
+    cat_lottery:"Mark Six",
+    cat_lottery_desc:"공식 추첨 · 다양한 베팅"
   }
 };
 
@@ -885,6 +978,107 @@ function SchemePage({ lang, schemes, onCancel, onConfirm }){
 }
 
 /* =========================
+   V0.4 大厅(静态版式)
+   - 3 个分类入口:体育 / 电子 / 六合彩
+   - 选中 → 底部「进入游戏」按钮点亮,点击唤起现有方案弹窗 / H5 方案页
+   - 顶部右上「退出登录」→ 回到登录页
+   - 双端响应式:桌面 3 列网格,H5 竖屏单列堆叠
+   - 不带钱包信息(卡片仅图标 + 名称 + 描述 + 选中勾)
+========================= */
+const LOBBY_CATEGORIES = (t) => [
+  { id:"sports",  name:t.cat_sports,  desc:t.cat_sports_desc,
+    icon:"⚽", bg:"linear-gradient(135deg,#1E6F42 0%,#2EAA61 55%,#195232 100%)" },
+  { id:"egame",   name:t.cat_egame,   desc:t.cat_egame_desc,
+    icon:"🎰", bg:"linear-gradient(135deg,#4B2E83 0%,#7A4DBD 55%,#2E1A55 100%)" },
+  { id:"lottery", name:t.cat_lottery, desc:t.cat_lottery_desc,
+    icon:"🎱", bg:"linear-gradient(135deg,#8E1A1A 0%,#C03030 55%,#5A1010 100%)" }
+];
+
+function LobbyPage({ lang, setLang, user, isMobile, onEnter, onLogout, interactive=true }){
+  const t = I18N[lang];
+  const cats = LOBBY_CATEGORIES(t);
+  const [selectedId, setSelectedId] = useState(null);
+
+  const go = ()=>{ if(selectedId && interactive) onEnter(selectedId); };
+
+  return (
+    <div className="stadium-bg min-h-screen flex flex-col">
+      {/* 顶部栏:品牌 + 欢迎 + 语言 + 退出登录 */}
+      <div className="lobby-header">
+        <div className="flex items-center gap-2">
+          <span className="gold text-xl logo-glow leading-none">★</span>
+          <span className="font-semibold tracking-wider text-sm sm:text-base">{t.brand}</span>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <span className="text-xs sm:text-sm muted hidden sm:inline">
+            {t.lobby_welcome_prefix}<span className="gold ml-1 font-semibold">{user?.nick}</span>
+          </span>
+          {isMobile
+            ? <LangPill lang={lang} setLang={setLang}/>
+            : <LangSwitcher lang={lang} setLang={setLang}/>
+          }
+          <button className="btn-secondary" style={{height:34, padding:"0 14px", fontSize:13}}
+                  onClick={()=>interactive && onLogout()}>
+            {t.exit_to_login}
+          </button>
+        </div>
+      </div>
+
+      {/* 主内容区:标题 + 3 张分类卡片 + 底部 CTA */}
+      <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-8 relative z-10">
+        <div className="text-center mb-6 sm:mb-10 logo-glow">
+          <div className="text-xl sm:text-2xl md:text-3xl font-bold gold tracking-[6px]">{t.lobby_title}</div>
+          <div className="text-xs sm:text-sm muted mt-3 tracking-wider">{t.lobby_desc}</div>
+          {/* H5 下显示欢迎语(桌面顶栏已有) */}
+          <div className="text-xs muted mt-2 sm:hidden">
+            {t.lobby_welcome_prefix}<span className="gold ml-1 font-semibold">{user?.nick}</span>
+          </div>
+        </div>
+
+        <div className="w-full max-w-5xl grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+          {cats.map(c=>{
+            const sel = c.id === selectedId;
+            return (
+              <button key={c.id}
+                      className={`lobby-card ${sel?"selected":""}`}
+                      style={{ background: c.bg }}
+                      onClick={()=>interactive && setSelectedId(c.id)}>
+                <div className="lobby-card-inner">
+                  <div className="lobby-card-icon">{c.icon}</div>
+                  <div className="lobby-card-name">{c.name}</div>
+                  <div className="lobby-card-desc">{c.desc}</div>
+                  {sel && <div className="lobby-card-check">✓</div>}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* 底部 CTA */}
+        <div className="w-full max-w-md mt-6 sm:mt-10 flex flex-col items-center gap-3">
+          {!selectedId && (
+            <div className="text-xs muted tracking-wider">{t.lobby_hint_unselected}</div>
+          )}
+          {isMobile ? (
+            <button className="btn-primary-pill" style={{maxWidth:360}}
+                    disabled={!selectedId} onClick={go}>
+              {t.btn_enter}
+            </button>
+          ) : (
+            <button className="btn-primary" style={{width:240}}
+                    disabled={!selectedId} onClick={go}>
+              {t.btn_enter}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="h-6"></div>
+    </div>
+  );
+}
+
+/* =========================
    三方游戏占位页
 ========================= */
 function ThirdPartyGame({ lang, user, scheme, onLogout }){
@@ -935,28 +1129,35 @@ function App(){
   const vp = useViewport();
   const [lang, setLang] = useState("zh-CN");
   const [devRole, setDevRole] = useState("top"); // top | sub
-  // stage: login | scheme | game
+  // stage: login | lobby | scheme | game
   const [stage, setStage] = useState("login");
   const [user, setUser] = useState(null);
+  const [category, setCategory] = useState(null); // sports | egame | lottery
   const [scheme, setScheme] = useState(null);
 
-  const reset = ()=>{ setStage("login"); setUser(null); setScheme(null); };
+  const reset = ()=>{ setStage("login"); setUser(null); setCategory(null); setScheme(null); };
 
+  // 登录 → 大厅(两类用户都先到大厅)
   const onLoggedIn = (u)=>{
     setUser(u);
-    if(u.topAgent){
+    setStage("lobby");
+  };
+
+  // 大厅 → 选方案(顶代)或直接进游戏(非顶代,方案继承)
+  const onLobbyEnter = (catId)=>{
+    setCategory(catId);
+    if(user.topAgent){
       setStage("scheme");
     } else {
-      // 非顶代:方案继承,直接进入游戏
-      setScheme(u.schemes[0]);
+      setScheme(user.schemes[0]);
       setStage("game");
     }
   };
 
-  const onSchemeCancel = ()=>{
-    // 取消 → 回到登录页
-    reset();
-  };
+  // 桌面端 方案弹窗「取消」→ 回大厅
+  const onSchemeCancelDesktop = ()=> setStage("lobby");
+  // H5 方案页 右上「退出登录」→ 直接回登录页(与按钮文案一致)
+  const onSchemeCancelH5 = ()=> reset();
 
   const onSchemeConfirm = (s)=>{
     setScheme(s);
@@ -974,23 +1175,31 @@ function App(){
                    onLoggedIn={onLoggedIn}/>
       )}
 
+      {stage==="lobby" && user && (
+        <LobbyPage lang={lang} setLang={setLang}
+                   user={user}
+                   isMobile={vp.isMobile}
+                   onEnter={onLobbyEnter}
+                   onLogout={reset}/>
+      )}
+
       {stage==="scheme" && user && (
         vp.isMobile ? (
-          /* H5:方案页是全屏的,不叠加登录页背景 */
+          /* H5:方案页全屏;右上「退出登录」= 完整登出 */
           <SchemePage lang={lang}
                       schemes={user.schemes}
-                      onCancel={onSchemeCancel}
+                      onCancel={onSchemeCancelH5}
                       onConfirm={onSchemeConfirm}/>
         ) : (
           <>
-            {/* 桌面端:弹窗叠在登录页背景上,更接近真实体验 */}
-            <LoginPage lang={lang} setLang={setLang}
-                       devRole={devRole}
-                       isMobile={false}
-                       onLoggedIn={()=>{}}/>
+            {/* 桌面端:弹窗叠在大厅页背景上;「取消」= 回大厅 */}
+            <LobbyPage lang={lang} setLang={setLang}
+                       user={user} isMobile={false}
+                       onEnter={()=>{}} onLogout={()=>{}}
+                       interactive={false}/>
             <SchemeModal lang={lang}
                          schemes={user.schemes}
-                         onCancel={onSchemeCancel}
+                         onCancel={onSchemeCancelDesktop}
                          onConfirm={onSchemeConfirm}/>
           </>
         )
