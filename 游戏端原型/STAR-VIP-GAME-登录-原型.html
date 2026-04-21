@@ -366,7 +366,9 @@ const I18N = {
     cat_egame:"电子",
     cat_egame_desc:"老虎机 · 捕鱼 · 电子桌游",
     cat_lottery:"六合彩",
-    cat_lottery_desc:"官方开奖 · 多种玩法"
+    cat_lottery_desc:"官方开奖 · 多种玩法",
+    // V0.4 大厅导航回退
+    btn_back_to_lobby:"返回大厅"
   },
   "en-US": {
     _name:"English", _short:"EN",
@@ -450,7 +452,9 @@ const I18N = {
     cat_egame:"E-Games",
     cat_egame_desc:"Slots · Fishing · Electronic table games",
     cat_lottery:"Mark Six",
-    cat_lottery_desc:"Official draws · Multiple bets"
+    cat_lottery_desc:"Official draws · Multiple bets",
+    // V0.4 Lobby nav back
+    btn_back_to_lobby:"Back to Lobby"
   },
   "ko-KR": {
     _name:"한국어", _short:"한",
@@ -534,7 +538,9 @@ const I18N = {
     cat_egame:"e-게임",
     cat_egame_desc:"슬롯 · 피싱 · 전자 테이블 게임",
     cat_lottery:"Mark Six",
-    cat_lottery_desc:"공식 추첨 · 다양한 베팅"
+    cat_lottery_desc:"공식 추첨 · 다양한 베팅",
+    // V0.4 로비 복귀
+    btn_back_to_lobby:"로비로 돌아가기"
   }
 };
 
@@ -919,10 +925,10 @@ function SchemeModal({ lang, schemes, onCancel, onConfirm }){
 }
 
 /* =========================
-   交收方案选择页(H5 全屏) — V0.3 新增
-   - 顶部 sticky 标题 + 右上角退出登录
+   交收方案选择页(H5 全屏) — V0.3 新增 / V0.4 改回大厅
+   - 顶部 sticky 标题 + 右上角「返回大厅」(V0.4 起,不再退出登录)
    - 卡片:左上角斜切金色丝带(国旗 + 币种)+ 右侧大号余额 + 底部「余额 / 佣金率」
-   - 底部固定 CTA:取消 / 进入游戏(横屏两列网格)
+   - 底部固定 CTA:取消 / 进入游戏(横屏两列网格);取消 = 返回大厅
 ========================= */
 function SchemePage({ lang, schemes, onCancel, onConfirm }){
   const t = I18N[lang];
@@ -934,7 +940,7 @@ function SchemePage({ lang, schemes, onCancel, onConfirm }){
       {/* 顶部标题 */}
       <div className="sp-header">
         <div className="sp-title">{t.scheme_title}</div>
-        <button className="sp-exit text-sm" onClick={onCancel}>{t.exit_to_login}</button>
+        <button className="sp-exit text-sm" onClick={onCancel}>{t.btn_back_to_lobby}</button>
       </div>
 
       {/* 卡片列表 */}
@@ -1080,8 +1086,9 @@ function LobbyPage({ lang, setLang, user, isMobile, onEnter, onLogout, interacti
 
 /* =========================
    三方游戏占位页
+   - V0.4 起:右上角「返回大厅」(原「退出游戏」),点击回大厅而非登录
 ========================= */
-function ThirdPartyGame({ lang, user, scheme, onLogout }){
+function ThirdPartyGame({ lang, user, scheme, onBackToLobby }){
   const t = I18N[lang];
   return (
     <div className="third-party-bg min-h-screen flex flex-col">
@@ -1090,7 +1097,7 @@ function ThirdPartyGame({ lang, user, scheme, onLogout }){
           <span className="gold text-xl">★</span>
           <span className="font-semibold tracking-wider">{t.brand}</span>
         </div>
-        <button className="btn-secondary" onClick={onLogout}>{t.btn_logout}</button>
+        <button className="btn-secondary" onClick={onBackToLobby}>{t.btn_back_to_lobby}</button>
       </div>
 
       <div className="flex-1 flex items-center justify-center px-6">
@@ -1154,14 +1161,19 @@ function App(){
     }
   };
 
-  // 桌面端 方案弹窗「取消」→ 回大厅
-  const onSchemeCancelDesktop = ()=> setStage("lobby");
-  // H5 方案页 右上「退出登录」→ 直接回登录页(与按钮文案一致)
-  const onSchemeCancelH5 = ()=> reset();
+  // 方案选择「取消 / 返回大厅」→ 回大厅(桌面与 H5 统一,V0.4 起不再退出登录)
+  const onSchemeCancel = ()=>{ setCategory(null); setStage("lobby"); };
 
   const onSchemeConfirm = (s)=>{
     setScheme(s);
     setStage("game");
+  };
+
+  // 三方游戏「返回大厅」→ 回大厅(清空方案与分类选择,便于再选别的)
+  const onGameBackToLobby = ()=>{
+    setScheme(null);
+    setCategory(null);
+    setStage("lobby");
   };
 
   return (
@@ -1185,10 +1197,10 @@ function App(){
 
       {stage==="scheme" && user && (
         vp.isMobile ? (
-          /* H5:方案页全屏;右上「退出登录」= 完整登出 */
+          /* H5:方案页全屏;右上「返回大厅」与底部「取消」一致 → 回大厅 */
           <SchemePage lang={lang}
                       schemes={user.schemes}
-                      onCancel={onSchemeCancelH5}
+                      onCancel={onSchemeCancel}
                       onConfirm={onSchemeConfirm}/>
         ) : (
           <>
@@ -1199,14 +1211,14 @@ function App(){
                        interactive={false}/>
             <SchemeModal lang={lang}
                          schemes={user.schemes}
-                         onCancel={onSchemeCancelDesktop}
+                         onCancel={onSchemeCancel}
                          onConfirm={onSchemeConfirm}/>
           </>
         )
       )}
 
       {stage==="game" && user && scheme && (
-        <ThirdPartyGame lang={lang} user={user} scheme={scheme} onLogout={reset}/>
+        <ThirdPartyGame lang={lang} user={user} scheme={scheme} onBackToLobby={onGameBackToLobby}/>
       )}
     </div>
   );
