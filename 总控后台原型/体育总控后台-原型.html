@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>体育游戏总控后台 · 原型 V0.2</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *{box-sizing:border-box}
+    html,body,#root{margin:0;padding:0;background:#0B0F15;color:#E6EAF0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh}
+    .bg-app{background:#0B0F15}
+    .bg-panel{background:#11161E}
+    .bg-card{background:#1A2434}
+    .bg-row-hover:hover{background:#1A2434}
+    .border-line{border-color:#2A3648}
+    .text-muted{color:#9AA4B5}
+    .text-faint{color:#6B7280}
+    .text-cool{color:#4A9EFF}
+    .bg-cool{background:#4A9EFF}
+    .bg-cool-soft{background:#0F1B2A}
+    .border-cool{border-color:#4A9EFF}
+    .ring-cool:focus{outline:2px solid #4A9EFF;outline-offset:1px}
+    .btn{padding:8px 14px;border-radius:6px;font-size:13px;font-weight:500;transition:.15s;cursor:pointer;border:1px solid transparent}
+    .btn-primary{background:#4A9EFF;color:#fff}
+    .btn-primary:hover{background:#5FA8FF}
+    .btn-primary:disabled{background:#2A3648;color:#6B7280;cursor:not-allowed}
+    .btn-ghost{background:transparent;color:#E6EAF0;border-color:#2A3648}
+    .btn-ghost:hover{border-color:#4A9EFF;color:#4A9EFF}
+    .btn-danger{background:#3A1F23;color:#FF6B6B;border-color:#5A2D33}
+    .btn-danger:hover{background:#5A2D33}
+    .input{background:#0B0F15;border:1px solid #2A3648;border-radius:6px;padding:8px 12px;font-size:13px;color:#E6EAF0;width:100%}
+    .input:focus{border-color:#4A9EFF;outline:none}
+    .chip{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;font-weight:500}
+    .chip-active{background:#0F2A1A;color:#5BC97C}
+    .chip-frozen{background:#3A1F23;color:#FF6B6B}
+    .chip-pending{background:#2A2415;color:#F0B93A}
+    .chip-settled{background:#0F2A1A;color:#5BC97C}
+    .chip-void{background:#2A2A30;color:#9AA4B5}
+    .chip-cool{background:#0F1B2A;color:#4A9EFF}
+    .chip-warn{background:#2A2415;color:#F0B93A}
+    .chip-info{background:#1A2434;color:#9AA4B5}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{text-align:left;padding:10px 12px;background:#0F141C;color:#9AA4B5;font-weight:500;border-bottom:1px solid #2A3648;white-space:nowrap}
+    td{padding:10px 12px;border-bottom:1px solid #1F2733;white-space:nowrap}
+    tr:hover td{background:#141B25}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:50}
+    .modal{background:#11161E;border:1px solid #2A3648;border-radius:10px;padding:24px;width:480px;max-width:92vw;max-height:90vh;overflow:auto}
+    .menu-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;color:#9AA4B5;transition:.15s}
+    .menu-item:hover{background:#1A2434;color:#E6EAF0}
+    .menu-item.active{background:#0F1B2A;color:#4A9EFF}
+    .menu-group{font-size:11px;color:#6B7280;padding:14px 12px 6px;letter-spacing:1px;font-weight:500}
+    .tab{padding:8px 16px;font-size:13px;color:#9AA4B5;cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+    .tab.active{color:#4A9EFF;border-bottom-color:#4A9EFF}
+    .scroll-x{overflow-x:auto}
+    .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+    .mono{font-family:"SF Mono",Monaco,Consolas,monospace}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo } = React;
+
+    // ============== 角色与权限 ==============
+    const ROLES = {
+      operator: { name: "平台运营", desc: "operator", color: "#4A9EFF",
+        menus: ["agents","reports.bets","reports.sports","reports.ledger","sys.audit"],
+        agentCols: [1,2,3,4,5,6,7,8,9,10,11,12], canWrite: true },
+      risk: { name: "风控审计", desc: "risk", color: "#F0B93A",
+        menus: ["agents","reports.bets","reports.sports","sys.audit"],
+        agentCols: [1,2,7,8,10,11,12], canWrite: false },
+      finance: { name: "财务对账", desc: "finance", color: "#5BC97C",
+        menus: ["agents","reports.bets","reports.sports","reports.ledger","sys.audit"],
+        agentCols: [1,2,3,4,6,7,9,10,12], canWrite: false },
+    };
+
+    // ============== Mock 数据 ==============
+    const TOP_AGENTS = [
+      { id:"qweqwe", nick:"Alpha", accHouse:"AH-001", scheme:"KRW-100%", rateMax:0.075, balance:12_580_000, currency:"KRW", subCount:48, monthBet:284_500_000, monthCommission:18_492_500, status:"active", lastLogin:"2026-04-29 14:22:18", createdAt:"2025-11-12 09:14:33" },
+      { id:"lucky88", nick:"Lucky88", accHouse:"AH-002", scheme:"PHP-50%", rateMax:0.060, balance:894_320, currency:"PHP", subCount:23, monthBet:6_842_000, monthCommission:342_100, status:"active", lastLogin:"2026-04-29 09:08:45", createdAt:"2025-12-03 11:22:08" },
+      { id:"diamond", nick:"Diamond", accHouse:"AH-003", scheme:"USD-30%", rateMax:0.080, balance:24_890.55, currency:"USD", subCount:67, monthBet:482_300, monthCommission:33_761, status:"active", lastLogin:"2026-04-29 16:30:02", createdAt:"2025-09-25 15:48:19" },
+      { id:"emerald", nick:"Emerald", accHouse:"AH-004", scheme:"USD-30%", rateMax:0.070, balance:0, currency:"USD", subCount:12, monthBet:0, monthCommission:0, status:"frozen", lastLogin:"2026-04-15 10:11:30", createdAt:"2026-01-08 14:25:11" },
+      { id:"sapphire", nick:"Sapphire", accHouse:"AH-005", scheme:"KRW-100%", rateMax:0.075, balance:3_240_000, currency:"KRW", subCount:34, monthBet:128_400_000, monthCommission:8_988_000, status:"active", lastLogin:"2026-04-29 11:45:08", createdAt:"2026-02-14 16:32:55" },
+    ];
+
+    const MOCK_BETS = [
+      { id:"BET-20260429-0042", playerId:"P-qw-008", topAgent:"qweqwe", provider:"BBIN 体育", gameType:"体育 ⚽", betTime:"2026-04-29 16:08:22", stake:120_000, payout:0, winLoss:0, currency:"KRW", status:"未结算" },
+      { id:"BET-20260429-0041", playerId:"P-dia-021", topAgent:"diamond", provider:"PG SOFT", gameType:"电子 🎰", betTime:"2026-04-29 16:05:11", stake:50, payout:185, winLoss:135, currency:"USD", status:"已结算" },
+      { id:"BET-20260429-0040", playerId:"P-qw-008", topAgent:"qweqwe", provider:"BBIN 体育", gameType:"体育 ⚽", betTime:"2026-04-29 15:58:03", stake:200_000, payout:380_000, winLoss:180_000, currency:"KRW", status:"已结算" },
+      { id:"BET-20260429-0039", playerId:"P-sap-014", topAgent:"sapphire", provider:"VR 六合彩", gameType:"六合彩 🎱", betTime:"2026-04-29 15:30:00", stake:500_000, payout:0, winLoss:-500_000, currency:"KRW", status:"已结算" },
+      { id:"BET-20260429-0038", playerId:"P-luk-005", topAgent:"lucky88", provider:"PG SOFT", gameType:"电子 🎰", betTime:"2026-04-29 15:22:47", stake:200, payout:0, winLoss:-200, currency:"PHP", status:"已结算" },
+      { id:"BET-20260429-0037", playerId:"P-qw-003", topAgent:"qweqwe", provider:"BBIN 体育", gameType:"体育 ⚽", betTime:"2026-04-29 14:50:18", stake:80_000, payout:152_000, winLoss:72_000, currency:"KRW", status:"已结算" },
+      { id:"BET-20260429-0036", playerId:"P-dia-014", topAgent:"diamond", provider:"BBIN 体育", gameType:"体育 ⚽", betTime:"2026-04-29 14:30:00", stake:1500, payout:2700, winLoss:1200, currency:"USD", status:"已结算" },
+      { id:"BET-20260429-0035", playerId:"P-qw-008", topAgent:"qweqwe", provider:"VR 六合彩", gameType:"六合彩 🎱", betTime:"2026-04-29 14:00:05", stake:50_000, payout:0, winLoss:-50_000, currency:"KRW", status:"已结算" },
+      { id:"BET-20260429-0034", playerId:"P-sap-002", topAgent:"sapphire", provider:"BBIN 体育", gameType:"体育 ⚽", betTime:"2026-04-29 13:42:30", stake:300_000, payout:0, winLoss:-300_000, currency:"KRW", status:"已结算" },
+      { id:"BET-20260429-0033", playerId:"P-luk-002", topAgent:"lucky88", provider:"BBIN 体育", gameType:"体育 ⚽", betTime:"2026-04-29 13:20:11", stake:1000, payout:1850, winLoss:850, currency:"PHP", status:"已结算" },
+      { id:"BET-20260429-0032", playerId:"P-qw-001", topAgent:"qweqwe", provider:"BBIN 体育", gameType:"体育 ⚽", betTime:"2026-04-29 12:55:00", stake:150_000, payout:0, winLoss:-150_000, currency:"KRW", status:"已结算" },
+      { id:"BET-20260429-0031", playerId:"P-dia-008", topAgent:"diamond", provider:"PG SOFT", gameType:"电子 🎰", betTime:"2026-04-29 12:30:42", stake:200, payout:0, winLoss:-200, currency:"USD", status:"已结算" },
+    ];
+
+    const MOCK_SPORTS_SESSIONS = [
+      { id:"SP-20260428-qweqwe-001", date:"2026-04-28", topAgent:"qweqwe", topNick:"Alpha", betCount:382, playerCount:48, totalStake:124_500_000, validStake:118_000_000, totalWinLoss:8_320_000, rate:0.0750, commission:8_850_000, status:"settled", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
+      { id:"SP-20260428-diamond-001", date:"2026-04-28", topAgent:"diamond", topNick:"Diamond", betCount:124, playerCount:35, totalStake:218_400, validStake:210_500, totalWinLoss:18_300, rate:0.0800, commission:16_840, status:"settled", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
+      { id:"SP-20260428-lucky88-001", date:"2026-04-28", topAgent:"lucky88", topNick:"Lucky88", betCount:67, playerCount:18, totalStake:3_120_000, validStake:2_980_000, totalWinLoss:-184_000, rate:0.0600, commission:178_800, status:"settled", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
+      { id:"SP-20260428-sapphire-001", date:"2026-04-28", topAgent:"sapphire", topNick:"Sapphire", betCount:158, playerCount:27, totalStake:54_800_000, validStake:52_300_000, totalWinLoss:3_140_000, rate:0.0750, commission:3_922_500, status:"settled", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
+      { id:"SP-20260428-emerald-001", date:"2026-04-28", topAgent:"emerald", topNick:"Emerald", betCount:0, playerCount:0, totalStake:0, validStake:0, totalWinLoss:0, rate:0.0700, commission:0, status:"void", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
+      { id:"SP-20260427-qweqwe-001", date:"2026-04-27", topAgent:"qweqwe", topNick:"Alpha", betCount:412, playerCount:51, totalStake:142_300_000, validStake:135_800_000, totalWinLoss:-4_180_000, rate:0.0750, commission:10_185_000, status:"settled", batchTime:"2026-04-28 02:30:08", batchId:"BATCH-20260428-001" },
+      { id:"SP-20260427-diamond-001", date:"2026-04-27", topAgent:"diamond", topNick:"Diamond", betCount:138, playerCount:38, totalStake:248_900, validStake:241_200, totalWinLoss:-12_400, rate:0.0800, commission:19_296, status:"settled", batchTime:"2026-04-28 02:30:08", batchId:"BATCH-20260428-001" },
+    ];
+
+    const MOCK_LEDGER = [
+      { id:"TX-20260429-3201", time:"2026-04-29 16:08:30", type:"transfer_in", typeLabel:"转入三方", from:"sapphire (代理)", to:"BBIN 体育 (三方平台)", amount:500_000, currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3200", time:"2026-04-29 15:58:18", type:"transfer_out", typeLabel:"三方回收", from:"BBIN 体育 (三方平台)", to:"qweqwe (代理)", amount:380_000, currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3199", time:"2026-04-29 15:30:42", type:"agent_credit", typeLabel:"代理上分", from:"qweqwe (顶代)", to:"qw-008 (下线)", amount:200_000, currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3198", time:"2026-04-29 14:55:00", type:"house_credit", typeLabel:"账房上分", from:"AH-001 (账房)", to:"qweqwe (顶代)", amount:5_000_000, currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3197", time:"2026-04-29 14:30:00", type:"transfer_in", typeLabel:"转入三方", from:"P-dia-014 (玩家)", to:"BBIN 体育 (三方平台)", amount:1500, currency:"USD", status:"成功" },
+      { id:"TX-20260429-3196", time:"2026-04-29 13:45:22", type:"agent_debit", typeLabel:"代理下分", from:"lucky88 (顶代)", to:"luk-002 (下线)", amount:1000, currency:"PHP", status:"成功" },
+      { id:"TX-20260429-3195", time:"2026-04-29 13:20:11", type:"transfer_out", typeLabel:"三方回收", from:"BBIN 体育 (三方平台)", to:"P-luk-002 (玩家)", amount:1850, currency:"PHP", status:"成功" },
+      { id:"TX-20260429-3194", time:"2026-04-29 12:08:45", type:"house_debit", typeLabel:"账房下分", from:"diamond (顶代)", to:"AH-003 (账房)", amount:8_500, currency:"USD", status:"成功" },
+      { id:"TX-20260429-3193", time:"2026-04-29 11:42:30", type:"transfer_in", typeLabel:"转入三方", from:"P-qw-008 (玩家)", to:"VR 六合彩 (三方平台)", amount:50_000, currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3192", time:"2026-04-29 11:15:00", type:"agent_credit", typeLabel:"代理上分", from:"qweqwe (顶代)", to:"qw-003 (下线)", amount:80_000, currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3191", time:"2026-04-29 10:30:18", type:"transfer_out", typeLabel:"三方回收", from:"PG SOFT (三方平台)", to:"P-luk-005 (玩家)", amount:0, currency:"PHP", status:"成功" },
+      { id:"TX-20260429-3190", time:"2026-04-29 09:50:44", type:"house_credit", typeLabel:"账房上分", from:"AH-002 (账房)", to:"lucky88 (顶代)", amount:200_000, currency:"PHP", status:"成功" },
+      { id:"TX-20260429-3189", time:"2026-04-29 09:08:33", type:"transfer_in", typeLabel:"转入三方", from:"P-dia-021 (玩家)", to:"PG SOFT (三方平台)", amount:50, currency:"USD", status:"成功" },
+      { id:"TX-20260428-3188", time:"2026-04-28 22:14:09", type:"transfer_out", typeLabel:"三方回收", from:"BBIN 体育 (三方平台)", to:"P-sap-014 (玩家)", amount:0, currency:"KRW", status:"超时重试" },
+    ];
+
+    const MOCK_AUDIT_SYSTEM = [
+      { time:"2026-04-29 14:22:18", actorType:"员工", actor:"admin (operator)", action:"调整佣金率", target:"顶代 lucky88", ip:"10.4.2.18", reason:"商务谈定本月升至 6.0%" },
+      { time:"2026-04-29 11:30:45", actorType:"员工", actor:"risk-mei (risk)", action:"切换角色", target:"role:risk", ip:"10.4.2.31", reason:"-" },
+      { time:"2026-04-29 10:08:22", actorType:"员工", actor:"admin (operator)", action:"导出报表", target:"体育场次记录 2026-04-28", ip:"10.4.2.18", reason:"月度结算" },
+      { time:"2026-04-28 16:45:11", actorType:"员工", actor:"admin (operator)", action:"冻结顶代", target:"顶代 emerald", ip:"10.4.2.18", reason:"对账多次失败 风控建议暂停" },
+      { time:"2026-04-28 14:30:00", actorType:"员工", actor:"finance-luo (finance)", action:"导出报表", target:"交易流水 2026-04-27", ip:"10.4.2.42", reason:"月底对账" },
+      { time:"2026-04-27 17:22:08", actorType:"员工", actor:"admin (operator)", action:"新增顶代", target:"顶代 sapphire", ip:"10.4.2.18", reason:"新合作方上线" },
+      { time:"2026-04-27 15:18:33", actorType:"员工", actor:"admin (operator)", action:"调整交收方案", target:"顶代 diamond  USD-50% → USD-30%", ip:"10.4.2.18", reason:"商务调整占成比例" },
+      { time:"2026-04-26 09:00:14", actorType:"员工", actor:"risk-mei (risk)", action:"导出报表", target:"注单记录 2026-04-25", ip:"10.4.2.31", reason:"风控周报采集" },
+    ];
+
+    const MOCK_AUDIT_PLAYER = [
+      { time:"2026-04-29 16:08:22", actorType:"玩家", actor:"P-qw-008", action:"投注", target:"BBIN 体育 / 注单 BET-20260429-0042", ip:"175.213.x.x", reason:"-" },
+      { time:"2026-04-29 16:05:11", actorType:"玩家", actor:"P-dia-021", action:"投注", target:"PG SOFT / 注单 BET-20260429-0041", ip:"172.58.x.x", reason:"-" },
+      { time:"2026-04-29 15:58:18", actorType:"玩家", actor:"P-qw-008", action:"返回大厅(回收)", target:"BBIN 体育 → 大厅", ip:"175.213.x.x", reason:"-" },
+      { time:"2026-04-29 15:30:42", actorType:"代理", actor:"qweqwe (顶代)", action:"上分", target:"下线 qw-008  +200,000 KRW", ip:"118.139.x.x", reason:"-" },
+      { time:"2026-04-29 15:22:47", actorType:"玩家", actor:"P-luk-005", action:"投注", target:"PG SOFT / 注单 BET-20260429-0038", ip:"180.190.x.x", reason:"-" },
+      { time:"2026-04-29 14:55:00", actorType:"代理", actor:"AH-001 (账房)", action:"账房上分", target:"顶代 qweqwe  +5,000,000 KRW", ip:"118.139.x.x", reason:"-" },
+      { time:"2026-04-29 14:30:00", actorType:"玩家", actor:"P-dia-014", action:"选交收方案", target:"USD-30%", ip:"172.58.x.x", reason:"-" },
+      { time:"2026-04-29 14:30:05", actorType:"玩家", actor:"P-dia-014", action:"进入游戏", target:"BBIN 体育", ip:"172.58.x.x", reason:"-" },
+      { time:"2026-04-29 13:45:22", actorType:"代理", actor:"lucky88 (顶代)", action:"下分", target:"下线 luk-002  -1,000 PHP", ip:"203.177.x.x", reason:"-" },
+      { time:"2026-04-29 13:20:00", actorType:"玩家", actor:"P-luk-002", action:"登录", target:"C 端登录", ip:"180.190.x.x", reason:"-" },
+      { time:"2026-04-29 12:30:42", actorType:"玩家", actor:"P-dia-008", action:"投注", target:"PG SOFT / 注单 BET-20260429-0031", ip:"172.58.x.x", reason:"-" },
+      { time:"2026-04-29 11:00:08", actorType:"代理", actor:"qweqwe (顶代)", action:"修改下线交收方案", target:"下线 qw-003  KRW-100% → KRW-80%", ip:"118.139.x.x", reason:"商务谈定" },
+      { time:"2026-04-29 10:45:14", actorType:"代理", actor:"qweqwe (顶代)", action:"隐藏佣金率列", target:"代理后台 / 下线列表", ip:"118.139.x.x", reason:"-" },
+    ];
+
+    // ============== 工具函数 ==============
+    const fmtNum = (n, dec=0) => {
+      if (n === 0) return "0";
+      if (typeof n !== "number") return n;
+      return n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    };
+    const fmtMoney = (n, cur) => {
+      const dec = (cur === "USD" || cur === "PHP") ? 2 : 0;
+      const sign = n < 0 ? "-" : "";
+      return sign + fmtNum(Math.abs(n), dec) + " " + cur;
+    };
+    const fmtPct = (n) => (n * 100).toFixed(2) + "%";
+    const StatusChip = ({ status }) => {
+      const map = { active:"chip-active", frozen:"chip-frozen", pending:"chip-pending", settled:"chip-settled", void:"chip-void", "未结算":"chip-pending", "已结算":"chip-settled" };
+      const txt = { active:"启用", frozen:"已冻结", pending:"待处理", settled:"已结算", void:"作废" };
+      return <span className={"chip " + (map[status] || "chip-info")}>{txt[status] || status}</span>;
+    };
+
+    // ============== 操作密码 + 审计原因 弹窗 (V0.1 沿用) ==============
+    function PasswordModal({ title, fields, onConfirm, onClose }) {
+      const [reason, setReason] = useState("");
+      const [pwd, setPwd] = useState("");
+      const [err, setErr] = useState("");
+      const submit = () => {
+        if (reason.trim().length < 2) { setErr("审计原因需至少 2 个字"); return; }
+        if (pwd !== "123456") { setErr("操作密码错误"); return; }
+        onConfirm({ reason: reason.trim(), pwd });
+      };
+      return (
+        <div className="modal-backdrop" onClick={onClose}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <h3 className="text-base font-semibold mb-1">{title}</h3>
+            <p className="text-xs text-faint mb-4">高风险操作 · 需审计原因 + 操作密码二次确认</p>
+            <div className="space-y-3">
+              {fields}
+              <div>
+                <label className="block text-xs text-muted mb-1">审计原因 <span className="text-cool">*</span></label>
+                <textarea className="input" rows="2" placeholder="例:商务谈定调整 / 风控建议冻结" value={reason} onChange={e=>setReason(e.target.value)}/>
+              </div>
+              <div>
+                <label className="block text-xs text-muted mb-1">操作密码 <span className="text-cool">*</span></label>
+                <input type="password" className="input" placeholder="Mock: 123456" value={pwd} onChange={e=>setPwd(e.target.value)}/>
+              </div>
+              {err && <div className="text-xs" style={{color:"#FF6B6B"}}>{err}</div>}
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <button className="btn btn-ghost" onClick={onClose}>取消</button>
+              <button className="btn btn-primary" onClick={submit}>确认提交</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============== 顶代户口页 ==============
+    function AgentsPage({ role, canWrite }) {
+      const [search, setSearch] = useState("");
+      const [statusFilter, setStatusFilter] = useState("all");
+      const [modal, setModal] = useState(null);
+      const cols = ROLES[role].agentCols;
+
+      const list = useMemo(() => TOP_AGENTS.filter(a => {
+        if (statusFilter !== "all" && a.status !== statusFilter) return false;
+        if (search && !(a.id.includes(search) || a.nick.toLowerCase().includes(search.toLowerCase()))) return false;
+        return true;
+      }), [search, statusFilter]);
+
+      const colDefs = [
+        { id:1, label:"顶代 ID", render:a => <span className="mono text-cool">{a.id}</span> },
+        { id:2, label:"昵称", render:a => a.nick },
+        { id:3, label:"账房户", render:a => <span className="mono text-muted">{a.accHouse}</span> },
+        { id:4, label:"交收方案", render:a => <span className="chip chip-cool">{a.scheme}</span> },
+        { id:5, label:"佣金率上限", render:a => fmtPct(a.rateMax) },
+        { id:6, label:"当前余额", render:a => <span className="num">{fmtMoney(a.balance, a.currency)}</span> },
+        { id:7, label:"下线总数", render:a => <span className="num">{a.subCount}</span> },
+        { id:8, label:"本月总投注", render:a => <span className="num">{fmtMoney(a.monthBet, a.currency)}</span> },
+        { id:9, label:"本月佣金", render:a => <span className="num text-cool">{fmtMoney(a.monthCommission, a.currency)}</span> },
+        { id:10, label:"状态", render:a => <StatusChip status={a.status}/> },
+        { id:11, label:"最近登录", render:a => <span className="text-muted">{a.lastLogin}</span> },
+        { id:12, label:"创建时间", render:a => <span className="text-muted">{a.createdAt}</span> },
+      ].filter(c => cols.includes(c.id));
+
+      return (
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-xl font-semibold">顶代户口</h2>
+              <p className="text-xs text-muted mt-1">平台直辖的顶代账号  ·  {ROLES[role].name} 视角可见 {cols.length} 列</p>
+            </div>
+            {canWrite && <button className="btn btn-primary" onClick={()=>setModal({type:"create"})}>+ 新增顶代</button>}
+          </div>
+          <div className="bg-panel border border-line rounded-lg p-4 mb-4 flex gap-3 items-center">
+            <input className="input flex-1 max-w-xs" placeholder="搜索顶代 ID / 昵称" value={search} onChange={e=>setSearch(e.target.value)}/>
+            <select className="input w-32" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
+              <option value="all">全部状态</option>
+              <option value="active">启用</option>
+              <option value="frozen">已冻结</option>
+              <option value="pending">待处理</option>
+            </select>
+            <span className="text-xs text-faint">共 {list.length} 条</span>
+          </div>
+          <div className="bg-panel border border-line rounded-lg overflow-hidden">
+            <div className="scroll-x">
+              <table>
+                <thead>
+                  <tr>
+                    {colDefs.map(c => <th key={c.id}>{c.label}</th>)}
+                    {canWrite && <th>操作</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.map(a => (
+                    <tr key={a.id}>
+                      {colDefs.map(c => <td key={c.id}>{c.render(a)}</td>)}
+                      {canWrite && <td>
+                        <div className="flex gap-2">
+                          {a.status === "active" ? <button className="btn btn-danger" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"freeze",agent:a})}>冻结</button> : a.status === "frozen" && <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"unfreeze",agent:a})}>解冻</button>}
+                          <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"rate",agent:a})}>调佣金率</button>
+                          <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"scheme",agent:a})}>调方案</button>
+                        </div>
+                      </td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {modal && <ActionModal modal={modal} onClose={()=>setModal(null)} onConfirm={()=>{ alert("已提交  ·  审计日志已记录"); setModal(null); }}/>}
+        </div>
+      );
+    }
+
+    function ActionModal({ modal, onClose, onConfirm }) {
+      const { type, agent } = modal;
+      if (type === "create") {
+        return <PasswordModal title="新增顶代" onClose={onClose} onConfirm={onConfirm}
+          fields={<>
+            <div><label className="block text-xs text-muted mb-1">顶代 ID *</label><input className="input" placeholder="例:goldenstar"/></div>
+            <div><label className="block text-xs text-muted mb-1">昵称 *</label><input className="input" placeholder="例:GoldenStar"/></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="block text-xs text-muted mb-1">账房户 *</label><select className="input"><option>AH-006</option><option>AH-007</option></select></div>
+              <div><label className="block text-xs text-muted mb-1">币种 *</label><select className="input"><option>KRW</option><option>USD</option><option>PHP</option></select></div>
+            </div>
+            <div><label className="block text-xs text-muted mb-1">初始交收方案 *</label><select className="input"><option>KRW-100% 占成</option><option>USD-50% 占成</option><option>PHP-30% 占成</option></select></div>
+            <div><label className="block text-xs text-muted mb-1">佣金率上限 *</label><input className="input" placeholder="例:7.5%"/></div>
+          </>}/>;
+      }
+      if (type === "freeze" || type === "unfreeze") {
+        const isFreeze = type === "freeze";
+        return <PasswordModal title={(isFreeze?"冻结":"解冻")+"顶代:" + agent.id} onClose={onClose} onConfirm={onConfirm}
+          fields={<>
+            <div className="bg-card border border-line rounded p-3 text-xs">
+              <div>顶代:<span className="mono text-cool">{agent.id}</span> ({agent.nick})</div>
+              <div className="mt-1 text-muted">当前余额:<span className="num">{fmtMoney(agent.balance, agent.currency)}</span></div>
+              <div className="mt-1 text-muted">下线总数:{agent.subCount}</div>
+            </div>
+            {isFreeze && <div className="text-xs" style={{color:"#F0B93A"}}>⚠ 冻结后顶代及全部下线无法登录,余额保留</div>}
+          </>}/>;
+      }
+      if (type === "rate") {
+        return <PasswordModal title={"调整佣金率上限:" + agent.id} onClose={onClose} onConfirm={onConfirm}
+          fields={<>
+            <div className="bg-card border border-line rounded p-3 text-xs">
+              <div>顶代:<span className="mono text-cool">{agent.id}</span></div>
+              <div className="mt-1 text-muted">当前佣金率上限:{fmtPct(agent.rateMax)}</div>
+            </div>
+            <div><label className="block text-xs text-muted mb-1">新佣金率上限 *</label><input className="input" placeholder="例:7.5%"/></div>
+            <div className="text-xs text-faint">说明:此为顶代给下线分配佣金率的天花板,不影响已分配下线</div>
+          </>}/>;
+      }
+      if (type === "scheme") {
+        return <PasswordModal title={"调整交收方案:" + agent.id} onClose={onClose} onConfirm={onConfirm}
+          fields={<>
+            <div className="bg-card border border-line rounded p-3 text-xs">
+              <div>顶代:<span className="mono text-cool">{agent.id}</span></div>
+              <div className="mt-1 text-muted">当前方案:<span className="chip chip-cool">{agent.scheme}</span> · 余额 {fmtMoney(agent.balance, agent.currency)}</div>
+            </div>
+            <div><label className="block text-xs text-muted mb-1">新交收方案 *</label><select className="input"><option>KRW-100% 占成</option><option>USD-50% 占成</option><option>USD-30% 占成</option><option>PHP-50% 占成</option></select></div>
+            <div className="text-xs" style={{color:"#FF6B6B"}}>⚠ 切换币种会导致历史余额无法直接沿用,需先回收三方平台余额</div>
+          </>}/>;
+      }
+      return null;
+    }
+
+    // ============== 注单记录页 ==============
+    function BetsPage({ role }) {
+      const [search, setSearch] = useState("");
+      const [gameType, setGameType] = useState("all");
+      const [status, setStatus] = useState("all");
+
+      const list = MOCK_BETS.filter(b => {
+        if (gameType !== "all" && !b.gameType.includes(gameType)) return false;
+        if (status !== "all" && b.status !== status) return false;
+        if (search && !(b.id.includes(search) || b.playerId.includes(search) || b.topAgent.includes(search))) return false;
+        return true;
+      });
+
+      const showFinanceCols = role !== "risk";  // risk 不看具体金额详情(简化:此处保留所有列,实际可按需精简)
+
+      return (
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-xl font-semibold">注单记录</h2>
+              <p className="text-xs text-muted mt-1">三方游戏商每笔回调,准实时  ·  含未结算 / 已结算两种状态</p>
+            </div>
+            <button className="btn btn-ghost">导出 CSV</button>
+          </div>
+          <div className="bg-panel border border-line rounded-lg p-4 mb-4 flex gap-3 items-center flex-wrap">
+            <input className="input flex-1 max-w-xs" placeholder="搜索注单号 / 玩家 / 顶代" value={search} onChange={e=>setSearch(e.target.value)}/>
+            <select className="input w-32" value={gameType} onChange={e=>setGameType(e.target.value)}>
+              <option value="all">全部类型</option><option value="体育">体育 ⚽</option><option value="电子">电子 🎰</option><option value="六合彩">六合彩 🎱</option>
+            </select>
+            <select className="input w-32" value={status} onChange={e=>setStatus(e.target.value)}>
+              <option value="all">全部状态</option><option value="未结算">未结算</option><option value="已结算">已结算</option>
+            </select>
+            <span className="text-xs text-faint">共 {list.length} 条</span>
+          </div>
+          <div className="bg-panel border border-line rounded-lg overflow-hidden">
+            <div className="scroll-x">
+              <table>
+                <thead><tr>
+                  <th>注单号</th><th>玩家 ID</th><th>顶代</th><th>三方商</th><th>游戏类型</th><th>投注时间</th>
+                  <th className="text-right">投注金额</th>{showFinanceCols && <th className="text-right">派彩金额</th>}{showFinanceCols && <th className="text-right">输赢</th>}<th>状态</th>
+                </tr></thead>
+                <tbody>
+                  {list.map(b => (
+                    <tr key={b.id}>
+                      <td className="mono text-cool">{b.id}</td>
+                      <td className="mono text-muted">{b.playerId}</td>
+                      <td className="mono">{b.topAgent}</td>
+                      <td className="text-muted">{b.provider}</td>
+                      <td>{b.gameType}</td>
+                      <td className="text-muted">{b.betTime}</td>
+                      <td className="num text-right">{fmtMoney(b.stake, b.currency)}</td>
+                      {showFinanceCols && <td className="num text-right">{b.status==="未结算"?<span className="text-faint">—</span>:fmtMoney(b.payout, b.currency)}</td>}
+                      {showFinanceCols && <td className="num text-right" style={{color: b.status==="未结算" ? "#9AA4B5" : (b.winLoss > 0 ? "#5BC97C" : (b.winLoss < 0 ? "#FF6B6B" : "#9AA4B5"))}}>
+                        {b.status==="未结算" ? "—" : (b.winLoss > 0 ? "+" : "") + fmtMoney(b.winLoss, b.currency)}
+                      </td>}
+                      <td><StatusChip status={b.status}/></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============== 体育场次记录页 ==============
+    function SportsSessionsPage({ role }) {
+      const [date, setDate] = useState("all");
+      const [topAgent, setTopAgent] = useState("all");
+
+      const list = MOCK_SPORTS_SESSIONS.filter(s => {
+        if (date !== "all" && s.date !== date) return false;
+        if (topAgent !== "all" && s.topAgent !== topAgent) return false;
+        return true;
+      });
+
+      return (
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-xl font-semibold">体育场次记录</h2>
+              <p className="text-xs text-muted mt-1">每日 02:30 跑批 1 次,只统计体育已结算注单  ·  用于代理佣金结算</p>
+            </div>
+            <button className="btn btn-ghost">导出 CSV</button>
+          </div>
+          <div className="bg-cool-soft border border-cool rounded-lg p-3 mb-4 text-xs flex items-center gap-2">
+            <span className="text-cool">ℹ</span>
+            <span>电子 / 六合彩 的代理佣金结算暂未实现 (Q-S1 待议),本页仅体育数据</span>
+          </div>
+          <div className="bg-panel border border-line rounded-lg p-4 mb-4 flex gap-3 items-center">
+            <select className="input w-40" value={date} onChange={e=>setDate(e.target.value)}>
+              <option value="all">全部日期</option><option value="2026-04-28">2026-04-28</option><option value="2026-04-27">2026-04-27</option>
+            </select>
+            <select className="input w-40" value={topAgent} onChange={e=>setTopAgent(e.target.value)}>
+              <option value="all">全部顶代</option>{TOP_AGENTS.map(a => <option key={a.id} value={a.id}>{a.id} ({a.nick})</option>)}
+            </select>
+            <span className="text-xs text-faint">共 {list.length} 条 · 总佣金 <span className="text-cool num">{fmtNum(list.reduce((s,r)=>s+r.commission,0))}</span></span>
+          </div>
+          <div className="bg-panel border border-line rounded-lg overflow-hidden">
+            <div className="scroll-x">
+              <table>
+                <thead><tr>
+                  <th>场次 ID</th><th>业务日期</th><th>顶代</th><th className="text-right">注单数</th><th className="text-right">玩家数</th>
+                  <th className="text-right">总投注</th><th className="text-right">有效投注</th><th className="text-right">总输赢</th>
+                  <th className="text-right">佣金率</th><th className="text-right">佣金金额</th><th>状态</th><th>生成时间</th><th>批次号</th>
+                </tr></thead>
+                <tbody>
+                  {list.map(s => (
+                    <tr key={s.id}>
+                      <td className="mono text-cool" style={{fontSize:11}}>{s.id}</td>
+                      <td>{s.date}</td>
+                      <td><span className="mono">{s.topAgent}</span> <span className="text-faint">({s.topNick})</span></td>
+                      <td className="num text-right">{fmtNum(s.betCount)}</td>
+                      <td className="num text-right">{fmtNum(s.playerCount)}</td>
+                      <td className="num text-right">{fmtNum(s.totalStake)}</td>
+                      <td className="num text-right">{fmtNum(s.validStake)}</td>
+                      <td className="num text-right" style={{color: s.totalWinLoss > 0 ? "#5BC97C" : (s.totalWinLoss < 0 ? "#FF6B6B" : "#9AA4B5")}}>
+                        {s.totalWinLoss > 0 ? "+" : ""}{fmtNum(s.totalWinLoss)}
+                      </td>
+                      <td className="num text-right">{fmtPct(s.rate)}</td>
+                      <td className="num text-right text-cool">{fmtNum(s.commission)}</td>
+                      <td><StatusChip status={s.status}/></td>
+                      <td className="text-muted" style={{fontSize:11}}>{s.batchTime}</td>
+                      <td className="mono text-faint" style={{fontSize:11}}>{s.batchId}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============== 交易流水记录页 ==============
+    function LedgerPage({ role }) {
+      const [type, setType] = useState("all");
+
+      const list = MOCK_LEDGER.filter(l => type === "all" || l.type === type);
+
+      const groupLabel = {
+        house_credit: "账房 ↔ 顶代",
+        house_debit: "账房 ↔ 顶代",
+        agent_credit: "代理后台内部",
+        agent_debit: "代理后台内部",
+        transfer_in: "代理 / 玩家 ↔ 三方平台",
+        transfer_out: "代理 / 玩家 ↔ 三方平台",
+      };
+
+      return (
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-xl font-semibold">交易流水记录</h2>
+              <p className="text-xs text-muted mt-1">三层资金动作合一  ·  账房上下分 / 代理后台内部上下分 / 三方平台 转入转出</p>
+            </div>
+            <button className="btn btn-ghost">导出 CSV</button>
+          </div>
+          <div className="bg-panel border border-line rounded-lg p-4 mb-4 flex gap-3 items-center">
+            <select className="input w-56" value={type} onChange={e=>setType(e.target.value)}>
+              <option value="all">全部类型</option>
+              <option value="house_credit">账房上分</option><option value="house_debit">账房下分</option>
+              <option value="agent_credit">代理上分</option><option value="agent_debit">代理下分</option>
+              <option value="transfer_in">转入三方</option><option value="transfer_out">三方回收</option>
+            </select>
+            <span className="text-xs text-faint">共 {list.length} 条</span>
+          </div>
+          <div className="bg-panel border border-line rounded-lg overflow-hidden">
+            <div className="scroll-x">
+              <table>
+                <thead><tr>
+                  <th>流水号</th><th>分类</th><th>类型</th><th>方向 / 操作</th><th>来源</th><th>去向</th><th className="text-right">金额</th><th>时间</th><th>状态</th>
+                </tr></thead>
+                <tbody>
+                  {list.map(l => (
+                    <tr key={l.id}>
+                      <td className="mono text-cool" style={{fontSize:11}}>{l.id}</td>
+                      <td><span className="chip chip-info" style={{fontSize:10}}>{groupLabel[l.type]}</span></td>
+                      <td>{l.typeLabel}</td>
+                      <td className="text-faint">{l.type.includes("credit") || l.type === "transfer_in" ? "↑ 入" : "↓ 出"}</td>
+                      <td className="text-muted" style={{fontSize:12}}>{l.from}</td>
+                      <td className="text-muted" style={{fontSize:12}}>{l.to}</td>
+                      <td className="num text-right">{fmtMoney(l.amount, l.currency)}</td>
+                      <td className="text-muted" style={{fontSize:12}}>{l.time}</td>
+                      <td><span className={"chip " + (l.status === "成功" ? "chip-active" : "chip-warn")}>{l.status}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============== 操作日志页 ==============
+    function AuditPage({ role }) {
+      const [tab, setTab] = useState("system");
+      const data = tab === "system" ? MOCK_AUDIT_SYSTEM : MOCK_AUDIT_PLAYER;
+
+      return (
+        <div className="p-6">
+          <div className="mb-5">
+            <h2 className="text-xl font-semibold">操作日志</h2>
+            <p className="text-xs text-muted mt-1">系统 = 平台员工动作  ·  玩家 = C 端玩家 + B 端代理动作 (在 S 端视角下,代理也是被管对象)</p>
+          </div>
+          <div className="border-b border-line mb-4 flex">
+            <div className={"tab " + (tab==="system"?"active":"")} onClick={()=>setTab("system")}>系统 ({MOCK_AUDIT_SYSTEM.length})</div>
+            <div className={"tab " + (tab==="player"?"active":"")} onClick={()=>setTab("player")}>玩家 ({MOCK_AUDIT_PLAYER.length})</div>
+          </div>
+          <div className="bg-panel border border-line rounded-lg overflow-hidden">
+            <div className="scroll-x">
+              <table>
+                <thead><tr>
+                  <th>时间</th><th>主体类型</th><th>主体</th><th>动作</th><th>目标</th><th>IP</th><th>{tab === "system" ? "审计原因" : "备注"}</th>
+                </tr></thead>
+                <tbody>
+                  {data.map((r, i) => (
+                    <tr key={i}>
+                      <td className="text-muted" style={{fontSize:12}}>{r.time}</td>
+                      <td><span className={"chip " + (r.actorType === "员工" ? "chip-cool" : (r.actorType === "代理" ? "chip-warn" : "chip-info"))}>{r.actorType}</span></td>
+                      <td className="mono">{r.actor}</td>
+                      <td>{r.action}</td>
+                      <td className="text-muted" style={{fontSize:12}}>{r.target}</td>
+                      <td className="mono text-faint" style={{fontSize:11}}>{r.ip}</td>
+                      <td className="text-muted" style={{fontSize:12}}>{r.reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============== 主框架 ==============
+    function App() {
+      const [role, setRole] = useState("operator");
+      const [active, setActive] = useState("agents");
+      const r = ROLES[role];
+      const visibleMenus = r.menus;
+
+      // 角色切换后兜底:若当前菜单不可见,回退到第一个可见菜单
+      React.useEffect(() => {
+        if (!visibleMenus.includes(active)) setActive(visibleMenus[0]);
+      }, [role]);
+
+      const Menu = ({ id, label, icon }) => visibleMenus.includes(id) && (
+        <div className={"menu-item " + (active===id?"active":"")} onClick={()=>setActive(id)}>
+          <span style={{width:14}}>{icon}</span>{label}
+        </div>
+      );
+
+      return (
+        <div className="flex min-h-screen">
+          {/* Sidebar */}
+          <aside className="w-56 bg-panel border-r border-line flex flex-col">
+            <div className="px-5 py-5 border-b border-line">
+              <div className="flex items-center gap-2">
+                <span className="text-cool text-lg">◆</span>
+                <span className="font-semibold tracking-wider" style={{letterSpacing:2}}>体育游戏</span>
+              </div>
+              <div className="text-xs text-faint mt-1 ml-5">总控后台 V0.2</div>
+            </div>
+            <nav className="flex-1 px-3 py-3 overflow-y-auto">
+              <div className="menu-group">账号管理</div>
+              <Menu id="agents" label="顶代户口" icon="◉"/>
+
+              <div className="menu-group">报表管理</div>
+              <Menu id="reports.bets" label="注单记录" icon="◐"/>
+              <Menu id="reports.sports" label="体育场次记录" icon="◑"/>
+              <Menu id="reports.ledger" label="交易流水记录" icon="◒"/>
+
+              <div className="menu-group">系统管理</div>
+              <Menu id="sys.audit" label="操作日志" icon="◓"/>
+            </nav>
+            <div className="px-4 py-3 border-t border-line text-xs text-faint">
+              内部工具 · 仅限授权员工
+            </div>
+          </aside>
+
+          {/* Main */}
+          <main className="flex-1 flex flex-col bg-app">
+            <header className="border-b border-line px-6 py-3 flex items-center justify-between bg-panel">
+              <div className="text-xs text-faint">
+                {active === "agents" && "账号管理 / 顶代户口"}
+                {active === "reports.bets" && "报表管理 / 注单记录"}
+                {active === "reports.sports" && "报表管理 / 体育场次记录"}
+                {active === "reports.ledger" && "报表管理 / 交易流水记录"}
+                {active === "sys.audit" && "系统管理 / 操作日志"}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted">当前角色</span>
+                <select className="input w-32" value={role} onChange={e=>setRole(e.target.value)} style={{padding:"6px 10px"}}>
+                  <option value="operator">平台运营</option>
+                  <option value="risk">风控审计</option>
+                  <option value="finance">财务对账</option>
+                </select>
+                <span className="chip chip-cool">{r.desc}</span>
+                <span className="text-xs text-muted">admin@platform</span>
+              </div>
+            </header>
+            <div className="flex-1 overflow-auto">
+              {active === "agents" && <AgentsPage role={role} canWrite={r.canWrite}/>}
+              {active === "reports.bets" && <BetsPage role={role}/>}
+              {active === "reports.sports" && <SportsSessionsPage role={role}/>}
+              {active === "reports.ledger" && <LedgerPage role={role}/>}
+              {active === "sys.audit" && <AuditPage role={role}/>}
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  </script>
+</body>
+</html>
