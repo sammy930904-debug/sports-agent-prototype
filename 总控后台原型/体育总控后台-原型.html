@@ -66,25 +66,35 @@
     const { useState, useMemo } = React;
 
     // ============== 角色与权限 ==============
+    // agentCols 编号说明:
+    // 1=系统户口号 2=用户账号 3=下线数 4=账号状态 5=币种 6=占成
+    // 7=账户余额 8=下线余额 9=总线余额 10=账号类型 11=开户时间
     const ROLES = {
       operator: { name: "平台运营", desc: "operator", color: "#4A9EFF",
         menus: ["agents","reports.bets","reports.sports","reports.ledger","sys.audit"],
-        agentCols: [1,2,3,4,5,6,7,8,9,10,11,12], canWrite: true },
+        agentCols: [1,2,3,4,5,6,7,8,9,10,11], canWrite: true },
       risk: { name: "风控审计", desc: "risk", color: "#F0B93A",
         menus: ["agents","reports.bets","reports.sports","sys.audit"],
-        agentCols: [1,2,7,8,10,11,12], canWrite: false },
+        agentCols: [1,2,3,4,5,10,11], canWrite: false },
       finance: { name: "财务对账", desc: "finance", color: "#5BC97C",
         menus: ["agents","reports.bets","reports.sports","reports.ledger","sys.audit"],
-        agentCols: [1,2,3,4,6,7,9,10,12], canWrite: false },
+        agentCols: [1,2,3,4,5,6,7,8,9,10,11], canWrite: false },
     };
 
     // ============== Mock 数据 ==============
+    // 顶代户口 mock - 1 顶代多币种 = N 行 (Sammy 2026-04-29 拍)
+    // 字段:系统户口号 sysId / 用户账号 user / 账号类型 accountType / 币种 currency
+    //      占成 shareRatio / 账户余额 balance / 下线余额 subBalance / 总线余额 totalBalance (= balance + subBalance)
+    //      下线数 subCount / 账号状态 status / 开户时间 createdAt
+    // B↔S 数据契约:subCount / subBalance / totalBalance / shareRatio 主信源在 B 端
     const TOP_AGENTS = [
-      { id:"qweqwe", nick:"Alpha", accHouse:"AH-001", scheme:"KRW-100%", rateMax:0.075, balance:12_580_000, currency:"KRW", subCount:48, monthBet:284_500_000, monthCommission:18_492_500, status:"active", lastLogin:"2026-04-29 14:22:18", createdAt:"2025-11-12 09:14:33" },
-      { id:"lucky88", nick:"Lucky88", accHouse:"AH-002", scheme:"PHP-50%", rateMax:0.060, balance:894_320, currency:"PHP", subCount:23, monthBet:6_842_000, monthCommission:342_100, status:"active", lastLogin:"2026-04-29 09:08:45", createdAt:"2025-12-03 11:22:08" },
-      { id:"diamond", nick:"Diamond", accHouse:"AH-003", scheme:"USD-30%", rateMax:0.080, balance:24_890.55, currency:"USD", subCount:67, monthBet:482_300, monthCommission:33_761, status:"active", lastLogin:"2026-04-29 16:30:02", createdAt:"2025-09-25 15:48:19" },
-      { id:"emerald", nick:"Emerald", accHouse:"AH-004", scheme:"USD-30%", rateMax:0.070, balance:0, currency:"USD", subCount:12, monthBet:0, monthCommission:0, status:"frozen", lastLogin:"2026-04-15 10:11:30", createdAt:"2026-01-08 14:25:11" },
-      { id:"sapphire", nick:"Sapphire", accHouse:"AH-005", scheme:"KRW-100%", rateMax:0.075, balance:3_240_000, currency:"KRW", subCount:34, monthBet:128_400_000, monthCommission:8_988_000, status:"active", lastLogin:"2026-04-29 11:45:08", createdAt:"2026-02-14 16:32:55" },
+      { sysId:"AH-001", user:"qweqwe", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.20, balance:12_580_000, subBalance:84_320_000, totalBalance:96_900_000, subCount:48, status:"active", createdAt:"2025-11-12 09:14:33" },
+      { sysId:"AH-001", user:"qweqwe", accountType:"普通(顶代)", currency:"USD", shareRatio:0.30, balance:8_240, subBalance:42_180, totalBalance:50_420, subCount:48, status:"active", createdAt:"2025-11-12 09:14:33" },
+      { sysId:"AH-002", user:"lucky88", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.15, balance:894_320, subBalance:2_140_500, totalBalance:3_034_820, subCount:23, status:"active", createdAt:"2025-12-03 11:22:08" },
+      { sysId:"AH-003", user:"diamond", accountType:"普通(顶代)", currency:"USD", shareRatio:0.25, balance:24_890.55, subBalance:38_120.20, totalBalance:63_010.75, subCount:67, status:"active", createdAt:"2025-09-25 15:48:19" },
+      { sysId:"AH-004", user:"emerald", accountType:"普通(顶代)", currency:"USD", shareRatio:0.20, balance:0, subBalance:0, totalBalance:0, subCount:12, status:"frozen", createdAt:"2026-01-08 14:25:11" },
+      { sysId:"AH-005", user:"sapphire", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.18, balance:3_240_000, subBalance:11_840_000, totalBalance:15_080_000, subCount:34, status:"active", createdAt:"2026-02-14 16:32:55" },
+      { sysId:"AH-006", user:"goldenstar", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.22, balance:1_200_000, subBalance:0, totalBalance:1_200_000, subCount:0, status:"pending", createdAt:"2026-04-25 10:14:22" },
     ];
 
     const MOCK_BETS = [
@@ -219,23 +229,23 @@
 
       const list = useMemo(() => TOP_AGENTS.filter(a => {
         if (statusFilter !== "all" && a.status !== statusFilter) return false;
-        if (search && !(a.id.includes(search) || a.nick.toLowerCase().includes(search.toLowerCase()))) return false;
+        if (search && !(a.user.includes(search) || a.sysId.toLowerCase().includes(search.toLowerCase()))) return false;
         return true;
       }), [search, statusFilter]);
 
+      // 字段集 (Sammy 2026-04-29 拍 13 列, 砍昵称/佣金率上限/本月投注/本月佣金/最近登录入详情)
       const colDefs = [
-        { id:1, label:"顶代 ID", render:a => <span className="mono text-cool">{a.id}</span> },
-        { id:2, label:"昵称", render:a => a.nick },
-        { id:3, label:"账房户", render:a => <span className="mono text-muted">{a.accHouse}</span> },
-        { id:4, label:"交收方案", render:a => <span className="chip chip-cool">{a.scheme}</span> },
-        { id:5, label:"佣金率上限", render:a => fmtPct(a.rateMax) },
-        { id:6, label:"当前余额", render:a => <span className="num">{fmtMoney(a.balance, a.currency)}</span> },
-        { id:7, label:"下线总数", render:a => <span className="num">{a.subCount}</span> },
-        { id:8, label:"本月总投注", render:a => <span className="num">{fmtMoney(a.monthBet, a.currency)}</span> },
-        { id:9, label:"本月佣金", render:a => <span className="num text-cool">{fmtMoney(a.monthCommission, a.currency)}</span> },
-        { id:10, label:"状态", render:a => <StatusChip status={a.status}/> },
-        { id:11, label:"最近登录", render:a => <span className="text-muted">{a.lastLogin}</span> },
-        { id:12, label:"创建时间", render:a => <span className="text-muted">{a.createdAt}</span> },
+        { id:1, label:"系统户口号", render:a => <span className="mono text-muted">{a.sysId}</span> },
+        { id:2, label:"用户账号", render:a => <span className="mono text-cool">{a.user}</span> },
+        { id:3, label:"下线数", render:a => <span className="num">{a.subCount}</span> },
+        { id:4, label:"账号状态", render:a => <StatusChip status={a.status}/> },
+        { id:5, label:"币种", render:a => <span className="chip chip-cool">{a.currency}</span> },
+        { id:6, label:"占成", render:a => <span className="num">{fmtPct(a.shareRatio)}</span> },
+        { id:7, label:"账户余额", render:a => <span className="num">{fmtMoney(a.balance, a.currency)}</span> },
+        { id:8, label:"下线余额", render:a => <span className="num text-muted">{fmtMoney(a.subBalance, a.currency)}</span> },
+        { id:9, label:"总线余额", render:a => <span className="num text-cool">{fmtMoney(a.totalBalance, a.currency)}</span> },
+        { id:10, label:"账号类型", render:a => <span className="chip chip-info">{a.accountType}</span> },
+        { id:11, label:"开户时间", render:a => <span className="text-muted" style={{fontSize:12}}>{a.createdAt}</span> },
       ].filter(c => cols.includes(c.id));
 
       return (
@@ -243,19 +253,23 @@
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-xl font-semibold">顶代户口</h2>
-              <p className="text-xs text-muted mt-1">平台直辖的顶代账号  ·  {ROLES[role].name} 视角可见 {cols.length} 列</p>
+              <p className="text-xs text-muted mt-1">账号管理 · 平台直辖顶代  ·  1 顶代多币种 = N 行(按币种拆)  ·  {ROLES[role].name} 视角可见 {cols.length} 列</p>
             </div>
             {canWrite && <button className="btn btn-primary" onClick={()=>setModal({type:"create"})}>+ 新增顶代</button>}
           </div>
+          <div className="bg-cool-soft border border-cool rounded-lg p-3 mb-4 text-xs flex items-start gap-2">
+            <span className="text-cool">ℹ</span>
+            <span><b>跨端契约:</b>下线数 / 下线余额 / 总线余额 / 占成 主信源在 B 端代理后台,本页只读展示;字段命名两端必须一致。命名分歧见 Q-S7。</span>
+          </div>
           <div className="bg-panel border border-line rounded-lg p-4 mb-4 flex gap-3 items-center">
-            <input className="input flex-1 max-w-xs" placeholder="搜索顶代 ID / 昵称" value={search} onChange={e=>setSearch(e.target.value)}/>
+            <input className="input flex-1 max-w-xs" placeholder="搜索 系统户口号 / 用户账号" value={search} onChange={e=>setSearch(e.target.value)}/>
             <select className="input w-32" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
               <option value="all">全部状态</option>
               <option value="active">启用</option>
               <option value="frozen">已冻结</option>
               <option value="pending">待处理</option>
             </select>
-            <span className="text-xs text-faint">共 {list.length} 条</span>
+            <span className="text-xs text-faint">共 {list.length} 行</span>
           </div>
           <div className="bg-panel border border-line rounded-lg overflow-hidden">
             <div className="scroll-x">
@@ -268,13 +282,13 @@
                 </thead>
                 <tbody>
                   {list.map(a => (
-                    <tr key={a.id}>
+                    <tr key={a.sysId + "-" + a.currency}>
                       {colDefs.map(c => <td key={c.id}>{c.render(a)}</td>)}
                       {canWrite && <td>
                         <div className="flex gap-2">
                           {a.status === "active" ? <button className="btn btn-danger" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"freeze",agent:a})}>冻结</button> : a.status === "frozen" && <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"unfreeze",agent:a})}>解冻</button>}
-                          <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"rate",agent:a})}>调佣金率</button>
-                          <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"scheme",agent:a})}>调方案</button>
+                          <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"shareRatio",agent:a})}>调占成</button>
+                          <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"currency",agent:a})}>调币种</button>
                         </div>
                       </td>}
                     </tr>
@@ -293,48 +307,53 @@
       if (type === "create") {
         return <PasswordModal title="新增顶代" onClose={onClose} onConfirm={onConfirm}
           fields={<>
-            <div><label className="block text-xs text-muted mb-1">顶代 ID *</label><input className="input" placeholder="例:goldenstar"/></div>
-            <div><label className="block text-xs text-muted mb-1">昵称 *</label><input className="input" placeholder="例:GoldenStar"/></div>
             <div className="grid grid-cols-2 gap-3">
-              <div><label className="block text-xs text-muted mb-1">账房户 *</label><select className="input"><option>AH-006</option><option>AH-007</option></select></div>
-              <div><label className="block text-xs text-muted mb-1">币种 *</label><select className="input"><option>KRW</option><option>USD</option><option>PHP</option></select></div>
+              <div><label className="block text-xs text-muted mb-1">系统户口号 *</label><input className="input" placeholder="例:AH-007"/></div>
+              <div><label className="block text-xs text-muted mb-1">用户账号 *</label><input className="input" placeholder="例:goldenstar"/></div>
             </div>
-            <div><label className="block text-xs text-muted mb-1">初始交收方案 *</label><select className="input"><option>KRW-100% 占成</option><option>USD-50% 占成</option><option>PHP-30% 占成</option></select></div>
-            <div><label className="block text-xs text-muted mb-1">佣金率上限 *</label><input className="input" placeholder="例:7.5%"/></div>
+            <div><label className="block text-xs text-muted mb-1">账号类型 *</label><select className="input"><option>普通(顶代)</option><option>代理</option><option>游戏</option></select></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="block text-xs text-muted mb-1">初始币种 *</label><select className="input"><option>KRW</option><option>USD</option><option>PHP</option></select></div>
+              <div><label className="block text-xs text-muted mb-1">初始占成 *</label><input className="input" placeholder="例:20%"/></div>
+            </div>
+            <div className="text-xs text-faint">说明:占成 X% 代表上下分时让利 X%(上分 100 实扣 (1-X%)×100)。新增后该顶代在此币种下生效;后续可通过「调币种」加币种或换币种。</div>
           </>}/>;
       }
       if (type === "freeze" || type === "unfreeze") {
         const isFreeze = type === "freeze";
-        return <PasswordModal title={(isFreeze?"冻结":"解冻")+"顶代:" + agent.id} onClose={onClose} onConfirm={onConfirm}
+        return <PasswordModal title={(isFreeze?"冻结":"解冻")+"顶代:" + agent.user + " · " + agent.currency} onClose={onClose} onConfirm={onConfirm}
           fields={<>
             <div className="bg-card border border-line rounded p-3 text-xs">
-              <div>顶代:<span className="mono text-cool">{agent.id}</span> ({agent.nick})</div>
-              <div className="mt-1 text-muted">当前余额:<span className="num">{fmtMoney(agent.balance, agent.currency)}</span></div>
-              <div className="mt-1 text-muted">下线总数:{agent.subCount}</div>
+              <div>顶代:<span className="mono text-cool">{agent.user}</span>  ·  系统户口号 <span className="mono">{agent.sysId}</span></div>
+              <div className="mt-1 text-muted">币种:{agent.currency}  ·  占成 {fmtPct(agent.shareRatio)}</div>
+              <div className="mt-1 text-muted">账户余额:<span className="num">{fmtMoney(agent.balance, agent.currency)}</span>  ·  总线余额 <span className="num">{fmtMoney(agent.totalBalance, agent.currency)}</span></div>
+              <div className="mt-1 text-muted">下线数:{agent.subCount}</div>
             </div>
-            {isFreeze && <div className="text-xs" style={{color:"#F0B93A"}}>⚠ 冻结后顶代及全部下线无法登录,余额保留</div>}
+            {isFreeze && <div className="text-xs" style={{color:"#F0B93A"}}>⚠ 冻结此账号 + 币种维度后,顶代在此币种下及对应下线无法登录;其他币种不受影响。余额保留</div>}
           </>}/>;
       }
-      if (type === "rate") {
-        return <PasswordModal title={"调整佣金率上限:" + agent.id} onClose={onClose} onConfirm={onConfirm}
+      if (type === "shareRatio") {
+        return <PasswordModal title={"调整占成:" + agent.user + " · " + agent.currency} onClose={onClose} onConfirm={onConfirm}
           fields={<>
             <div className="bg-card border border-line rounded p-3 text-xs">
-              <div>顶代:<span className="mono text-cool">{agent.id}</span></div>
-              <div className="mt-1 text-muted">当前佣金率上限:{fmtPct(agent.rateMax)}</div>
+              <div>顶代:<span className="mono text-cool">{agent.user}</span>  ·  币种 {agent.currency}</div>
+              <div className="mt-1 text-muted">当前占成:{fmtPct(agent.shareRatio)}</div>
+              <div className="mt-1 text-muted">当前余额:{fmtMoney(agent.balance, agent.currency)}</div>
             </div>
-            <div><label className="block text-xs text-muted mb-1">新佣金率上限 *</label><input className="input" placeholder="例:7.5%"/></div>
-            <div className="text-xs text-faint">说明:此为顶代给下线分配佣金率的天花板,不影响已分配下线</div>
+            <div><label className="block text-xs text-muted mb-1">新占成 *</label><input className="input" placeholder="例:25%(0~100)"/></div>
+            <div className="text-xs text-faint">说明:占成只影响后续上下分扣款公式,不重算历史交易。同顶代的其他币种占成不受影响。</div>
           </>}/>;
       }
-      if (type === "scheme") {
-        return <PasswordModal title={"调整交收方案:" + agent.id} onClose={onClose} onConfirm={onConfirm}
+      if (type === "currency") {
+        return <PasswordModal title={"调币种:" + agent.user + " · 当前 " + agent.currency} onClose={onClose} onConfirm={onConfirm}
           fields={<>
             <div className="bg-card border border-line rounded p-3 text-xs">
-              <div>顶代:<span className="mono text-cool">{agent.id}</span></div>
-              <div className="mt-1 text-muted">当前方案:<span className="chip chip-cool">{agent.scheme}</span> · 余额 {fmtMoney(agent.balance, agent.currency)}</div>
+              <div>顶代:<span className="mono text-cool">{agent.user}</span></div>
+              <div className="mt-1 text-muted">当前币种:<span className="chip chip-cool">{agent.currency}</span>  ·  当前余额 {fmtMoney(agent.balance, agent.currency)}</div>
             </div>
-            <div><label className="block text-xs text-muted mb-1">新交收方案 *</label><select className="input"><option>KRW-100% 占成</option><option>USD-50% 占成</option><option>USD-30% 占成</option><option>PHP-50% 占成</option></select></div>
-            <div className="text-xs" style={{color:"#FF6B6B"}}>⚠ 切换币种会导致历史余额无法直接沿用,需先回收三方平台余额</div>
+            <div><label className="block text-xs text-muted mb-1">目标币种 *</label><select className="input"><option>KRW</option><option>USD</option><option>PHP</option><option>CNY</option></select></div>
+            <div><label className="block text-xs text-muted mb-1">新币种占成 *</label><input className="input" placeholder="例:20%"/></div>
+            <div className="text-xs" style={{color:"#FF6B6B"}}>⚠ 沿用 B 端 FN-ACC-12 规则:原币种余额非零时本动作硬阻断,需先回收三方平台余额 + 走"切币种"流程。本原型仅展示弹窗骨架。</div>
           </>}/>;
       }
       return null;
