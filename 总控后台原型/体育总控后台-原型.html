@@ -317,11 +317,10 @@
               <h2 className="text-xl font-semibold">顶代户口</h2>
               <p className="text-xs text-muted mt-1">账号管理 · 平台直辖顶代  ·  1 顶代多币种 = N 行(按币种拆)  ·  {ROLES[role].name} 视角可见 {cols.length} 列</p>
             </div>
-            {canWrite && <button className="btn btn-primary" onClick={()=>setModal({type:"create"})}>+ 新增顶代</button>}
           </div>
           <div className="bg-cool-soft border border-cool rounded-lg p-3 mb-4 text-xs flex items-start gap-2">
             <span className="text-cool">ℹ</span>
-            <span><b>跨端契约:</b>下线数 / 下线余额 / 总线余额 / 占成 主信源在 B 端代理后台,本页只读展示;字段命名两端必须一致。命名分歧见 Q-S7。</span>
+            <span><b>账号来源:</b>顶代账号由<b>账房侧</b>创建并下发户口(系统户口号 + 初始币种 + 初始占成),本页仅查看与管理(冻结 / 调占成 / 调币种),<b>不负责创建</b>。下线数 / 下线余额 / 总线余额 主信源在 B 端代理后台。Q-S7 / Q-S14 议题待。</span>
           </div>
           <div className="bg-panel border border-line rounded-lg p-4 mb-4 flex gap-3 items-center">
             <input className="input flex-1 max-w-xs" placeholder="搜索 系统户口号 / 用户账号" value={search} onChange={e=>setSearch(e.target.value)}/>
@@ -367,21 +366,7 @@
 
     function ActionModal({ modal, onClose, onConfirm }) {
       const { type, agent } = modal;
-      if (type === "create") {
-        return <PasswordModal title="新增顶代" onClose={onClose} onConfirm={onConfirm}
-          fields={<>
-            <div className="grid grid-cols-2 gap-3">
-              <div><label className="block text-xs text-muted mb-1">系统户口号 *</label><input className="input" placeholder="例:AH-007"/></div>
-              <div><label className="block text-xs text-muted mb-1">用户账号 *</label><input className="input" placeholder="例:goldenstar"/></div>
-            </div>
-            <div><label className="block text-xs text-muted mb-1">账号类型 *</label><select className="input"><option>普通(顶代)</option><option>代理</option><option>游戏</option></select></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><label className="block text-xs text-muted mb-1">初始币种 *</label><select className="input"><option>KRW</option><option>USD</option><option>PHP</option></select></div>
-              <div><label className="block text-xs text-muted mb-1">初始占成 *</label><input className="input" placeholder="例:20%"/></div>
-            </div>
-            <div className="text-xs text-faint">说明:占成 X% 代表上下分时让利 X%(上分 100 实扣 (1-X%)×100)。新增后该顶代在此币种下生效;后续可通过「调币种」加币种或换币种。</div>
-          </>}/>;
-      }
+      // 注意:type=create 已在 2026-04-29 删除 (Sammy 拍:S 端不创建顶代,顶代由账房侧创建后下发)
       if (type === "freeze" || type === "unfreeze") {
         const isFreeze = type === "freeze";
         return <PasswordModal title={(isFreeze?"冻结":"解冻")+"顶代:" + agent.user + " · " + agent.currency} onClose={onClose} onConfirm={onConfirm}
