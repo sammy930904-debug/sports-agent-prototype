@@ -256,7 +256,7 @@
         onConfirm({ pwd });
       };
       return (
-        <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal-backdrop">
           <div className={"modal" + (wide ? " modal-wide" : "")} onClick={e=>e.stopPropagation()}>
             <h3 className="text-base font-semibold mb-1">{title}</h3>
             <p className="text-xs text-faint mb-4">高风险操作 · 操作密码二次确认</p>
@@ -567,7 +567,7 @@
       };
 
       return (
-        <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal-backdrop">
           <div className="modal modal-wide" onClick={e=>e.stopPropagation()}>
             <h3 className="text-base font-semibold mb-1">新增下线:{parent.user} 下挂</h3>
             <p className="text-xs text-faint mb-4">沿用 B 端 V1.12 AddSubModal 字段集 · 操作密码二次确认</p>
@@ -702,7 +702,7 @@
       };
 
       return (
-        <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal-backdrop">
           <div className="modal modal-wide" onClick={e=>e.stopPropagation()}>
             <h3 className="text-base font-semibold mb-1">修改资料:{account.user}</h3>
             <p className="text-xs text-faint mb-4">沿用 B 端 V1.12 EditProfileModal 字段集 · 高敏感字段才触发操作密码</p>
