@@ -451,18 +451,24 @@
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map(a => (
+                  {rows.map(a => {
+                    const isTop = a.accountType === "普通(顶代)";
+                    const isAgent = a.accountType === "代理";
+                    const isPlayer = a.accountType === "游戏";
+                    return (
                     <tr key={a.key} style={a.depth > 0 ? {background:"rgba(74,158,255,0.04)"} : {}}>
                       {colDefs.map(c => <td key={c.id}>{c.render(a)}</td>)}
                       {canWrite && <td>
-                        <div className="flex gap-2">
-                          {a.status === "active" ? <button className="btn btn-danger" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"freeze",agent:a})}>冻结</button> : a.status === "frozen" && <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"unfreeze",agent:a})}>解冻</button>}
-                          <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"shareRatio",agent:a})}>调占成</button>
-                          <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"currency",agent:a})}>调币种</button>
+                        <div className="flex gap-2 flex-wrap">
+                          {(isTop || isAgent) && <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"newSub",agent:a})}>新增下级</button>}
+                          <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"editProfile",agent:a})}>修改资料</button>
+                          {(isAgent || isPlayer) && <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,color:"#5BC97C",borderColor:"#2A4534"}} onClick={()=>setModal({type:"credit",agent:a})}>上分</button>}
+                          {(isAgent || isPlayer) && <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,color:"#FF8B6B",borderColor:"#5A2D33"}} onClick={()=>setModal({type:"debit",agent:a})}>下分</button>}
                         </div>
                       </td>}
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -474,46 +480,70 @@
 
     function ActionModal({ modal, onClose, onConfirm }) {
       const { type, agent } = modal;
-      // 注意:type=create 已在 2026-04-29 删除 (Sammy 拍:S 端不创建顶代,顶代由账房侧创建后下发)
-      if (type === "freeze" || type === "unfreeze") {
-        const isFreeze = type === "freeze";
-        return <PasswordModal title={(isFreeze?"冻结":"解冻")+"顶代:" + agent.user + " · " + agent.currency} onClose={onClose} onConfirm={onConfirm}
+      // 2026-04-29 重做:操作集 = 新增下级 / 修改资料 / 上分 / 下分
+      // 旧 type (create / freeze / unfreeze / shareRatio / currency) 全部移除
+      // 冻结/解冻并入「修改资料」状态切换;调占成 / 调币种 删除 (后端真支持时再加)
+
+      const InfoCard = () => (
+        <div className="bg-card border border-line rounded p-3 text-xs">
+          <div>{agent.accountType}:<span className="mono text-cool">{agent.user}</span>  ·  系统户口号 <span className="mono">{agent.sysId}</span></div>
+          <div className="mt-1 text-muted">币种:{agent.currency}  ·  占成 {agent.shareRatio == null ? "—" : fmtPct(agent.shareRatio) + (agent.accountType !== "普通(顶代)" ? " (参考)" : "")}</div>
+          <div className="mt-1 text-muted">账户余额:<span className="num">{fmtAmount(agent.balance) + " " + agent.currency}</span></div>
+        </div>
+      );
+
+      if (type === "newSub") {
+        const subType = agent.accountType === "普通(顶代)" ? "代理 / 游戏" : "游戏";
+        return <PasswordModal title={"新增下级:" + agent.user + " 下挂"} onClose={onClose} onConfirm={onConfirm}
           fields={<>
-            <div className="bg-card border border-line rounded p-3 text-xs">
-              <div>顶代:<span className="mono text-cool">{agent.user}</span>  ·  系统户口号 <span className="mono">{agent.sysId}</span></div>
-              <div className="mt-1 text-muted">币种:{agent.currency}  ·  占成 {fmtPct(agent.shareRatio)}</div>
-              <div className="mt-1 text-muted">账户余额:<span className="num">{fmtAmount(agent.balance) + " " + agent.currency}</span>  ·  总线余额 <span className="num">{fmtAmount(agent.totalBalance) + " " + agent.currency}</span></div>
-              <div className="mt-1 text-muted">下线数:{agent.subCount}</div>
+            <InfoCard/>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="block text-xs text-muted mb-1">下级类型 *</label>
+                <select className="input">
+                  {agent.accountType === "普通(顶代)" && <option value="代理">代理</option>}
+                  <option value="游戏">游戏(玩家)</option>
+                </select>
+              </div>
+              <div><label className="block text-xs text-muted mb-1">用户账号 *</label><input className="input" placeholder="例:carry02"/></div>
             </div>
-            {isFreeze && <div className="text-xs" style={{color:"#F0B93A"}}>⚠ 冻结此账号 + 币种维度后,顶代在此币种下及对应下线无法登录;其他币种不受影响。余额保留</div>}
+            <div><label className="block text-xs text-muted mb-1">昵称</label><input className="input" placeholder="选填"/></div>
+            <div className="text-xs text-faint">说明:下级币种自动继承上级 ({agent.currency});系统户口号自动派生 (如 {agent.sysId}-N)。可创建类型:{subType}。</div>
           </>}/>;
       }
-      if (type === "shareRatio") {
-        const isSubAccount = agent.accountType !== "普通(顶代)";
-        return <PasswordModal title={"调整占成:" + agent.user + " · " + agent.currency} onClose={onClose} onConfirm={onConfirm}
+
+      if (type === "editProfile") {
+        return <PasswordModal title={"修改资料:" + agent.user} onClose={onClose} onConfirm={onConfirm}
           fields={<>
-            {isSubAccount && <div className="text-xs p-2 rounded" style={{background:"#2A2415",color:"#F0B93A"}}>⚠ 下线层显示的是「参考占成」(上级让利后传递),独立调整 V0.2 尚未支持。Q-S11 议题待。</div>}
-            <div className="bg-card border border-line rounded p-3 text-xs">
-              <div>{agent.accountType}:<span className="mono text-cool">{agent.user}</span>  ·  币种 {agent.currency}</div>
-              <div className="mt-1 text-muted">当前占成:{agent.shareRatio == null ? "— (未设置)" : fmtPct(agent.shareRatio) + (isSubAccount ? " (参考)" : "")}</div>
-              <div className="mt-1 text-muted">当前余额:{fmtAmount(agent.balance) + " " + agent.currency}</div>
+            <InfoCard/>
+            <div><label className="block text-xs text-muted mb-1">昵称</label><input className="input" placeholder="选填"/></div>
+            <div><label className="block text-xs text-muted mb-1">备注</label><textarea className="input" rows="2" placeholder="风控备注 / 商务备注"/></div>
+            <div><label className="block text-xs text-muted mb-1">账号状态 *</label>
+              <select className="input" defaultValue={agent.status}>
+                <option value="active">启用</option>
+                <option value="frozen">已冻结</option>
+              </select>
             </div>
-            <div><label className="block text-xs text-muted mb-1">新占成 *</label><input className="input" placeholder="例:25%(0~100)" disabled={isSubAccount}/></div>
-            <div className="text-xs text-faint">说明:占成只影响后续上下分扣款公式,不重算历史交易。同顶代的其他币种占成不受影响。</div>
+            <div className="text-xs" style={{color:"#F0B93A"}}>⚠ 切换为「已冻结」后,该账号 + 币种维度无法登录上下分;余额保留。</div>
           </>}/>;
       }
-      if (type === "currency") {
-        const isPlayer = agent.accountType === "游戏";
-        return <PasswordModal title={"调币种:" + agent.user + " · 当前 " + agent.currency} onClose={onClose} onConfirm={onConfirm}
+
+      if (type === "credit" || type === "debit") {
+        const isCredit = type === "credit";
+        return <PasswordModal title={(isCredit ? "上分" : "下分") + ":" + agent.user + " · " + agent.currency} onClose={onClose} onConfirm={onConfirm}
           fields={<>
-            {isPlayer && <div className="text-xs p-2 rounded" style={{background:"#2A2415",color:"#F0B93A"}}>⚠ 玩家币种继承上级方案,本动作建议在代理层操作。</div>}
-            <div className="bg-card border border-line rounded p-3 text-xs">
-              <div>{agent.accountType}:<span className="mono text-cool">{agent.user}</span></div>
-              <div className="mt-1 text-muted">当前币种:<span className="chip chip-cool">{agent.currency}</span>  ·  当前余额 {fmtAmount(agent.balance) + " " + agent.currency}</div>
+            <InfoCard/>
+            <div><label className="block text-xs text-muted mb-1">{isCredit ? "上分金额" : "下分金额"} *</label>
+              <div className="flex items-center gap-2">
+                <input className="input flex-1" placeholder={"例:1000000(单位 " + agent.currency + ")"}/>
+                <span className="chip chip-cool">{agent.currency}</span>
+              </div>
             </div>
-            <div><label className="block text-xs text-muted mb-1">目标币种 *</label><select className="input"><option>KRW</option><option>USD</option><option>PHP</option><option>CNY</option></select></div>
-            <div><label className="block text-xs text-muted mb-1">新币种占成 *</label><input className="input" placeholder="例:20%" disabled={agent.accountType !== "普通(顶代)"}/></div>
-            <div className="text-xs" style={{color:"#FF6B6B"}}>⚠ 沿用 B 端 FN-ACC-12 规则:原币种余额非零时本动作硬阻断,需先回收三方平台余额 + 走"切币种"流程。本原型仅展示弹窗骨架。</div>
+            <div className="text-xs text-faint">
+              {isCredit ? "上分后该账号余额增加,资金来源 = 上级账户;沿用 B 端 FN-ACC-08 上下分流程。" : "下分后该账号余额减少,资金回流到上级账户。"}
+            </div>
+            <div className="text-xs" style={{color:isCredit ? "#5BC97C" : "#FF8B6B"}}>
+              {isCredit ? "↑ 该笔流水写入「交易流水记录」,类型 = " + (agent.accountType === "代理" ? "代理上分" : "代理上分") : "↓ 该笔流水写入「交易流水记录」,类型 = 代理下分"}
+            </div>
           </>}/>;
       }
       return null;
