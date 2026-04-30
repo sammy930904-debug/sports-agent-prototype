@@ -275,12 +275,15 @@
                 </table>
               </div>
             </div>
-            {/* 右下角翻页 */}
-            <div className="flex items-center gap-2" style={{justifyContent:"flex-end"}}>
-              <span className="text-xs text-faint" style={{marginRight:4}}>每页 {pageSize} 条 · 共 {matched.length} 条</span>
-              <button className="btn btn-ghost" onClick={()=>setPageNum(p=>Math.max(0,p-1))} disabled={pageNum===0} style={{padding:"4px 12px",fontSize:12}}>← 上一页</button>
-              <span className="text-xs text-muted">第 {pageNum+1} / {totalPages} 页</span>
-              <button className="btn btn-ghost" onClick={()=>setPageNum(p=>Math.min(totalPages-1,p+1))} disabled={pageNum>=totalPages-1} style={{padding:"4px 12px",fontSize:12}}>下一页 →</button>
+            {/* 左下: 导出 Excel  右下: 翻页 */}
+            <div className="flex items-center gap-2" style={{justifyContent:"space-between"}}>
+              <button className="btn btn-ghost" disabled={matched.length===0} style={{padding:"4px 14px",fontSize:12}}>导出 Excel</button>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-faint" style={{marginRight:4}}>每页 {pageSize} 条 · 共 {matched.length} 条</span>
+                <button className="btn btn-ghost" onClick={()=>setPageNum(p=>Math.max(0,p-1))} disabled={pageNum===0} style={{padding:"4px 12px",fontSize:12}}>← 上一页</button>
+                <span className="text-xs text-muted">第 {pageNum+1} / {totalPages} 页</span>
+                <button className="btn btn-ghost" onClick={()=>setPageNum(p=>Math.min(totalPages-1,p+1))} disabled={pageNum>=totalPages-1} style={{padding:"4px 12px",fontSize:12}}>下一页 →</button>
+              </div>
             </div>
           </div>
         </div>
