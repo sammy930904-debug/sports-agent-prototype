@@ -152,13 +152,13 @@
     ];
 
     const MOCK_SPORTS_SESSIONS = [
-      { id:"SP-20260428-qweqwe-001", date:"2026-04-28", topAgent:"qweqwe", topNick:"Alpha", betCount:382, playerCount:48, totalStake:124_500_000, validStake:118_000_000, totalWinLoss:8_320_000, rate:0.0750, commission:8_850_000, status:"settled", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
-      { id:"SP-20260428-diamond-001", date:"2026-04-28", topAgent:"diamond", topNick:"Diamond", betCount:124, playerCount:35, totalStake:218_400, validStake:210_500, totalWinLoss:18_300, rate:0.0800, commission:16_840, status:"settled", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
-      { id:"SP-20260428-lucky88-001", date:"2026-04-28", topAgent:"lucky88", topNick:"Lucky88", betCount:67, playerCount:18, totalStake:3_120_000, validStake:2_980_000, totalWinLoss:-184_000, rate:0.0600, commission:178_800, status:"settled", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
-      { id:"SP-20260428-sapphire-001", date:"2026-04-28", topAgent:"sapphire", topNick:"Sapphire", betCount:158, playerCount:27, totalStake:54_800_000, validStake:52_300_000, totalWinLoss:3_140_000, rate:0.0750, commission:3_922_500, status:"settled", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
-      { id:"SP-20260428-emerald-001", date:"2026-04-28", topAgent:"emerald", topNick:"Emerald", betCount:0, playerCount:0, totalStake:0, validStake:0, totalWinLoss:0, rate:0.0700, commission:0, status:"void", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
-      { id:"SP-20260427-qweqwe-001", date:"2026-04-27", topAgent:"qweqwe", topNick:"Alpha", betCount:412, playerCount:51, totalStake:142_300_000, validStake:135_800_000, totalWinLoss:-4_180_000, rate:0.0750, commission:10_185_000, status:"settled", batchTime:"2026-04-28 02:30:08", batchId:"BATCH-20260428-001" },
-      { id:"SP-20260427-diamond-001", date:"2026-04-27", topAgent:"diamond", topNick:"Diamond", betCount:138, playerCount:38, totalStake:248_900, validStake:241_200, totalWinLoss:-12_400, rate:0.0800, commission:19_296, status:"settled", batchTime:"2026-04-28 02:30:08", batchId:"BATCH-20260428-001" },
+      { id:"SP-20260428-qweqwe-001", date:"2026-04-28", topAgent:"qweqwe", topNick:"Alpha", currency:"KRW", betCount:382, playerCount:48, totalStake:124_500_000, validStake:118_000_000, totalWinLoss:8_320_000, rate:0.0750, commission:8_850_000, status:"settled", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
+      { id:"SP-20260428-diamond-001", date:"2026-04-28", topAgent:"diamond", topNick:"Diamond", currency:"USD", betCount:124, playerCount:35, totalStake:218_400, validStake:210_500, totalWinLoss:18_300, rate:0.0800, commission:16_840, status:"settled", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
+      { id:"SP-20260428-lucky88-001", date:"2026-04-28", topAgent:"lucky88", topNick:"Lucky88", currency:"PHP", betCount:67, playerCount:18, totalStake:3_120_000, validStake:2_980_000, totalWinLoss:-184_000, rate:0.0600, commission:178_800, status:"settled", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
+      { id:"SP-20260428-sapphire-001", date:"2026-04-28", topAgent:"sapphire", topNick:"Sapphire", currency:"KRW", betCount:158, playerCount:27, totalStake:54_800_000, validStake:52_300_000, totalWinLoss:3_140_000, rate:0.0750, commission:3_922_500, status:"settled", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
+      { id:"SP-20260428-emerald-001", date:"2026-04-28", topAgent:"emerald", topNick:"Emerald", currency:"USD", betCount:0, playerCount:0, totalStake:0, validStake:0, totalWinLoss:0, rate:0.0700, commission:0, status:"void", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
+      { id:"SP-20260427-qweqwe-001", date:"2026-04-27", topAgent:"qweqwe", topNick:"Alpha", currency:"KRW", betCount:412, playerCount:51, totalStake:142_300_000, validStake:135_800_000, totalWinLoss:-4_180_000, rate:0.0750, commission:10_185_000, status:"settled", batchTime:"2026-04-28 02:30:08", batchId:"BATCH-20260428-001" },
+      { id:"SP-20260427-diamond-001", date:"2026-04-27", topAgent:"diamond", topNick:"Diamond", currency:"USD", betCount:138, playerCount:38, totalStake:248_900, validStake:241_200, totalWinLoss:-12_400, rate:0.0800, commission:19_296, status:"settled", batchTime:"2026-04-28 02:30:08", batchId:"BATCH-20260428-001" },
     ];
 
     const MOCK_LEDGER = [
@@ -206,15 +206,22 @@
     ];
 
     // ============== 工具函数 ==============
+    // fmtNum: 纯数字 (下线数 / 注单数 / 玩家数), 千分位
     const fmtNum = (n, dec=0) => {
       if (n === 0) return "0";
       if (typeof n !== "number") return n;
       return n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
     };
+    // fmtAmount: 金额走「万」单位 (B 端 V1.12 line 189-198 同款规则)
+    //   全量, 无下限阈值, 最多 4 位小数; 8,000 → 0.8 万 / 300 → 0.03 万 / 0 → 0 万 / -1,200 → -0.12 万
+    const fmtAmount = (n) => {
+      if (n === undefined || n === null || isNaN(n)) return "-";
+      const v = n / 10000;
+      return v.toLocaleString("zh-CN", { maximumFractionDigits: 4 }) + " 万";
+    };
     const fmtMoney = (n, cur) => {
-      const dec = (cur === "USD" || cur === "PHP") ? 2 : 0;
-      const sign = n < 0 ? "-" : "";
-      return sign + fmtNum(Math.abs(n), dec) + " " + cur;
+      if (n === undefined || n === null || isNaN(n)) return "-";
+      return fmtAmount(n) + " " + cur;
     };
     const fmtPct = (n) => (n * 100).toFixed(2) + "%";
     const StatusChip = ({ status }) => {
@@ -515,13 +522,13 @@
             <select className="input w-40" value={topAgent} onChange={e=>setTopAgent(e.target.value)}>
               <option value="all">全部顶代</option>{TOP_AGENTS.map(a => <option key={a.id} value={a.id}>{a.id} ({a.nick})</option>)}
             </select>
-            <span className="text-xs text-faint">共 {list.length} 条 · 总佣金 <span className="text-cool num">{fmtNum(list.reduce((s,r)=>s+r.commission,0))}</span></span>
+            <span className="text-xs text-faint">共 {list.length} 条  ·  各币种佣金独立合计</span>
           </div>
           <div className="bg-panel border border-line rounded-lg overflow-hidden">
             <div className="scroll-x">
               <table>
                 <thead><tr>
-                  <th>场次 ID</th><th>业务日期</th><th>顶代</th><th className="text-right">注单数</th><th className="text-right">玩家数</th>
+                  <th>场次 ID</th><th>业务日期</th><th>顶代</th><th>币种</th><th className="text-right">注单数</th><th className="text-right">玩家数</th>
                   <th className="text-right">总投注</th><th className="text-right">有效投注</th><th className="text-right">总输赢</th>
                   <th className="text-right">佣金率</th><th className="text-right">佣金金额</th><th>状态</th><th>生成时间</th><th>批次号</th>
                 </tr></thead>
@@ -531,15 +538,16 @@
                       <td className="mono text-cool" style={{fontSize:11}}>{s.id}</td>
                       <td>{s.date}</td>
                       <td><span className="mono">{s.topAgent}</span> <span className="text-faint">({s.topNick})</span></td>
+                      <td><span className="chip chip-cool">{s.currency}</span></td>
                       <td className="num text-right">{fmtNum(s.betCount)}</td>
                       <td className="num text-right">{fmtNum(s.playerCount)}</td>
-                      <td className="num text-right">{fmtNum(s.totalStake)}</td>
-                      <td className="num text-right">{fmtNum(s.validStake)}</td>
+                      <td className="num text-right">{fmtMoney(s.totalStake, s.currency)}</td>
+                      <td className="num text-right">{fmtMoney(s.validStake, s.currency)}</td>
                       <td className="num text-right" style={{color: s.totalWinLoss > 0 ? "#5BC97C" : (s.totalWinLoss < 0 ? "#FF6B6B" : "#9AA4B5")}}>
-                        {s.totalWinLoss > 0 ? "+" : ""}{fmtNum(s.totalWinLoss)}
+                        {s.totalWinLoss > 0 ? "+" : ""}{fmtMoney(s.totalWinLoss, s.currency)}
                       </td>
                       <td className="num text-right">{fmtPct(s.rate)}</td>
-                      <td className="num text-right text-cool">{fmtNum(s.commission)}</td>
+                      <td className="num text-right text-cool">{fmtMoney(s.commission, s.currency)}</td>
                       <td><StatusChip status={s.status}/></td>
                       <td className="text-muted" style={{fontSize:11}}>{s.batchTime}</td>
                       <td className="mono text-faint" style={{fontSize:11}}>{s.batchId}</td>
