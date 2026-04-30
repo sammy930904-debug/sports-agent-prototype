@@ -176,14 +176,16 @@
       { id:"519346028101500982", playerSysId:"diamond-1", playerUser:"dia-014", topAgent:"diamond", provider:"PG SOFT", providerCode:"PG", gameType:"电子 🎰", league:"PG 麻将胡了", teamHome:"", teamAway:"", score:"", playMethod:"赏金 ×5", selection:"局次 #99012", odds:0, bundleType:"单局", betTime:"2026-04-29 12:30:42", settleTime:"2026-04-29 12:30:45", stake:200, payout:0, winLoss:-200, currency:"USD", status:"已结算" },
     ];
 
+    // 体育场次记录 mock - 每顶代每天一行 (Sammy 2026-04-30 拍 10 列)
+    // shareRatio 跟 ACCOUNTS 顶代节点一致; shareAmount = shareRatio × validStake (占成让利总规模)
     const MOCK_SPORTS_SESSIONS = [
-      { id:"SP-20260428-qweqwe-001", date:"2026-04-28", topAgent:"qweqwe", topNick:"Alpha", currency:"KRW", betCount:382, playerCount:48, totalStake:124_500_000, validStake:118_000_000, totalWinLoss:8_320_000, rate:0.0750, commission:8_850_000, status:"settled", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
-      { id:"SP-20260428-diamond-001", date:"2026-04-28", topAgent:"diamond", topNick:"Diamond", currency:"USD", betCount:124, playerCount:35, totalStake:218_400, validStake:210_500, totalWinLoss:18_300, rate:0.0800, commission:16_840, status:"settled", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
-      { id:"SP-20260428-lucky88-001", date:"2026-04-28", topAgent:"lucky88", topNick:"Lucky88", currency:"PHP", betCount:67, playerCount:18, totalStake:3_120_000, validStake:2_980_000, totalWinLoss:-184_000, rate:0.0600, commission:178_800, status:"settled", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
-      { id:"SP-20260428-sapphire-001", date:"2026-04-28", topAgent:"sapphire", topNick:"Sapphire", currency:"KRW", betCount:158, playerCount:27, totalStake:54_800_000, validStake:52_300_000, totalWinLoss:3_140_000, rate:0.0750, commission:3_922_500, status:"settled", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
-      { id:"SP-20260428-emerald-001", date:"2026-04-28", topAgent:"emerald", topNick:"Emerald", currency:"USD", betCount:0, playerCount:0, totalStake:0, validStake:0, totalWinLoss:0, rate:0.0700, commission:0, status:"void", batchTime:"2026-04-29 02:30:14", batchId:"BATCH-20260429-001" },
-      { id:"SP-20260427-qweqwe-001", date:"2026-04-27", topAgent:"qweqwe", topNick:"Alpha", currency:"KRW", betCount:412, playerCount:51, totalStake:142_300_000, validStake:135_800_000, totalWinLoss:-4_180_000, rate:0.0750, commission:10_185_000, status:"settled", batchTime:"2026-04-28 02:30:08", batchId:"BATCH-20260428-001" },
-      { id:"SP-20260427-diamond-001", date:"2026-04-27", topAgent:"diamond", topNick:"Diamond", currency:"USD", betCount:138, playerCount:38, totalStake:248_900, validStake:241_200, totalWinLoss:-12_400, rate:0.0800, commission:19_296, status:"settled", batchTime:"2026-04-28 02:30:08", batchId:"BATCH-20260428-001" },
+      { id:"SP-20260428-qweqwe-001",  date:"2026-04-28", topAgent:"qweqwe",  sysId:"qweqwe",  user:"qweqwe",  currency:"KRW", shareRatio:0.1875, validStake:118_000_000, shareAmount:22_125_000, totalWinLoss:8_320_000, rate:0.0750, commission:8_850_000 },
+      { id:"SP-20260428-diamond-001", date:"2026-04-28", topAgent:"diamond", sysId:"diamond", user:"diamond", currency:"USD", shareRatio:0.225,  validStake:210_500,     shareAmount:47_362.50,  totalWinLoss:18_300,    rate:0.0800, commission:16_840 },
+      { id:"SP-20260428-lucky88-001", date:"2026-04-28", topAgent:"lucky88", sysId:"lucky88", user:"lucky88", currency:"PHP", shareRatio:0.125,  validStake:2_980_000,   shareAmount:372_500,    totalWinLoss:-184_000,  rate:0.0600, commission:178_800 },
+      { id:"SP-20260428-sapphire-001",date:"2026-04-28", topAgent:"sapphire",sysId:"sapphire",user:"sapphire",currency:"KRW", shareRatio:0.165,  validStake:52_300_000,  shareAmount:8_629_500,  totalWinLoss:3_140_000, rate:0.0750, commission:3_922_500 },
+      { id:"SP-20260428-emerald-001", date:"2026-04-28", topAgent:"emerald", sysId:"emerald", user:"emerald", currency:"USD", shareRatio:0.05,   validStake:0,           shareAmount:0,          totalWinLoss:0,         rate:0.0700, commission:0 },
+      { id:"SP-20260427-qweqwe-001",  date:"2026-04-27", topAgent:"qweqwe",  sysId:"qweqwe",  user:"qweqwe",  currency:"KRW", shareRatio:0.1875, validStake:135_800_000, shareAmount:25_462_500, totalWinLoss:-4_180_000,rate:0.0750, commission:10_185_000 },
+      { id:"SP-20260427-diamond-001", date:"2026-04-27", topAgent:"diamond", sysId:"diamond", user:"diamond", currency:"USD", shareRatio:0.225,  validStake:241_200,     shareAmount:54_270,     totalWinLoss:-12_400,   rate:0.0800, commission:19_296 },
     ];
 
     const MOCK_LEDGER = [
@@ -1067,29 +1069,27 @@
             <div className="scroll-x">
               <table>
                 <thead><tr>
-                  <th>场次 ID</th><th>业务日期</th><th>顶代</th><th>币种</th><th className="text-right">注单数</th><th className="text-right">玩家数</th>
-                  <th className="text-right">总投注</th><th className="text-right">有效投注</th><th className="text-right">总输赢</th>
-                  <th className="text-right">佣金率</th><th className="text-right">佣金金额</th><th>状态</th><th>生成时间</th><th>批次号</th>
+                  <th>场次编号</th><th>系统户口号</th><th>用户账号</th>
+                  <th className="text-right">输赢</th><th className="text-right">有效投注</th>
+                  <th>币种</th>
+                  <th className="text-right">占成</th><th className="text-right">占成金额</th>
+                  <th className="text-right">佣金率</th><th className="text-right">佣金</th>
                 </tr></thead>
                 <tbody>
                   {list.map(s => (
                     <tr key={s.id}>
                       <td className="mono text-cool" style={{fontSize:11}}>{s.id}</td>
-                      <td>{s.date}</td>
-                      <td><span className="mono">{s.topAgent}</span> <span className="text-faint">({s.topNick})</span></td>
-                      <td><span className="chip chip-cool">{s.currency}</span></td>
-                      <td className="num text-right">{fmtNum(s.betCount)}</td>
-                      <td className="num text-right">{fmtNum(s.playerCount)}</td>
-                      <td className="num text-right">{fmtAmount(s.totalStake)}</td>
-                      <td className="num text-right">{fmtAmount(s.validStake)}</td>
+                      <td className="mono text-muted">{s.sysId}</td>
+                      <td className="mono">{s.user}</td>
                       <td className="num text-right" style={{color: s.totalWinLoss > 0 ? "#5BC97C" : (s.totalWinLoss < 0 ? "#FF6B6B" : "#9AA4B5")}}>
                         {s.totalWinLoss > 0 ? "+" : ""}{fmtAmount(s.totalWinLoss)}
                       </td>
+                      <td className="num text-right">{fmtAmount(s.validStake)}</td>
+                      <td><span className="chip chip-cool">{s.currency}</span></td>
+                      <td className="num text-right">{fmtPct(s.shareRatio)}</td>
+                      <td className="num text-right">{fmtAmount(s.shareAmount)}</td>
                       <td className="num text-right">{fmtPct(s.rate)}</td>
                       <td className="num text-right text-cool">{fmtAmount(s.commission)}</td>
-                      <td><StatusChip status={s.status}/></td>
-                      <td className="text-muted" style={{fontSize:11}}>{s.batchTime}</td>
-                      <td className="mono text-faint" style={{fontSize:11}}>{s.batchId}</td>
                     </tr>
                   ))}
                 </tbody>
