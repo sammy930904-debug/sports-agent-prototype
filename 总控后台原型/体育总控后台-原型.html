@@ -1895,21 +1895,23 @@
 
     // ============== 主框架 ==============
     function App() {
+      // ⚠ React Hooks 规则: 所有 hooks 必须在 early return 之前,且每次 render 调用顺序一致
       const [currentUser, setCurrentUser] = useState(null);  // null = 未登录
       const [active, setActive] = useState("agents");
       const [showChangePwd, setShowChangePwd] = useState(false);
       const [showUserMenu, setShowUserMenu] = useState(false);
 
-      if (!currentUser) return <LoginPage onLogin={(staff)=>setCurrentUser(staff)}/>;
-
-      const role = currentUser.role;
-      const r = ROLES[role];
-      const visibleMenus = r.menus;
+      const role = currentUser ? currentUser.role : null;
+      const r = role ? ROLES[role] : null;
+      const visibleMenus = r ? r.menus : [];
 
       // 角色变化兜底:若当前菜单不可见,回退到第一个可见菜单
       React.useEffect(() => {
-        if (!visibleMenus.includes(active)) setActive(visibleMenus[0]);
+        if (currentUser && !visibleMenus.includes(active)) setActive(visibleMenus[0]);
       }, [role]);
+
+      // 所有 hooks 调用完毕后再 early return (避免登录前后 hook 数量不一致引发 React 报错)
+      if (!currentUser) return <LoginPage onLogin={(staff)=>setCurrentUser(staff)}/>;
 
       const Menu = ({ id, label, icon }) => visibleMenus.includes(id) && (
         <div className={"menu-item " + (active===id?"active":"")} onClick={()=>setActive(id)}>
