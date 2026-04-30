@@ -921,13 +921,39 @@
 
     // ============== 注单记录页 ==============
     function BetsPage({ role }) {
-      const [search, setSearch] = useState("");
+      // 提交触发模式 (跟顶代户口筛选区一致)
+      const [inBetId, setInBetId] = useState(""), [betId, setBetId] = useState("");
+      const [inUser, setInUser] = useState(""), [userQ, setUserQ] = useState("");
+      const [inCurrency, setInCurrency] = useState("all"), [currency, setCurrency] = useState("all");
+      const [inDateFrom, setInDateFrom] = useState(""), [dateFrom, setDateFrom] = useState("");
+      const [inDateTo, setInDateTo] = useState(""), [dateTo, setDateTo] = useState("");
+      const doSearch = () => {
+        setBetId(inBetId.trim()); setUserQ(inUser.trim()); setCurrency(inCurrency);
+        setDateFrom(inDateFrom); setDateTo(inDateTo);
+      };
+      const resetSearch = () => {
+        setInBetId(""); setInUser(""); setInCurrency("all"); setInDateFrom(""); setInDateTo("");
+        setBetId(""); setUserQ(""); setCurrency("all"); setDateFrom(""); setDateTo("");
+      };
 
       // 硬过滤: 只显示体育注单 + 只显示已结算 (Sammy 2026-04-30 拍, 跟体育场次记录数据源对齐)
       const list = MOCK_BETS.filter(b => {
         if (!b.gameType.includes("体育")) return false;
         if (b.status !== "已结算") return false;
-        if (search && !(b.id.includes(search) || (b.playerUser || "").includes(search) || (b.playerSysId || "").includes(search) || b.topAgent.includes(search))) return false;
+        if (betId && !b.id.includes(betId)) return false;
+        if (userQ && !((b.playerSysId || "").includes(userQ) || (b.playerUser || "").includes(userQ))) return false;
+        if (currency !== "all" && b.currency !== currency) return false;
+        // 时间过滤 betTime (投注时间)
+        if (dateFrom) {
+          let fromCmp = dateFrom.replace("T", " ");
+          if (fromCmp.length === 16) fromCmp += ":00";
+          if (b.betTime < fromCmp) return false;
+        }
+        if (dateTo) {
+          let toCmp = dateTo.replace("T", " ");
+          if (toCmp.length === 16) toCmp += ":59";
+          if (b.betTime > toCmp) return false;
+        }
         return true;
       });
 
@@ -942,9 +968,35 @@
             </div>
             <button className="btn btn-ghost">导出 CSV</button>
           </div>
-          <div className="bg-panel border border-line rounded-lg p-4 mb-4 flex gap-3 items-center flex-wrap">
-            <input className="input flex-1 max-w-xs" placeholder="搜索注单号 / 系统户口号 / 用户账号 / 顶代" value={search} onChange={e=>setSearch(e.target.value)}/>
-            <span className="text-xs text-faint">共 {list.length} 条已结算注单</span>
+          <div className="bg-panel border border-line rounded-lg p-3 mb-4">
+            <div className="flex flex-wrap gap-2 items-center">
+              <input className="input" style={{width:200}} placeholder="搜索注单号" value={inBetId} onChange={e=>setInBetId(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:240}} placeholder="搜索 系统户口号 / 用户账号" value={inUser} onChange={e=>setInUser(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <select className="input" style={{width:120}} value={inCurrency} onChange={e=>setInCurrency(e.target.value)}>
+                <option value="all">全部币种</option>
+                <option value="KRW">KRW</option><option value="USD">USD</option><option value="PHP">PHP</option><option value="CNY">CNY</option><option value="THB">THB</option>
+              </select>
+              <ConfigProvider locale={zhCN}>
+                <RangePicker
+                  showTime={{ format: "HH:mm:ss" }}
+                  format="YYYY-MM-DD HH:mm:ss"
+                  placeholder={["投注开始时间","结束时间"]}
+                  allowEmpty={[true, true]}
+                  value={[inDateFrom ? moment(inDateFrom.replace("T"," ")) : null, inDateTo ? moment(inDateTo.replace("T"," ")) : null]}
+                  onChange={(vals) => {
+                    if (!vals) { setInDateFrom(""); setInDateTo(""); return; }
+                    setInDateFrom(vals[0] ? vals[0].format("YYYY-MM-DDTHH:mm:ss") : "");
+                    setInDateTo(vals[1] ? vals[1].format("YYYY-MM-DDTHH:mm:ss") : "");
+                  }}
+                  style={{ height: 36, width: 380 }}
+                />
+              </ConfigProvider>
+              <button className="btn btn-primary" style={{padding:"8px 18px"}} onClick={doSearch}>搜索</button>
+              <button className="btn btn-ghost" style={{padding:"8px 14px"}} onClick={resetSearch}>重置</button>
+            </div>
+            <div className="flex items-center mt-2 text-xs text-faint">
+              <span>共 {list.length} 条已结算注单(投注时间过滤)</span>
+            </div>
           </div>
           <div className="bg-panel border border-line rounded-lg overflow-hidden">
             <div className="scroll-x">
