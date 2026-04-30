@@ -922,13 +922,13 @@
     // ============== 注单记录页 ==============
     function BetsPage({ role }) {
       const [search, setSearch] = useState("");
-      const [gameType, setGameType] = useState("all");
       const [status, setStatus] = useState("all");
       const [expanded, setExpanded] = useState(new Set());
       const toggle = (id) => { const n = new Set(expanded); n.has(id) ? n.delete(id) : n.add(id); setExpanded(n); };
 
+      // 硬过滤: 只显示体育注单 (Sammy 2026-04-30 拍, S 端注单记录收窄到只体育)
       const list = MOCK_BETS.filter(b => {
-        if (gameType !== "all" && !b.gameType.includes(gameType)) return false;
+        if (!b.gameType.includes("体育")) return false;
         if (status !== "all" && b.status !== status) return false;
         if (search && !(b.id.includes(search) || b.playerId.includes(search) || b.topAgent.includes(search))) return false;
         return true;
@@ -940,16 +940,13 @@
         <div className="p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="text-xl font-semibold">注单记录</h2>
-              <p className="text-xs text-muted mt-1">三方游戏商每笔回调,准实时  ·  含未结算 / 已结算两种状态</p>
+              <h2 className="text-xl font-semibold">体育注单记录</h2>
+              <p className="text-xs text-muted mt-1">三方体育游戏商每笔回调,准实时  ·  含未结算 / 已结算两种状态  ·  只显示体育注单(电子 / 六合彩 暂不在 S 端展示)</p>
             </div>
             <button className="btn btn-ghost">导出 CSV</button>
           </div>
           <div className="bg-panel border border-line rounded-lg p-4 mb-4 flex gap-3 items-center flex-wrap">
             <input className="input flex-1 max-w-xs" placeholder="搜索注单号 / 玩家 / 顶代" value={search} onChange={e=>setSearch(e.target.value)}/>
-            <select className="input w-32" value={gameType} onChange={e=>setGameType(e.target.value)}>
-              <option value="all">全部类型</option><option value="体育">体育 ⚽</option><option value="电子">电子 🎰</option><option value="六合彩">六合彩 🎱</option>
-            </select>
             <select className="input w-32" value={status} onChange={e=>setStatus(e.target.value)}>
               <option value="all">全部状态</option><option value="未结算">未结算</option><option value="已结算">已结算</option>
             </select>
@@ -960,12 +957,12 @@
               <table>
                 <thead><tr>
                   <th style={{width:24}}></th>
-                  <th>注单号</th><th>玩家 ID</th><th>顶代</th><th>三方商</th><th>游戏类型</th><th>币种</th><th>投注时间</th>
+                  <th>注单号</th><th>玩家 ID</th><th>顶代</th><th>三方商</th><th>币种</th><th>投注时间</th>
                   <th className="text-right">投注金额</th>{showFinanceCols && <th className="text-right">派彩金额</th>}{showFinanceCols && <th className="text-right">输赢</th>}<th>状态</th>
                 </tr></thead>
                 <tbody>
                   {list.map(b => {
-                    const colSpan = showFinanceCols ? 12 : 10;
+                    const colSpan = showFinanceCols ? 11 : 9;
                     const isOpen = expanded.has(b.id);
                     return (<React.Fragment key={b.id}>
                     <tr>
@@ -974,7 +971,6 @@
                       <td className="mono text-muted">{b.playerId}</td>
                       <td className="mono">{b.topAgent}</td>
                       <td className="text-muted">{b.provider}</td>
-                      <td>{b.gameType}</td>
                       <td><span className="chip chip-cool">{b.currency}</span></td>
                       <td className="text-muted">{b.betTime}</td>
                       <td className="num text-right">{fmtAmount(b.stake)}</td>
@@ -1248,7 +1244,7 @@
               <Menu id="agents" label="顶代户口" icon="◉"/>
 
               <div className="menu-group">报表管理</div>
-              <Menu id="reports.bets" label="注单记录" icon="◐"/>
+              <Menu id="reports.bets" label="体育注单记录" icon="◐"/>
               <Menu id="reports.sports" label="体育场次记录" icon="◑"/>
               <Menu id="reports.ledger" label="交易流水记录" icon="◒"/>
 
@@ -1266,7 +1262,7 @@
             <header className="border-b border-line px-6 py-3 flex items-center bg-panel">
               <div className="text-xs text-faint">
                 {active === "agents" && "账号管理 / 顶代户口"}
-                {active === "reports.bets" && "报表管理 / 注单记录"}
+                {active === "reports.bets" && "报表管理 / 体育注单记录"}
                 {active === "reports.sports" && "报表管理 / 体育场次记录"}
                 {active === "reports.ledger" && "报表管理 / 交易流水记录"}
                 {active === "sys.audit" && "系统管理 / 操作日志"}
