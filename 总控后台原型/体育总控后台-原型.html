@@ -176,6 +176,80 @@
       { id:"519346028101500982", playerSysId:"diamond-1", playerUser:"dia-014", topAgent:"diamond", provider:"PG SOFT", providerCode:"PG", gameType:"电子 🎰", league:"PG 麻将胡了", teamHome:"", teamAway:"", score:"", playMethod:"赏金 ×5", selection:"局次 #99012", odds:0, bundleType:"单局", betTime:"2026-04-29 12:30:42", settleTime:"2026-04-29 12:30:45", stake:200, payout:0, winLoss:-200, currency:"USD", status:"已结算" },
     ];
 
+    // 场次明细弹窗 (Sammy 2026-04-30): 显示某场次下的注单, 含分页 + 小计 + 总计
+    function SessionDetailModal({ session, onClose }) {
+      // 匹配条件: 体育 + 已结算 + 同一顶代 (PM 简化: 不严格按 date 匹配, 真实按场次 batchId)
+      const matched = MOCK_BETS.filter(b => b.gameType.includes("体育") && b.status === "已结算" && b.topAgent === session.topAgent);
+      const [pageNum, setPageNum] = useState(0);
+      const pageSize = 10;
+      const totalPages = Math.max(1, Math.ceil(matched.length / pageSize));
+      const pageData = matched.slice(pageNum * pageSize, (pageNum + 1) * pageSize);
+      const sumOf = (arr, key) => arr.reduce((s, b) => s + (b[key] !== undefined ? b[key] : 0), 0);
+      const sumValid = (arr) => arr.reduce((s, b) => s + (b.validStake !== undefined ? b.validStake : b.stake), 0);
+      const sub = { stake: sumOf(pageData,"stake"), payout: sumOf(pageData,"payout"), winLoss: sumOf(pageData,"winLoss"), validStake: sumValid(pageData) };
+      const total = { stake: sumOf(matched,"stake"), payout: sumOf(matched,"payout"), winLoss: sumOf(matched,"winLoss"), validStake: sumValid(matched) };
+      return (
+        <div className="modal-backdrop">
+          <div className="modal modal-wide" onClick={e=>e.stopPropagation()} style={{width:920,maxWidth:"96vw"}}>
+            <h3 className="text-base font-semibold mb-1">游戏明细 · <span className="mono text-cool">{session.id}</span></h3>
+            <p className="text-xs text-faint mb-3">{session.date} · 顶代 <span className="mono">{session.user}</span> · 币种 {session.currency} · 共 {matched.length} 条注单 · <span className="text-faint">PM 简化:按 topAgent 过滤,真实按场次 batchId 关联</span></p>
+            <div className="bg-panel border border-line rounded-lg overflow-hidden mb-3">
+              <div className="scroll-x">
+                <table style={{fontSize:12}}>
+                  <thead><tr>
+                    <th>注单号</th><th>系统户口号</th><th>用户账号</th><th>币种</th><th>投注时间</th><th>结算时间</th>
+                    <th className="text-right">投注金额</th><th className="text-right">派彩金额</th><th className="text-right">输赢</th><th className="text-right">有效投注</th>
+                  </tr></thead>
+                  <tbody>
+                    {pageData.map(b => (
+                      <tr key={b.id}>
+                        <td className="mono text-cool" style={{fontSize:11}}>{b.id}</td>
+                        <td className="mono text-muted">{b.playerSysId}</td>
+                        <td className="mono">{b.playerUser}</td>
+                        <td><span className="chip chip-cool">{b.currency}</span></td>
+                        <td className="text-muted" style={{fontSize:11}}>{b.betTime}</td>
+                        <td className="text-muted" style={{fontSize:11}}>{b.settleTime}</td>
+                        <td className="num text-right">{fmtAmount(b.stake)}</td>
+                        <td className="num text-right">{fmtAmount(b.payout)}</td>
+                        <td className="num text-right" style={{color: b.winLoss > 0 ? "#5BC97C" : (b.winLoss < 0 ? "#FF6B6B" : "#9AA4B5")}}>{(b.winLoss > 0 ? "+" : "") + fmtAmount(b.winLoss)}</td>
+                        <td className="num text-right">{fmtAmount(b.validStake !== undefined ? b.validStake : b.stake)}</td>
+                      </tr>
+                    ))}
+                    {pageData.length === 0 && <tr><td colSpan="10" style={{textAlign:"center",padding:"20px",color:"#6B7280"}}>暂无数据</td></tr>}
+                  </tbody>
+                  {pageData.length > 0 && (
+                    <tfoot>
+                      <tr style={{background:"#0F141C",borderTop:"1px solid #2A3648"}}>
+                        <td colSpan="6" className="text-faint" style={{fontSize:11,padding:"8px"}}>本页小计({pageData.length} 条)</td>
+                        <td className="num text-right">{fmtAmount(sub.stake)}</td>
+                        <td className="num text-right">{fmtAmount(sub.payout)}</td>
+                        <td className="num text-right" style={{color: sub.winLoss > 0 ? "#5BC97C" : (sub.winLoss < 0 ? "#FF6B6B" : "#9AA4B5")}}>{(sub.winLoss > 0 ? "+" : "") + fmtAmount(sub.winLoss)}</td>
+                        <td className="num text-right">{fmtAmount(sub.validStake)}</td>
+                      </tr>
+                      <tr style={{background:"#11161E"}}>
+                        <td colSpan="6" className="text-cool font-semibold" style={{fontSize:11,padding:"8px"}}>总计({matched.length} 条)</td>
+                        <td className="num text-right text-cool">{fmtAmount(total.stake)}</td>
+                        <td className="num text-right text-cool">{fmtAmount(total.payout)}</td>
+                        <td className="num text-right" style={{color: total.winLoss > 0 ? "#5BC97C" : (total.winLoss < 0 ? "#FF6B6B" : "#9AA4B5"),fontWeight:600}}>{(total.winLoss > 0 ? "+" : "") + fmtAmount(total.winLoss)}</td>
+                        <td className="num text-right text-cool">{fmtAmount(total.validStake)}</td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button className="btn btn-ghost" onClick={()=>setPageNum(p=>Math.max(0,p-1))} disabled={pageNum===0} style={{padding:"4px 12px",fontSize:12}}>← 上一页</button>
+              <span className="text-xs text-muted">第 {pageNum+1} / {totalPages} 页</span>
+              <button className="btn btn-ghost" onClick={()=>setPageNum(p=>Math.min(totalPages-1,p+1))} disabled={pageNum>=totalPages-1} style={{padding:"4px 12px",fontSize:12}}>下一页 →</button>
+              <span className="text-xs text-faint ml-auto">每页 {pageSize} 条</span>
+              <button className="btn btn-primary" onClick={onClose} style={{padding:"6px 18px"}}>关闭</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // 体育场次记录 mock - 每顶代每天一行 (Sammy 2026-04-30 拍 15 列)
     // submitRate 数组: 上缴给多个上级顶代的佣金率 [{ sysId, rate }, ...]
     //   sysId 是真实顶代的系统户口号 (从 ACCOUNTS 里取),代表上级顶代
@@ -1038,6 +1112,7 @@
     function SportsSessionsPage({ role }) {
       const [date, setDate] = useState("all");
       const [topAgent, setTopAgent] = useState("all");
+      const [detailModal, setDetailModal] = useState(null);
 
       const list = MOCK_SPORTS_SESSIONS.filter(s => {
         if ((s.validStake || 0) === 0) return false; // 过滤无有效投注的场次 (空跑批不展示)
@@ -1108,13 +1183,14 @@
                       <td className="text-muted" style={{fontSize:12}}>{s.workStartAt}</td>
                       <td className="text-muted" style={{fontSize:12}}>{s.workEndAt}</td>
                       <td><StatusChip status={s.status}/></td>
-                      <td><button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>alert("游戏明细 " + s.id + "\n\n真实开发: 跳转「体育注单记录」+ 自动按场次 ID / 顶代 / 业务日期过滤")}>游戏明细</button></td>
+                      <td><button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setDetailModal(s)}>游戏明细</button></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </div>
+          {detailModal && <SessionDetailModal session={detailModal} onClose={()=>setDetailModal(null)}/>}
         </div>
       );
     }
