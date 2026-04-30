@@ -387,6 +387,31 @@
       return v.toLocaleString("zh-CN", { maximumFractionDigits: 4 }) + " 万";
     };
     const fmtPct = (n) => (n * 100).toFixed(2) + "%";
+
+    // ============== 通用分页组件 (列表页统一 20 条/页) ==============
+    const PAGE_SIZE = 20;
+    function Pagination({ total, pageNum, setPageNum, pageSize = PAGE_SIZE }) {
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const safePage = Math.min(Math.max(0, pageNum), totalPages - 1);
+      const [jumpVal, setJumpVal] = useState("");
+      const doJump = () => {
+        const n = parseInt(jumpVal, 10);
+        if (Number.isFinite(n) && n >= 1 && n <= totalPages) { setPageNum(n - 1); setJumpVal(""); }
+      };
+      return (
+        <div className="flex items-center gap-2" style={{justifyContent:"flex-end", padding:"10px 12px", borderTop:"1px solid #2A3648", background:"#0F141C"}}>
+          <span className="text-xs text-faint" style={{marginRight:6}}>共 {total} 条 · 每页 {pageSize} 条</span>
+          <button className="btn btn-ghost" onClick={()=>setPageNum(p=>Math.max(0,p-1))} disabled={safePage===0} style={{padding:"4px 12px",fontSize:12}}>← 上一页</button>
+          <span className="text-xs text-muted">第 {safePage+1} / {totalPages} 页</span>
+          <button className="btn btn-ghost" onClick={()=>setPageNum(p=>Math.min(totalPages-1,p+1))} disabled={safePage>=totalPages-1} style={{padding:"4px 12px",fontSize:12}}>下一页 →</button>
+          <span className="text-xs text-faint" style={{marginLeft:8}}>跳至</span>
+          <input className="input" type="number" min="1" max={totalPages} value={jumpVal} onChange={e=>setJumpVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doJump();}} style={{width:60,padding:"4px 8px",fontSize:12,textAlign:"center"}} placeholder={String(safePage+1)}/>
+          <span className="text-xs text-faint">页</span>
+          <button className="btn btn-ghost" onClick={doJump} disabled={!jumpVal} style={{padding:"4px 10px",fontSize:12}}>确定</button>
+        </div>
+      );
+    }
+
     const StatusChip = ({ status }) => {
       const map = { active:"chip-active", frozen:"chip-frozen", settled:"chip-settled", void:"chip-void", "未结算":"chip-warn", "已结算":"chip-settled" };
       const txt = { active:"启用", frozen:"已冻结", settled:"已结算", void:"作废" };
@@ -509,13 +534,14 @@
       const [inShareRatio, setInShareRatio] = useState("all"), [shareRatioFilter, setShareRatioFilter] = useState("all");
       const [inDateFrom, setInDateFrom] = useState(""), [dateFrom, setDateFrom] = useState("");
       const [inDateTo, setInDateTo] = useState(""), [dateTo, setDateTo] = useState("");
+      const [pageNum, setPageNum] = useState(0);
       const doSearch = () => {
         setSearch(inSearch.trim()); setStatusFilter(inStatus); setCurrencyFilter(inCurrency);
-        setShareRatioFilter(inShareRatio); setDateFrom(inDateFrom); setDateTo(inDateTo);
+        setShareRatioFilter(inShareRatio); setDateFrom(inDateFrom); setDateTo(inDateTo); setPageNum(0);
       };
       const resetSearch = () => {
         setInSearch(""); setInStatus("all"); setInCurrency("all"); setInShareRatio("all"); setInDateFrom(""); setInDateTo("");
-        setSearch(""); setStatusFilter("all"); setCurrencyFilter("all"); setShareRatioFilter("all"); setDateFrom(""); setDateTo("");
+        setSearch(""); setStatusFilter("all"); setCurrencyFilter("all"); setShareRatioFilter("all"); setDateFrom(""); setDateTo(""); setPageNum(0);
       };
 
       // Tree 扁平化: 顶代行先过筛选; 下线行只在父级展开时才出现 (V0.1 同款懒加载)
@@ -569,6 +595,18 @@
         topKeys.forEach(k => walk(k, 0));
         return out;
       }, [accounts, topKeys, search, statusFilter, currencyFilter, shareRatioFilter, dateFrom, dateTo, expanded]);
+
+      // 按顶代行分组 (顶代 + 该顶代展开的所有下线 = 1 组), 分页以"组"为单位 (PAGE_SIZE 个顶代/页, 展开下线随父级一起出现)
+      const groups = useMemo(() => {
+        const out = []; let cur = null;
+        for (const r of rows) {
+          if (r.depth === 0) { cur = { top: r, descs: [] }; out.push(cur); }
+          else if (cur) cur.descs.push(r);
+        }
+        return out;
+      }, [rows]);
+      const totalTop = groups.length;
+      const pagedRows = groups.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).flatMap(g => [g.top, ...g.descs]);
 
       const toggle = (key) => {
         const next = new Set(expanded);
@@ -656,7 +694,7 @@
               <button className="btn btn-ghost" style={{padding:"8px 14px"}} onClick={resetSearch}>重置</button>
             </div>
             <div className="flex items-center mt-2 text-xs text-faint">
-              <span>共 {rows.filter(r=>r.depth===0).length} 顶代行  ·  当前渲染 {rows.length} 行(含展开)</span>
+              <span>共 {totalTop} 顶代行  ·  当前页渲染 {pagedRows.length} 行(含展开下线)</span>
               <button className="btn btn-ghost ml-auto" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setExpanded(new Set())} disabled={expanded.size===0}>全部收起</button>
             </div>
           </div>
@@ -670,7 +708,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map(a => {
+                  {pagedRows.map(a => {
                     const isTop = a.accountType === "普通(顶代)";
                     const isAgent = a.accountType === "代理";
                     const isPlayer = a.accountType === "游戏";
@@ -691,6 +729,7 @@
                 </tbody>
               </table>
             </div>
+            <Pagination total={totalTop} pageNum={pageNum} setPageNum={setPageNum}/>
           </div>
           {modal && modal.type === "newSub" && <NewSubModal parent={modal.agent} accounts={accounts} onClose={()=>setModal(null)} onSubmit={(data)=>handleNewSub(modal.agent, data)}/>}
           {modal && modal.type === "editProfile" && <EditProfileModal account={modal.agent} accounts={accounts} onClose={()=>setModal(null)} onSubmit={(data)=>handleEditProfile(modal.agent, data)}/>}
@@ -1068,13 +1107,14 @@
       const [inCurrency, setInCurrency] = useState("all"), [currency, setCurrency] = useState("all");
       const [inDateFrom, setInDateFrom] = useState(""), [dateFrom, setDateFrom] = useState("");
       const [inDateTo, setInDateTo] = useState(""), [dateTo, setDateTo] = useState("");
+      const [pageNum, setPageNum] = useState(0);
       const doSearch = () => {
         setBetId(inBetId.trim()); setUserQ(inUser.trim()); setCurrency(inCurrency);
-        setDateFrom(inDateFrom); setDateTo(inDateTo);
+        setDateFrom(inDateFrom); setDateTo(inDateTo); setPageNum(0);
       };
       const resetSearch = () => {
         setInBetId(""); setInUser(""); setInCurrency("all"); setInDateFrom(""); setInDateTo("");
-        setBetId(""); setUserQ(""); setCurrency("all"); setDateFrom(""); setDateTo("");
+        setBetId(""); setUserQ(""); setCurrency("all"); setDateFrom(""); setDateTo(""); setPageNum(0);
       };
 
       // 硬过滤: 只显示体育注单 + 只显示已结算 (Sammy 2026-04-30 拍, 跟体育场次记录数据源对齐)
@@ -1147,7 +1187,7 @@
                   <th className="text-right">投注金额</th>{showFinanceCols && <th className="text-right">派彩金额</th>}{showFinanceCols && <th className="text-right">输赢</th>}<th>状态</th>
                 </tr></thead>
                 <tbody>
-                  {list.map(b => (
+                  {list.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).map(b => (
                     <tr key={b.id}>
                       <td className="mono text-cool" style={{fontSize:11}}>{b.id}</td>
                       <td className="mono text-muted">{b.playerSysId}</td>
@@ -1166,6 +1206,7 @@
                 </tbody>
               </table>
             </div>
+            <Pagination total={list.length} pageNum={pageNum} setPageNum={setPageNum}/>
           </div>
         </div>
       );
@@ -1182,14 +1223,15 @@
       const [inDateTo, setInDateTo] = useState(""), [dateTo, setDateTo] = useState("");
       const [inStatus, setInStatus] = useState("all"), [statusQ, setStatusQ] = useState("all");
       const [detailModal, setDetailModal] = useState(null);
+      const [pageNum, setPageNum] = useState(0);
 
       const doSearch = () => {
         setSessionId(inSessionId.trim()); setUserQ(inUser.trim()); setCurrency(inCurrency);
-        setShareRatioQ(inShareRatio); setDateFrom(inDateFrom); setDateTo(inDateTo); setStatusQ(inStatus);
+        setShareRatioQ(inShareRatio); setDateFrom(inDateFrom); setDateTo(inDateTo); setStatusQ(inStatus); setPageNum(0);
       };
       const resetSearch = () => {
         setInSessionId(""); setInUser(""); setInCurrency("all"); setInShareRatio("all"); setInDateFrom(""); setInDateTo(""); setInStatus("all");
-        setSessionId(""); setUserQ(""); setCurrency("all"); setShareRatioQ("all"); setDateFrom(""); setDateTo(""); setStatusQ("all");
+        setSessionId(""); setUserQ(""); setCurrency("all"); setShareRatioQ("all"); setDateFrom(""); setDateTo(""); setStatusQ("all"); setPageNum(0);
       };
 
       // 占成下拉的所有可选值 (从 mock 数据 distinct)
@@ -1280,7 +1322,7 @@
                   <th>操作</th>
                 </tr></thead>
                 <tbody>
-                  {list.map(s => (
+                  {list.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).map(s => (
                     <tr key={s.id}>
                       <td className="mono text-cool" style={{fontSize:11}}>{s.id}</td>
                       <td className="mono text-muted">{s.sysId}</td>
@@ -1311,6 +1353,7 @@
                 </tbody>
               </table>
             </div>
+            <Pagination total={list.length} pageNum={pageNum} setPageNum={setPageNum}/>
           </div>
           {detailModal && <SessionDetailModal session={detailModal} onClose={()=>setDetailModal(null)}/>}
         </div>
@@ -1328,14 +1371,15 @@
       const [inDateFrom, setInDateFrom] = useState(""), [dateFrom, setDateFrom] = useState("");
       const [inDateTo, setInDateTo] = useState(""), [dateTo, setDateTo] = useState("");
       const [inStatus, setInStatus] = useState("all"), [statusQ, setStatusQ] = useState("all");
+      const [pageNum, setPageNum] = useState(0);
 
       const doSearch = () => {
         setTxId(inTxId.trim()); setUserQ(inUser.trim()); setTxType(inTxType);
-        setFlow(inFlow); setCurrency(inCurrency); setDateFrom(inDateFrom); setDateTo(inDateTo); setStatusQ(inStatus);
+        setFlow(inFlow); setCurrency(inCurrency); setDateFrom(inDateFrom); setDateTo(inDateTo); setStatusQ(inStatus); setPageNum(0);
       };
       const resetSearch = () => {
         setInTxId(""); setInUser(""); setInTxType("all"); setInFlow("all"); setInCurrency("all"); setInDateFrom(""); setInDateTo(""); setInStatus("all");
-        setTxId(""); setUserQ(""); setTxType("all"); setFlow("all"); setCurrency("all"); setDateFrom(""); setDateTo(""); setStatusQ("all");
+        setTxId(""); setUserQ(""); setTxType("all"); setFlow("all"); setCurrency("all"); setDateFrom(""); setDateTo(""); setStatusQ("all"); setPageNum(0);
       };
 
       const isCredit = (t) => t === "house_credit" || t === "agent_credit";
@@ -1434,7 +1478,7 @@
                   <th>流水号</th><th>系统户口号</th><th>用户账号</th><th>交易类型</th><th>转入/转出</th><th>币种</th><th className="text-right">金额</th><th>时间</th><th>状态</th>
                 </tr></thead>
                 <tbody>
-                  {list.map(l => {
+                  {list.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).map(l => {
                     const isIn = isCredit(l.type) || l.type === "transfer_in";
                     return (
                     <tr key={l.id}>
@@ -1453,6 +1497,7 @@
                 </tbody>
               </table>
             </div>
+            <Pagination total={list.length} pageNum={pageNum} setPageNum={setPageNum}/>
           </div>
         </div>
       );
@@ -1467,15 +1512,16 @@
       const [inActorType, setInActorType] = useState("all"), [actorTypeQ, setActorTypeQ] = useState("all");
       const [inDateFrom, setInDateFrom] = useState(""), [dateFrom, setDateFrom] = useState("");
       const [inDateTo, setInDateTo] = useState(""), [dateTo, setDateTo] = useState("");
+      const [pageNum, setPageNum] = useState(0);
 
       const doSearch = () => {
-        setActorQ(inActor.trim()); setActorTypeQ(inActorType); setDateFrom(inDateFrom); setDateTo(inDateTo);
+        setActorQ(inActor.trim()); setActorTypeQ(inActorType); setDateFrom(inDateFrom); setDateTo(inDateTo); setPageNum(0);
       };
       const resetSearch = () => {
         setInActor(""); setInActorType("all"); setInDateFrom(""); setInDateTo("");
-        setActorQ(""); setActorTypeQ("all"); setDateFrom(""); setDateTo("");
+        setActorQ(""); setActorTypeQ("all"); setDateFrom(""); setDateTo(""); setPageNum(0);
       };
-      // 切 tab 时重置筛选 (避免上个 tab 的过滤值串入下个 tab)
+      // 切 tab 时重置筛选 + pageNum (避免上个 tab 的过滤值/页码串入下个 tab)
       const switchTab = (t) => { setTab(t); resetSearch(); };
 
       const raw = tab === "system" ? MOCK_AUDIT_SYSTEM : MOCK_AUDIT_PLAYER;
@@ -1546,7 +1592,7 @@
                   <th>时间</th><th>主体类型</th><th>主体</th><th>动作</th><th>目标</th><th>IP</th>
                 </tr></thead>
                 <tbody>
-                  {data.map((r, i) => (
+                  {data.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).map((r, i) => (
                     <tr key={i}>
                       <td className="text-muted" style={{fontSize:12}}>{r.time}</td>
                       <td><span className={"chip " + (r.actorType === "员工" ? "chip-cool" : (r.actorType === "代理" ? "chip-warn" : "chip-info"))}>{r.actorType}</span></td>
@@ -1559,6 +1605,7 @@
                 </tbody>
               </table>
             </div>
+            <Pagination total={data.length} pageNum={pageNum} setPageNum={setPageNum}/>
           </div>
         </div>
       );
