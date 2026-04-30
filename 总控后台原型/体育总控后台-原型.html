@@ -7,6 +7,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- 局部破例: 仅开户时间用 antd 4 RangePicker (native datetime-local 体验不够) -->
+  <link rel="stylesheet" href="https://unpkg.com/antd@4.24.16/dist/antd.dark.min.css">
+  <script src="https://unpkg.com/moment@2.30.1/min/moment.min.js"></script>
+  <script src="https://unpkg.com/antd@4.24.16/dist/antd-with-locales.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     *{box-sizing:border-box}
@@ -64,6 +68,10 @@
 
   <script type="text/babel">
     const { useState, useMemo } = React;
+    // antd 4 RangePicker (仅开户时间用, 其他筛选/UI 仍用 Tailwind)
+    const { DatePicker, ConfigProvider } = antd;
+    const { RangePicker } = DatePicker;
+    const zhCN = antd.locales && antd.locales.zh_CN;
 
     // ============== 角色与权限 ==============
     // agentCols 编号说明:
@@ -409,14 +417,21 @@
                 <option value="20to30">占成 20% — 30%</option>
                 <option value="gte30">占成 ≥ 30%</option>
               </select>
-              <div className="flex items-center gap-1 bg-app border border-line rounded-md px-2" style={{height:36}}>
-                <span className="text-xs text-faint" style={{padding:"0 4px"}}>开户</span>
-                <input type="datetime-local" step="1" className="text-sm outline-none" style={{background:"transparent",color:"#E6EAF0",border:"none",padding:"4px",colorScheme:"dark",width:175}} value={inDateFrom} onChange={e=>setInDateFrom(e.target.value)}/>
-                {inDateFrom && <span className="cursor-pointer text-faint" onClick={()=>setInDateFrom("")} title="清空开始时间" style={{padding:"0 4px",fontSize:11,userSelect:"none"}}>✕</span>}
-                <span className="text-muted text-sm">→</span>
-                <input type="datetime-local" step="1" className="text-sm outline-none" style={{background:"transparent",color:"#E6EAF0",border:"none",padding:"4px",colorScheme:"dark",width:175}} value={inDateTo} onChange={e=>setInDateTo(e.target.value)}/>
-                {inDateTo && <span className="cursor-pointer text-faint" onClick={()=>setInDateTo("")} title="清空结束时间" style={{padding:"0 4px",fontSize:11,userSelect:"none"}}>✕</span>}
-              </div>
+              <ConfigProvider locale={zhCN}>
+                <RangePicker
+                  showTime={{ format: "HH:mm:ss" }}
+                  format="YYYY-MM-DD HH:mm:ss"
+                  placeholder={["开户开始时间","结束时间"]}
+                  allowEmpty={[true, true]}
+                  value={[inDateFrom ? moment(inDateFrom.replace("T"," ")) : null, inDateTo ? moment(inDateTo.replace("T"," ")) : null]}
+                  onChange={(vals) => {
+                    if (!vals) { setInDateFrom(""); setInDateTo(""); return; }
+                    setInDateFrom(vals[0] ? vals[0].format("YYYY-MM-DDTHH:mm:ss") : "");
+                    setInDateTo(vals[1] ? vals[1].format("YYYY-MM-DDTHH:mm:ss") : "");
+                  }}
+                  style={{ height: 36, width: 380 }}
+                />
+              </ConfigProvider>
               <button className="btn btn-primary" style={{padding:"8px 18px"}} onClick={doSearch}>搜索</button>
               <button className="btn btn-ghost" style={{padding:"8px 14px"}} onClick={resetSearch}>重置</button>
             </div>
