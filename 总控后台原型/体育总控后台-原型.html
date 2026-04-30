@@ -290,7 +290,7 @@
         const next = {...accounts};
         const k = account.key;
         if (!next[k]) return;
-        next[k] = { ...next[k], nick: data.nick, phone: data.phone, phone2: data.phone2, accountType: data.accountType || next[k].accountType, shareRatio: data.shareRatio == null ? next[k].shareRatio : data.shareRatio, status: data.status };
+        next[k] = { ...next[k], nick: data.nick, phone: data.phone, phone2: data.phone2, accountType: data.accountType || next[k].accountType, shareRatio: data.shareRatio == null ? next[k].shareRatio : data.shareRatio, refRate: data.refRate == null ? next[k].refRate : data.refRate, status: data.status };
         setAccounts(next);
         setModal(null);
       };
@@ -685,10 +685,12 @@
       const rateUpperPct = rateUpper == null ? null : (rateUpper * 100).toFixed(2);
 
       const initShareRatio = account.shareRatio == null ? "" : (account.shareRatio * 100).toFixed(2);
+      const initRefRate = account.refRate == null ? "" : (account.refRate * 100).toFixed(2);
       const [nick, setNick] = useState(account.nick || account.user);
       const [phone, setPhone] = useState(account.phone || "");
       const [phone2, setPhone2] = useState(account.phone2 || "");
-      const [rate, setRate] = useState(initShareRatio);
+      const [refShareRatio, setRefShareRatio] = useState(initShareRatio);
+      const [refRate, setRefRate] = useState(initRefRate);
       const [resetPwd, setResetPwd] = useState("");
       const [accStatus, setAccStatus] = useState(account.status);
       const [accType, setAccType] = useState(account.accountType);
@@ -698,19 +700,23 @@
       // 账号类型升降级规则: 游戏 → 代理 (升级 OK) / 代理 → 游戏 (禁止) / 顶代 不可改
       const canChangeType = account.accountType === "游戏";
 
-      // 高敏感字段是否被改动 (顶代不算 rate, 因为该字段不显示)
-      const highSensitive = (!isTop && rate !== initShareRatio) || resetPwd !== "" || accStatus !== account.status || accType !== account.accountType;
+      // 高敏感字段是否被改动 (顶代不算占成/佣金率, 因为该字段不显示)
+      const highSensitive = (!isTop && refShareRatio !== initShareRatio) || (!isTop && refRate !== initRefRate) || resetPwd !== "" || accStatus !== account.status || accType !== account.accountType;
 
       const submit = () => {
         if (!nick.trim()) { setErr("请输入账户昵称"); return; }
-        if (!isTop && rate !== "" && isNaN(+rate)) { setErr("显示佣金率必须是数字"); return; }
-        if (!isTop && rate !== "" && rateUpperPct != null && +rate > +rateUpperPct) { setErr("佣金率不能超过上限 " + rateUpperPct + "%"); return; }
+        if (!isTop) {
+          if (refShareRatio !== "" && isNaN(+refShareRatio)) { setErr("参考占成必须是数字"); return; }
+          if (refShareRatio !== "" && rateUpperPct != null && +refShareRatio > +rateUpperPct) { setErr("参考占成不能超过上限 " + rateUpperPct + "%"); return; }
+          if (refRate !== "" && isNaN(+refRate)) { setErr("参考佣金率必须是数字"); return; }
+        }
         if (highSensitive && !opPwd) { setErr("修改了高敏感字段,请输入操作密码"); return; }
         if (highSensitive && opPwd !== "123456") { setErr("操作密码错误"); return; }
         onSubmit({
           nick, phone, phone2,
           accountType: accType,
-          shareRatio: isTop ? account.shareRatio : (rate === "" ? null : (+rate / 100)),
+          shareRatio: isTop ? account.shareRatio : (refShareRatio === "" ? null : (+refShareRatio / 100)),
+          refRate: isTop ? account.refRate : (refRate === "" ? null : (+refRate / 100)),
           status: accStatus,
         });
       };
@@ -740,15 +746,27 @@
 
               <div className="section-title">高敏感字段(修改时触发操作密码)</div>
               {isTop && <div className="text-xs p-2 rounded mb-1" style={{background:"#0F1B2A",color:"#4A9EFF"}}>ℹ 顶代占成由账房侧设置,不在 S 端修改</div>}
-              <div className="grid grid-cols-2 gap-3">
-                {!isTop && <div>
-                  <label className="block text-xs text-muted mb-1">显示佣金率</label>
-                  <div className="flex items-center gap-2">
-                    <input type="number" step="0.01" className="input flex-1" value={rate} onChange={e=>setRate(e.target.value)} placeholder={rateUpperPct ? "上限 " + rateUpperPct + "%" : ""}/>
-                    <span className="text-muted">%</span>
+              {!isTop && (
+                <div className="grid grid-cols-2 gap-3 mb-2" style={{padding:"8px",background:"#0F141C",borderRadius:6}}>
+                  <div>
+                    <label className="block text-xs text-muted mb-1">参考占成</label>
+                    <div className="flex items-center gap-2">
+                      <input type="number" step="0.01" className="input flex-1" value={refShareRatio} onChange={e=>setRefShareRatio(e.target.value)} placeholder={rateUpperPct ? "上限 " + rateUpperPct + "%" : ""}/>
+                      <span className="text-muted">%</span>
+                    </div>
+                    {rateUpperPct != null && <div className="text-faint mt-1" style={{fontSize:11}}>上限 <span className="text-cool">{rateUpperPct}%</span> (继承自上级 {parentNode ? parentNode.user : "—"})</div>}
                   </div>
-                  {rateUpperPct != null && <div className="text-faint mt-1" style={{fontSize:11}}>上限 <span className="text-cool">{rateUpperPct}%</span> (继承自上级 {parentNode ? parentNode.user : "—"})</div>}
-                </div>}
+                  <div>
+                    <label className="block text-xs text-muted mb-1">参考佣金率</label>
+                    <div className="flex items-center gap-2">
+                      <input type="number" step="0.01" className="input flex-1" value={refRate} onChange={e=>setRefRate(e.target.value)} placeholder="例: 0.30"/>
+                      <span className="text-muted">%</span>
+                    </div>
+                    <div className="text-faint mt-1" style={{fontSize:11}}>上级给该下线的提成比例</div>
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-muted mb-1">重置登录密码(选填)</label>
                   <input type="password" className="input" value={resetPwd} onChange={e=>setResetPwd(e.target.value)} placeholder="留空=不重置"/>
