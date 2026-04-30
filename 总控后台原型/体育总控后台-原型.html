@@ -1329,15 +1329,17 @@
             <div className="scroll-x">
               <table>
                 <thead><tr>
-                  <th>流水号</th><th>分类</th><th>类型</th><th>方向 / 操作</th><th>来源</th><th>去向</th><th>币种</th><th className="text-right">金额</th><th>时间</th><th>状态</th>
+                  <th>流水号</th><th>分类</th><th>类型</th><th>转入/转出</th><th>来源</th><th>去向</th><th>币种</th><th className="text-right">金额</th><th>时间</th><th>状态</th>
                 </tr></thead>
                 <tbody>
-                  {list.map(l => (
+                  {list.map(l => {
+                    const isIn = l.type.includes("credit") || l.type === "transfer_in";
+                    return (
                     <tr key={l.id}>
                       <td className="mono text-cool" style={{fontSize:11}}>{l.id}</td>
                       <td><span className="chip chip-info" style={{fontSize:10}}>{groupLabel[l.type]}</span></td>
                       <td>{l.typeLabel}</td>
-                      <td className="text-faint">{l.type.includes("credit") || l.type === "transfer_in" ? "↑ 入" : "↓ 出"}</td>
+                      <td><span className={"chip " + (isIn ? "chip-active" : "chip-warn")} style={{fontSize:11}}>{isIn ? "转入" : "转出"}</span></td>
                       <td className="text-muted" style={{fontSize:12}}>{l.from}</td>
                       <td className="text-muted" style={{fontSize:12}}>{l.to}</td>
                       <td><span className="chip chip-cool">{l.currency}</span></td>
@@ -1345,7 +1347,8 @@
                       <td className="text-muted" style={{fontSize:12}}>{l.time}</td>
                       <td><span className={"chip " + (l.status === "成功" ? "chip-active" : "chip-warn")}>{l.status}</span></td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
