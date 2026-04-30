@@ -214,14 +214,11 @@
     };
     // fmtAmount: 金额走「万」单位 (B 端 V1.12 line 189-198 同款规则)
     //   全量, 无下限阈值, 最多 4 位小数; 8,000 → 0.8 万 / 300 → 0.03 万 / 0 → 0 万 / -1,200 → -0.12 万
+    //   2026-04-29 Sammy 拍: 金额不带币种后缀, 币种走独立列
     const fmtAmount = (n) => {
       if (n === undefined || n === null || isNaN(n)) return "-";
       const v = n / 10000;
       return v.toLocaleString("zh-CN", { maximumFractionDigits: 4 }) + " 万";
-    };
-    const fmtMoney = (n, cur) => {
-      if (n === undefined || n === null || isNaN(n)) return "-";
-      return fmtAmount(n) + " " + cur;
     };
     const fmtPct = (n) => (n * 100).toFixed(2) + "%";
     const StatusChip = ({ status }) => {
@@ -317,9 +314,9 @@
         { id:4, label:"账号状态", render:a => <StatusChip status={a.status}/> },
         { id:5, label:"币种", render:a => <span className="chip chip-cool">{a.currency}</span> },
         { id:6, label:"占成", render:a => a.shareRatio == null ? <span className="text-faint">—</span> : <span className="num">{fmtPct(a.shareRatio)}</span> },
-        { id:7, label:"账户余额", render:a => <span className="num">{fmtMoney(a.balance, a.currency)}</span> },
-        { id:8, label:"下线余额", render:a => <span className="num text-muted">{fmtMoney(a.subBalance, a.currency)}</span> },
-        { id:9, label:"总线余额", render:a => <span className="num text-cool">{fmtMoney(a.totalBalance, a.currency)}</span> },
+        { id:7, label:"账户余额", render:a => <span className="num">{fmtAmount(a.balance)}</span> },
+        { id:8, label:"下线余额", render:a => <span className="num text-muted">{fmtAmount(a.subBalance)}</span> },
+        { id:9, label:"总线余额", render:a => <span className="num text-cool">{fmtAmount(a.totalBalance)}</span> },
         { id:10, label:"账号类型", render:a => <span className={"chip " + (a.accountType === "普通(顶代)" ? "chip-cool" : a.accountType === "代理" ? "chip-warn" : "chip-info")}>{a.accountType}</span> },
         { id:11, label:"开户时间", render:a => <span className="text-muted" style={{fontSize:12}}>{a.createdAt}</span> },
       ].filter(c => cols.includes(c.id));
@@ -388,7 +385,7 @@
             <div className="bg-card border border-line rounded p-3 text-xs">
               <div>顶代:<span className="mono text-cool">{agent.user}</span>  ·  系统户口号 <span className="mono">{agent.sysId}</span></div>
               <div className="mt-1 text-muted">币种:{agent.currency}  ·  占成 {fmtPct(agent.shareRatio)}</div>
-              <div className="mt-1 text-muted">账户余额:<span className="num">{fmtMoney(agent.balance, agent.currency)}</span>  ·  总线余额 <span className="num">{fmtMoney(agent.totalBalance, agent.currency)}</span></div>
+              <div className="mt-1 text-muted">账户余额:<span className="num">{fmtAmount(agent.balance) + " " + agent.currency}</span>  ·  总线余额 <span className="num">{fmtAmount(agent.totalBalance) + " " + agent.currency}</span></div>
               <div className="mt-1 text-muted">下线数:{agent.subCount}</div>
             </div>
             {isFreeze && <div className="text-xs" style={{color:"#F0B93A"}}>⚠ 冻结此账号 + 币种维度后,顶代在此币种下及对应下线无法登录;其他币种不受影响。余额保留</div>}
@@ -402,7 +399,7 @@
             <div className="bg-card border border-line rounded p-3 text-xs">
               <div>{agent.accountType}:<span className="mono text-cool">{agent.user}</span>  ·  币种 {agent.currency}</div>
               <div className="mt-1 text-muted">当前占成:{agent.shareRatio == null ? "— (占位)" : fmtPct(agent.shareRatio)}</div>
-              <div className="mt-1 text-muted">当前余额:{fmtMoney(agent.balance, agent.currency)}</div>
+              <div className="mt-1 text-muted">当前余额:{fmtAmount(agent.balance) + " " + agent.currency}</div>
             </div>
             <div><label className="block text-xs text-muted mb-1">新占成 *</label><input className="input" placeholder="例:25%(0~100)" disabled={isSubAccount}/></div>
             <div className="text-xs text-faint">说明:占成只影响后续上下分扣款公式,不重算历史交易。同顶代的其他币种占成不受影响。</div>
@@ -415,7 +412,7 @@
             {isPlayer && <div className="text-xs p-2 rounded" style={{background:"#2A2415",color:"#F0B93A"}}>⚠ 玩家币种继承上级方案,本动作建议在代理层操作。</div>}
             <div className="bg-card border border-line rounded p-3 text-xs">
               <div>{agent.accountType}:<span className="mono text-cool">{agent.user}</span></div>
-              <div className="mt-1 text-muted">当前币种:<span className="chip chip-cool">{agent.currency}</span>  ·  当前余额 {fmtMoney(agent.balance, agent.currency)}</div>
+              <div className="mt-1 text-muted">当前币种:<span className="chip chip-cool">{agent.currency}</span>  ·  当前余额 {fmtAmount(agent.balance) + " " + agent.currency}</div>
             </div>
             <div><label className="block text-xs text-muted mb-1">目标币种 *</label><select className="input"><option>KRW</option><option>USD</option><option>PHP</option><option>CNY</option></select></div>
             <div><label className="block text-xs text-muted mb-1">新币种占成 *</label><input className="input" placeholder="例:20%" disabled={agent.accountType !== "普通(顶代)"}/></div>
@@ -463,7 +460,7 @@
             <div className="scroll-x">
               <table>
                 <thead><tr>
-                  <th>注单号</th><th>玩家 ID</th><th>顶代</th><th>三方商</th><th>游戏类型</th><th>投注时间</th>
+                  <th>注单号</th><th>玩家 ID</th><th>顶代</th><th>三方商</th><th>游戏类型</th><th>币种</th><th>投注时间</th>
                   <th className="text-right">投注金额</th>{showFinanceCols && <th className="text-right">派彩金额</th>}{showFinanceCols && <th className="text-right">输赢</th>}<th>状态</th>
                 </tr></thead>
                 <tbody>
@@ -474,11 +471,12 @@
                       <td className="mono">{b.topAgent}</td>
                       <td className="text-muted">{b.provider}</td>
                       <td>{b.gameType}</td>
+                      <td><span className="chip chip-cool">{b.currency}</span></td>
                       <td className="text-muted">{b.betTime}</td>
-                      <td className="num text-right">{fmtMoney(b.stake, b.currency)}</td>
-                      {showFinanceCols && <td className="num text-right">{b.status==="未结算"?<span className="text-faint">—</span>:fmtMoney(b.payout, b.currency)}</td>}
+                      <td className="num text-right">{fmtAmount(b.stake)}</td>
+                      {showFinanceCols && <td className="num text-right">{b.status==="未结算"?<span className="text-faint">—</span>:fmtAmount(b.payout)}</td>}
                       {showFinanceCols && <td className="num text-right" style={{color: b.status==="未结算" ? "#9AA4B5" : (b.winLoss > 0 ? "#5BC97C" : (b.winLoss < 0 ? "#FF6B6B" : "#9AA4B5"))}}>
-                        {b.status==="未结算" ? "—" : (b.winLoss > 0 ? "+" : "") + fmtMoney(b.winLoss, b.currency)}
+                        {b.status==="未结算" ? "—" : (b.winLoss > 0 ? "+" : "") + fmtAmount(b.winLoss)}
                       </td>}
                       <td><StatusChip status={b.status}/></td>
                     </tr>
@@ -541,13 +539,13 @@
                       <td><span className="chip chip-cool">{s.currency}</span></td>
                       <td className="num text-right">{fmtNum(s.betCount)}</td>
                       <td className="num text-right">{fmtNum(s.playerCount)}</td>
-                      <td className="num text-right">{fmtMoney(s.totalStake, s.currency)}</td>
-                      <td className="num text-right">{fmtMoney(s.validStake, s.currency)}</td>
+                      <td className="num text-right">{fmtAmount(s.totalStake)}</td>
+                      <td className="num text-right">{fmtAmount(s.validStake)}</td>
                       <td className="num text-right" style={{color: s.totalWinLoss > 0 ? "#5BC97C" : (s.totalWinLoss < 0 ? "#FF6B6B" : "#9AA4B5")}}>
-                        {s.totalWinLoss > 0 ? "+" : ""}{fmtMoney(s.totalWinLoss, s.currency)}
+                        {s.totalWinLoss > 0 ? "+" : ""}{fmtAmount(s.totalWinLoss)}
                       </td>
                       <td className="num text-right">{fmtPct(s.rate)}</td>
-                      <td className="num text-right text-cool">{fmtMoney(s.commission, s.currency)}</td>
+                      <td className="num text-right text-cool">{fmtAmount(s.commission)}</td>
                       <td><StatusChip status={s.status}/></td>
                       <td className="text-muted" style={{fontSize:11}}>{s.batchTime}</td>
                       <td className="mono text-faint" style={{fontSize:11}}>{s.batchId}</td>
@@ -598,7 +596,7 @@
             <div className="scroll-x">
               <table>
                 <thead><tr>
-                  <th>流水号</th><th>分类</th><th>类型</th><th>方向 / 操作</th><th>来源</th><th>去向</th><th className="text-right">金额</th><th>时间</th><th>状态</th>
+                  <th>流水号</th><th>分类</th><th>类型</th><th>方向 / 操作</th><th>来源</th><th>去向</th><th>币种</th><th className="text-right">金额</th><th>时间</th><th>状态</th>
                 </tr></thead>
                 <tbody>
                   {list.map(l => (
@@ -609,7 +607,8 @@
                       <td className="text-faint">{l.type.includes("credit") || l.type === "transfer_in" ? "↑ 入" : "↓ 出"}</td>
                       <td className="text-muted" style={{fontSize:12}}>{l.from}</td>
                       <td className="text-muted" style={{fontSize:12}}>{l.to}</td>
-                      <td className="num text-right">{fmtMoney(l.amount, l.currency)}</td>
+                      <td><span className="chip chip-cool">{l.currency}</span></td>
+                      <td className="num text-right">{fmtAmount(l.amount)}</td>
                       <td className="text-muted" style={{fontSize:12}}>{l.time}</td>
                       <td><span className={"chip " + (l.status === "成功" ? "chip-active" : "chip-warn")}>{l.status}</span></td>
                     </tr>
