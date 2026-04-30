@@ -279,7 +279,45 @@
     function AgentsPage({ role, canWrite }) {
       const [modal, setModal] = useState(null);
       const [expanded, setExpanded] = useState(new Set());
+      // mock 数据放 state 里, 让"新增下线"等动作能真更新列表
+      const [accounts, setAccounts] = useState(() => ({...ACCOUNTS}));
+      const [topKeys, setTopKeys] = useState(() => [...TOP_AGENT_KEYS]);
       const cols = ROLES[role].agentCols;
+      // 新增下线: 派生 sysId / 加节点 / 更新父级 children / 沿祖先链 +subCount
+      const handleNewSub = (parent, data) => {
+        const next = {...accounts};
+        const parentKey = parent.key;
+        const parentNode = next[parentKey];
+        if (!parentNode) return;
+        const childSeq = (parentNode.children || []).length + 1;
+        const newSysId = parentNode.sysId + "-" + childSeq;
+        const newKey = data.user + "::" + data.currency;
+        if (next[newKey]) { alert("用户账号 + 币种已存在: " + newKey); return; }
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, "0");
+        const createdAt = now.getFullYear() + "-" + pad(now.getMonth()+1) + "-" + pad(now.getDate()) + " " + pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds());
+        next[newKey] = {
+          sysId: newSysId, user: data.user, accountType: data.type, currency: data.currency,
+          shareRatio: data.shareRatio, balance: 0, subBalance: 0, totalBalance: 0,
+          subCount: 0, status: data.status, createdAt, children: [],
+        };
+        next[parentKey] = { ...parentNode, children: [...(parentNode.children || []), newKey], subCount: (parentNode.subCount || 0) + 1 };
+        // 沿祖先链 +1 subCount (穿透口径)
+        let cursor = parentKey;
+        while (true) {
+          let found = null;
+          for (const [k, n] of Object.entries(next)) {
+            if (k !== cursor && n.children && n.children.includes(cursor)) { found = k; break; }
+          }
+          if (!found) break;
+          next[found] = { ...next[found], subCount: (next[found].subCount || 0) + 1 };
+          cursor = found;
+        }
+        setAccounts(next);
+        // 自动展开父级让用户看到新行
+        const ne = new Set(expanded); ne.add(parentKey); setExpanded(ne);
+        setModal(null);
+      };
       // 所有筛选走"输入态 + 提交后生效"双状态 (跟搜索按钮一起触发, ProComponents QueryFilter 模式)
       const [inSearch, setInSearch] = useState(""), [search, setSearch] = useState("");
       const [inStatus, setInStatus] = useState("all"), [statusFilter, setStatusFilter] = useState("all");
@@ -304,13 +342,13 @@
         const matches = (node) => !ls || node.user.toLowerCase().includes(ls) || node.sysId.toLowerCase().includes(ls);
         // 当前节点或任意后代匹配 (用于决定是否显示顶代行 / 是否强制展开)
         const hasMatchInSubtree = (key) => {
-          const node = ACCOUNTS[key];
+          const node = accounts[key];
           if (!node) return false;
           if (matches(node)) return true;
           return (node.children || []).some(c => hasMatchInSubtree(c));
         };
         function walk(key, depth) {
-          const node = ACCOUNTS[key];
+          const node = accounts[key];
           if (!node) return;
           if (depth === 0) {
             if (statusFilter !== "all" && node.status !== statusFilter) return;
@@ -344,9 +382,9 @@
             (node.children || []).forEach(child => walk(child, depth + 1));
           }
         }
-        TOP_AGENT_KEYS.forEach(k => walk(k, 0));
+        topKeys.forEach(k => walk(k, 0));
         return out;
-      }, [search, statusFilter, currencyFilter, shareRatioFilter, dateFrom, dateTo, expanded]);
+      }, [accounts, topKeys, search, statusFilter, currencyFilter, shareRatioFilter, dateFrom, dateTo, expanded]);
 
       const toggle = (key) => {
         const next = new Set(expanded);
@@ -470,7 +508,142 @@
               </table>
             </div>
           </div>
-          {modal && <ActionModal modal={modal} onClose={()=>setModal(null)} onConfirm={()=>{ alert("已提交  ·  审计日志已记录"); setModal(null); }}/>}
+          {modal && modal.type === "newSub" && <NewSubModal parent={modal.agent} accounts={accounts} onClose={()=>setModal(null)} onSubmit={(data)=>handleNewSub(modal.agent, data)}/>}
+          {modal && modal.type !== "newSub" && <ActionModal modal={modal} onClose={()=>setModal(null)} onConfirm={()=>{ alert("已提交  ·  操作日志已记录"); setModal(null); }}/>}
+        </div>
+      );
+    }
+
+    // 新增下线弹窗 (独立组件 / 内部 state / 提交时回传完整数据)
+    // 对齐 B 端 V1.12 AddSubModal (FN-ACC-04): 6 个 Section + 顶代/代理 角色分支
+    function NewSubModal({ parent, accounts, onClose, onSubmit }) {
+      const isTopParent = parent.accountType === "普通(顶代)";
+      const topSchemes = isTopParent
+        ? Object.values(accounts).filter(n => n.user === parent.user && n.accountType === "普通(顶代)")
+        : [];
+      const [user, setUser] = useState("");
+      const [nick, setNick] = useState("");
+      const [pwd, setPwd] = useState("");
+      const [pwdC, setPwdC] = useState("");
+      const [phone, setPhone] = useState("");
+      const [phone2, setPhone2] = useState("");
+      const [accType, setAccType] = useState("代理");
+      const [accStatus, setAccStatus] = useState("active");
+      const [schemeIdx, setSchemeIdx] = useState(0);
+      const [rate, setRate] = useState("");
+      const [opPwd, setOpPwd] = useState("");
+      const [err, setErr] = useState("");
+
+      const submit = () => {
+        if (!/^[A-Za-z0-9]{6,20}$/.test(user)) { setErr("用户账号需 6-20 位英文+数字"); return; }
+        if (!nick.trim()) { setErr("请输入账户昵称"); return; }
+        if (!pwd) { setErr("请输入登录密码"); return; }
+        if (pwd !== pwdC) { setErr("两次密码不一致"); return; }
+        if (rate === "" || isNaN(+rate)) { setErr("请输入显示佣金率"); return; }
+        if (opPwd !== "123456") { setErr("操作密码错误 (Mock: 123456)"); return; }
+        const targetCurrency = isTopParent ? topSchemes[schemeIdx].currency : parent.currency;
+        onSubmit({
+          user, nick, type: accType, status: accStatus,
+          currency: targetCurrency,
+          shareRatio: +rate / 100, // 显示佣金率作为下线 shareRatio mock
+        });
+      };
+
+      return (
+        <div className="modal-backdrop" onClick={onClose}>
+          <div className="modal modal-wide" onClick={e=>e.stopPropagation()}>
+            <h3 className="text-base font-semibold mb-1">新增下线:{parent.user} 下挂</h3>
+            <p className="text-xs text-faint mb-4">沿用 B 端 V1.12 AddSubModal 字段集 · 操作密码二次确认</p>
+            <div className="space-y-3">
+              <div className="section-title">① 关联信息</div>
+              <div className="bg-card border border-line rounded p-3 text-xs">
+                <div>上级:<span className="mono text-cool">{parent.user}</span> ({parent.accountType}) · 系统户口号 <span className="mono">{parent.sysId}</span></div>
+                <div className="mt-1">系统户口号(自动派生):<span className="mono text-cool">{parent.sysId}-{(parent.children||[]).length+1}</span></div>
+                <div className="mt-1 text-faint" style={{fontSize:11}}>系统户口号永不回收、永不复用、永不变更</div>
+              </div>
+
+              <div className="section-title">② 基本信息</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs text-muted mb-1">用户账号 *</label><input className="input" placeholder="6-20 位英数" value={user} onChange={e=>setUser(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">账户昵称 *</label><input className="input" value={nick} onChange={e=>setNick(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">密码 *</label><input type="password" className="input" value={pwd} onChange={e=>setPwd(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">确认密码 *</label><input type="password" className="input" value={pwdC} onChange={e=>setPwdC(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">电话号码</label><input className="input" placeholder="选填" value={phone} onChange={e=>setPhone(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">备用电话</label><input className="input" placeholder="选填" value={phone2} onChange={e=>setPhone2(e.target.value)}/></div>
+              </div>
+
+              <div className="section-title">③ 账号属性</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-muted mb-1">账号类型 *</label>
+                  <div className="flex gap-4 text-sm" style={{paddingTop:6}}>
+                    <label><input type="radio" checked={accType==="代理"} onChange={()=>setAccType("代理")}/> <span className="ml-1">代理</span></label>
+                    <label><input type="radio" checked={accType==="游戏"} onChange={()=>setAccType("游戏")}/> <span className="ml-1">游戏(玩家)</span></label>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-muted mb-1">账号状态 *</label>
+                  <div className="flex gap-4 text-sm" style={{paddingTop:6}}>
+                    <label><input type="radio" checked={accStatus==="active"} onChange={()=>setAccStatus("active")}/> <span className="ml-1">启用</span></label>
+                    <label><input type="radio" checked={accStatus==="frozen"} onChange={()=>setAccStatus("frozen")}/> <span className="ml-1">禁用</span></label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="section-title">④ 交收方案(单选)</div>
+              {isTopParent ? (
+                <div className="bg-card border border-line rounded overflow-hidden">
+                  <table style={{width:"100%",fontSize:12}}>
+                    <thead>
+                      <tr style={{background:"#0F141C"}}>
+                        <th style={{padding:"6px",fontWeight:500,color:"#9AA4B5",textAlign:"center",width:36}}></th>
+                        <th style={{padding:"6px",fontWeight:500,color:"#9AA4B5",textAlign:"left"}}>币种</th>
+                        <th style={{padding:"6px",fontWeight:500,color:"#9AA4B5",textAlign:"left"}}>占成</th>
+                        <th style={{padding:"6px",fontWeight:500,color:"#9AA4B5",textAlign:"right"}}>账户余额</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topSchemes.map((s,i) => (
+                        <tr key={i} style={{borderTop:"1px solid #1F2733",cursor:"pointer"}} onClick={()=>setSchemeIdx(i)}>
+                          <td style={{padding:"8px 6px",textAlign:"center"}}><input type="radio" checked={schemeIdx===i} onChange={()=>setSchemeIdx(i)}/></td>
+                          <td style={{padding:"8px 6px"}}><span className="chip chip-cool">{s.currency}</span></td>
+                          <td style={{padding:"8px 6px"}} className="num">{fmtPct(s.shareRatio)}</td>
+                          <td style={{padding:"8px 6px",textAlign:"right"}} className="num">{fmtAmount(s.balance)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="text-faint" style={{fontSize:11,padding:"6px 8px",borderTop:"1px solid #1F2733"}}>下线创建后终身单一币种 / 单一交收方案,切换须走切币种高危流程。</div>
+                </div>
+              ) : (
+                <div className="bg-card border border-line rounded p-3 text-xs">
+                  <div>下线账号继承上级交收方案,不可更换</div>
+                  <div className="text-muted mt-1">币种:<span className="chip chip-cool">{parent.currency}</span>  ·  占成:{parent.shareRatio == null ? "—" : fmtPct(parent.shareRatio) + " (参考)"}</div>
+                </div>
+              )}
+
+              <div className="section-title">⑤ 游戏条件(显示佣金率)</div>
+              <div>
+                <label className="block text-xs text-muted mb-1">显示佣金率 *</label>
+                <div className="flex items-center gap-2">
+                  <input type="number" step="0.01" className="input flex-1" value={rate} onChange={e=>setRate(e.target.value)} placeholder="例: 12.5"/>
+                  <span className="text-muted">%</span>
+                </div>
+                <div className="text-faint mt-1" style={{fontSize:11}}>上限继承上级;代理与玩家均必填。本字段在该下线的「占成」列显示(参考)。</div>
+              </div>
+
+              <div className="section-title">⑥ 安全校验</div>
+              <div>
+                <label className="block text-xs text-muted mb-1">操作密码 *</label>
+                <input type="password" className="input" placeholder="Mock: 123456" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
+              </div>
+              {err && <div className="text-xs" style={{color:"#FF6B6B"}}>{err}</div>}
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <button className="btn btn-ghost" onClick={onClose}>取消</button>
+              <button className="btn btn-primary" onClick={submit}>确认提交</button>
+            </div>
+          </div>
         </div>
       );
     }
@@ -489,101 +662,7 @@
         </div>
       );
 
-      if (type === "newSub") {
-        // 对齐 B 端 V1.12 AddSubModal (FN-ACC-04): 6 个 Section, 顶代行 / 代理行 角色分支
-        const isTopParent = agent.accountType === "普通(顶代)";
-        // 顶代下挂时, 列出该顶代名下所有币种方案 (供选择); 代理下挂时, 方案继承不可选
-        const topSchemes = isTopParent
-          ? Object.values(ACCOUNTS).filter(n => n.user === agent.user && n.accountType === "普通(顶代)")
-          : [];
-        return <PasswordModal title={"新增下线:" + agent.user + " 下挂"} onClose={onClose} onConfirm={onConfirm} wide
-          fields={<>
-            {/* ① 关联信息 */}
-            <div className="section-title">① 关联信息</div>
-            <div className="bg-card border border-line rounded p-3 text-xs">
-              <div>上级:<span className="mono text-cool">{agent.user}</span> ({agent.accountType}) · 系统户口号 <span className="mono">{agent.sysId}</span></div>
-              <div className="mt-1">系统户口号(自动派生):<span className="mono text-cool">{agent.sysId}-N</span></div>
-              <div className="mt-1 text-faint" style={{fontSize:11}}>系统户口号永不回收、永不复用、永不变更</div>
-            </div>
-
-            {/* ② 基本信息 */}
-            <div className="section-title">② 基本信息</div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><label className="block text-xs text-muted mb-1">用户账号 *</label><input className="input" placeholder="6-20 位英数"/></div>
-              <div><label className="block text-xs text-muted mb-1">账户昵称 *</label><input className="input"/></div>
-              <div><label className="block text-xs text-muted mb-1">密码 *</label><input type="password" className="input"/></div>
-              <div><label className="block text-xs text-muted mb-1">确认密码 *</label><input type="password" className="input"/></div>
-              <div><label className="block text-xs text-muted mb-1">电话号码</label><input className="input" placeholder="选填"/></div>
-              <div><label className="block text-xs text-muted mb-1">备用电话</label><input className="input" placeholder="选填"/></div>
-            </div>
-
-            {/* ③ 账号属性 */}
-            <div className="section-title">③ 账号属性</div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-muted mb-1">账号类型 *</label>
-                <div className="flex gap-4 text-sm" style={{paddingTop:6}}>
-                  <label><input type="radio" name="newSubType" defaultChecked/> <span className="ml-1">代理</span></label>
-                  <label><input type="radio" name="newSubType"/> <span className="ml-1">游戏(玩家)</span></label>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs text-muted mb-1">账号状态 *</label>
-                <div className="flex gap-4 text-sm" style={{paddingTop:6}}>
-                  <label><input type="radio" name="newSubStatus" defaultChecked/> <span className="ml-1">启用</span></label>
-                  <label><input type="radio" name="newSubStatus"/> <span className="ml-1">禁用该账号及所有下线</span></label>
-                </div>
-              </div>
-            </div>
-
-            {/* ④ 交收方案 */}
-            <div className="section-title">④ 交收方案(单选)</div>
-            {isTopParent ? (
-              <div className="bg-card border border-line rounded overflow-hidden">
-                <table style={{width:"100%",fontSize:12}}>
-                  <thead>
-                    <tr style={{background:"#0F141C"}}>
-                      <th style={{padding:"6px",fontWeight:500,color:"#9AA4B5",textAlign:"center",width:36}}></th>
-                      <th style={{padding:"6px",fontWeight:500,color:"#9AA4B5",textAlign:"left"}}>币种</th>
-                      <th style={{padding:"6px",fontWeight:500,color:"#9AA4B5",textAlign:"left"}}>占成</th>
-                      <th style={{padding:"6px",fontWeight:500,color:"#9AA4B5",textAlign:"right"}}>账户余额</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {topSchemes.map((s,i) => (
-                      <tr key={i} style={{borderTop:"1px solid #1F2733"}}>
-                        <td style={{padding:"8px 6px",textAlign:"center"}}><input type="radio" name="newSubScheme" defaultChecked={i===0}/></td>
-                        <td style={{padding:"8px 6px"}}><span className="chip chip-cool">{s.currency}</span></td>
-                        <td style={{padding:"8px 6px"}} className="num">{fmtPct(s.shareRatio)}</td>
-                        <td style={{padding:"8px 6px",textAlign:"right"}} className="num">{fmtAmount(s.balance)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div className="text-faint" style={{fontSize:11,padding:"6px 8px",borderTop:"1px solid #1F2733"}}>下线创建后终身单一币种 / 单一交收方案,切换须走切币种高危流程。</div>
-              </div>
-            ) : (
-              <div className="bg-card border border-line rounded p-3 text-xs">
-                <div>下线账号继承上级交收方案,不可更换</div>
-                <div className="text-muted mt-1">币种:<span className="chip chip-cool">{agent.currency}</span>  ·  占成:{agent.shareRatio == null ? "—" : fmtPct(agent.shareRatio) + " (参考)"}</div>
-                <div className="text-faint mt-1" style={{fontSize:11}}>如需更换,走切币种高危流程</div>
-              </div>
-            )}
-
-            {/* ⑤ 游戏条件 */}
-            <div className="section-title">⑤ 游戏条件(显示佣金率)</div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-muted mb-1">显示佣金率 *</label>
-                <div className="flex items-center gap-2">
-                  <input type="number" step="0.01" className="input flex-1"/>
-                  <span className="text-muted">%</span>
-                </div>
-                <div className="text-faint mt-1" style={{fontSize:11}}>上限继承上级;代理与玩家均必填</div>
-              </div>
-            </div>
-          </>}/>;
-      }
+      if (type === "newSub") return null; // 由 AgentsPage 直接渲染 NewSubModal
 
       if (type === "editProfile") {
         return <PasswordModal title={"修改资料:" + agent.user} onClose={onClose} onConfirm={onConfirm}
