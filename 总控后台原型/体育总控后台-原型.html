@@ -950,7 +950,7 @@
             <div className="scroll-x">
               <table>
                 <thead><tr>
-                  <th>注单号</th><th>系统户口号</th><th>用户账号</th><th>顶代</th><th>币种</th><th>投注时间</th><th>结算时间</th>
+                  <th>注单号</th><th>系统户口号</th><th>用户账号</th><th>币种</th><th>投注时间</th><th>结算时间</th>
                   <th className="text-right">投注金额</th>{showFinanceCols && <th className="text-right">派彩金额</th>}{showFinanceCols && <th className="text-right">输赢</th>}<th>状态</th>
                 </tr></thead>
                 <tbody>
@@ -959,7 +959,6 @@
                       <td className="mono text-cool" style={{fontSize:11}}>{b.id}</td>
                       <td className="mono text-muted">{b.playerSysId}</td>
                       <td className="mono">{b.playerUser}</td>
-                      <td className="mono">{b.topAgent}</td>
                       <td><span className="chip chip-cool">{b.currency}</span></td>
                       <td className="text-muted" style={{fontSize:12}}>{b.betTime}</td>
                       <td className="text-muted" style={{fontSize:12}}>{b.settleTime}</td>
