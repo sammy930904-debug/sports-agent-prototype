@@ -52,6 +52,9 @@
     tr:hover td{background:#141B25}
     .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:50}
     .modal{background:#11161E;border:1px solid #2A3648;border-radius:10px;padding:24px;width:480px;max-width:92vw;max-height:90vh;overflow:auto}
+    .modal-wide{width:720px}
+    .section-title{font-size:12px;color:#F0B93A;font-weight:600;margin:14px 0 8px 0}
+    .section-title:first-child{margin-top:0}
     .menu-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;color:#9AA4B5;transition:.15s}
     .menu-item:hover{background:#1A2434;color:#E6EAF0}
     .menu-item.active{background:#0F1B2A;color:#4A9EFF}
@@ -243,7 +246,7 @@
     };
 
     // ============== 操作密码 + 审计原因 弹窗 (V0.1 沿用) ==============
-    function PasswordModal({ title, fields, onConfirm, onClose }) {
+    function PasswordModal({ title, fields, onConfirm, onClose, wide }) {
       const [reason, setReason] = useState("");
       const [pwd, setPwd] = useState("");
       const [err, setErr] = useState("");
@@ -254,7 +257,7 @@
       };
       return (
         <div className="modal-backdrop" onClick={onClose}>
-          <div className="modal" onClick={e=>e.stopPropagation()}>
+          <div className={"modal" + (wide ? " modal-wide" : "")} onClick={e=>e.stopPropagation()}>
             <h3 className="text-base font-semibold mb-1">{title}</h3>
             <p className="text-xs text-faint mb-4">高风险操作 · 需审计原因 + 操作密码二次确认</p>
             <div className="space-y-3">
@@ -493,21 +496,98 @@
       );
 
       if (type === "newSub") {
-        const subType = agent.accountType === "普通(顶代)" ? "代理 / 游戏" : "游戏";
-        return <PasswordModal title={"新增下级:" + agent.user + " 下挂"} onClose={onClose} onConfirm={onConfirm}
+        // 对齐 B 端 V1.12 AddSubModal (FN-ACC-04): 6 个 Section, 顶代行 / 代理行 角色分支
+        const isTopParent = agent.accountType === "普通(顶代)";
+        // 顶代下挂时, 列出该顶代名下所有币种方案 (供选择); 代理下挂时, 方案继承不可选
+        const topSchemes = isTopParent
+          ? Object.values(ACCOUNTS).filter(n => n.user === agent.user && n.accountType === "普通(顶代)")
+          : [];
+        return <PasswordModal title={"新增下线:" + agent.user + " 下挂"} onClose={onClose} onConfirm={onConfirm} wide
           fields={<>
-            <InfoCard/>
-            <div className="grid grid-cols-2 gap-3">
-              <div><label className="block text-xs text-muted mb-1">下级类型 *</label>
-                <select className="input">
-                  {agent.accountType === "普通(顶代)" && <option value="代理">代理</option>}
-                  <option value="游戏">游戏(玩家)</option>
-                </select>
-              </div>
-              <div><label className="block text-xs text-muted mb-1">用户账号 *</label><input className="input" placeholder="例:carry02"/></div>
+            {/* ① 关联信息 */}
+            <div className="section-title">① 关联信息</div>
+            <div className="bg-card border border-line rounded p-3 text-xs">
+              <div>上级:<span className="mono text-cool">{agent.user}</span> ({agent.accountType}) · 系统户口号 <span className="mono">{agent.sysId}</span></div>
+              <div className="mt-1">系统户口号(自动派生):<span className="mono text-cool">{agent.sysId}-N</span></div>
+              <div className="mt-1 text-faint" style={{fontSize:11}}>系统户口号永不回收、永不复用、永不变更</div>
             </div>
-            <div><label className="block text-xs text-muted mb-1">昵称</label><input className="input" placeholder="选填"/></div>
-            <div className="text-xs text-faint">说明:下级币种自动继承上级 ({agent.currency});系统户口号自动派生 (如 {agent.sysId}-N)。可创建类型:{subType}。</div>
+
+            {/* ② 基本信息 */}
+            <div className="section-title">② 基本信息</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="block text-xs text-muted mb-1">用户账号 *</label><input className="input" placeholder="6-20 位英数"/></div>
+              <div><label className="block text-xs text-muted mb-1">账户昵称 *</label><input className="input"/></div>
+              <div><label className="block text-xs text-muted mb-1">密码 *</label><input type="password" className="input"/></div>
+              <div><label className="block text-xs text-muted mb-1">确认密码 *</label><input type="password" className="input"/></div>
+              <div><label className="block text-xs text-muted mb-1">电话号码</label><input className="input" placeholder="选填"/></div>
+              <div><label className="block text-xs text-muted mb-1">备用电话</label><input className="input" placeholder="选填"/></div>
+            </div>
+
+            {/* ③ 账号属性 */}
+            <div className="section-title">③ 账号属性</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-muted mb-1">账号类型 *</label>
+                <div className="flex gap-4 text-sm" style={{paddingTop:6}}>
+                  <label><input type="radio" name="newSubType" defaultChecked/> <span className="ml-1">代理</span></label>
+                  <label><input type="radio" name="newSubType"/> <span className="ml-1">游戏(玩家)</span></label>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-muted mb-1">账号状态 *</label>
+                <div className="flex gap-4 text-sm" style={{paddingTop:6}}>
+                  <label><input type="radio" name="newSubStatus" defaultChecked/> <span className="ml-1">启用</span></label>
+                  <label><input type="radio" name="newSubStatus"/> <span className="ml-1">禁用该账号及所有下线</span></label>
+                </div>
+              </div>
+            </div>
+
+            {/* ④ 交收方案 */}
+            <div className="section-title">④ 交收方案(单选)</div>
+            {isTopParent ? (
+              <div className="bg-card border border-line rounded overflow-hidden">
+                <table style={{width:"100%",fontSize:12}}>
+                  <thead>
+                    <tr style={{background:"#0F141C"}}>
+                      <th style={{padding:"6px",fontWeight:500,color:"#9AA4B5",textAlign:"center",width:36}}></th>
+                      <th style={{padding:"6px",fontWeight:500,color:"#9AA4B5",textAlign:"left"}}>币种</th>
+                      <th style={{padding:"6px",fontWeight:500,color:"#9AA4B5",textAlign:"left"}}>占成</th>
+                      <th style={{padding:"6px",fontWeight:500,color:"#9AA4B5",textAlign:"right"}}>账户余额</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topSchemes.map((s,i) => (
+                      <tr key={i} style={{borderTop:"1px solid #1F2733"}}>
+                        <td style={{padding:"8px 6px",textAlign:"center"}}><input type="radio" name="newSubScheme" defaultChecked={i===0}/></td>
+                        <td style={{padding:"8px 6px"}}><span className="chip chip-cool">{s.currency}</span></td>
+                        <td style={{padding:"8px 6px"}} className="num">{fmtPct(s.shareRatio)}</td>
+                        <td style={{padding:"8px 6px",textAlign:"right"}} className="num">{fmtAmount(s.balance)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="text-faint" style={{fontSize:11,padding:"6px 8px",borderTop:"1px solid #1F2733"}}>下线创建后终身单一币种 / 单一交收方案,切换须走切币种高危流程。</div>
+              </div>
+            ) : (
+              <div className="bg-card border border-line rounded p-3 text-xs">
+                <div>下线账号继承上级交收方案,不可更换</div>
+                <div className="text-muted mt-1">币种:<span className="chip chip-cool">{agent.currency}</span>  ·  占成:{agent.shareRatio == null ? "—" : fmtPct(agent.shareRatio) + " (参考)"}</div>
+                <div className="text-faint mt-1" style={{fontSize:11}}>如需更换,走切币种高危流程</div>
+              </div>
+            )}
+
+            {/* ⑤ 游戏条件 */}
+            <div className="section-title">⑤ 游戏条件(显示佣金率)</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-muted mb-1">显示佣金率 *</label>
+                <div className="flex items-center gap-2">
+                  <input type="number" step="0.01" className="input flex-1"/>
+                  <span className="text-muted">%</span>
+                </div>
+                <div className="text-faint mt-1" style={{fontSize:11}}>上限继承上级;代理与玩家均必填</div>
+              </div>
+            </div>
           </>}/>;
       }
 
