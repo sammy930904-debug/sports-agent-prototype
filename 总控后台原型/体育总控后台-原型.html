@@ -922,8 +922,6 @@
     // ============== 注单记录页 ==============
     function BetsPage({ role }) {
       const [search, setSearch] = useState("");
-      const [expanded, setExpanded] = useState(new Set());
-      const toggle = (id) => { const n = new Set(expanded); n.has(id) ? n.delete(id) : n.add(id); setExpanded(n); };
 
       // 硬过滤: 只显示体育注单 + 只显示已结算 (Sammy 2026-04-30 拍, 跟体育场次记录数据源对齐)
       const list = MOCK_BETS.filter(b => {
@@ -952,17 +950,12 @@
             <div className="scroll-x">
               <table>
                 <thead><tr>
-                  <th style={{width:24}}></th>
                   <th>注单号</th><th>系统户口号</th><th>用户账号</th><th>顶代</th><th>币种</th><th>投注时间</th><th>结算时间</th>
                   <th className="text-right">投注金额</th>{showFinanceCols && <th className="text-right">派彩金额</th>}{showFinanceCols && <th className="text-right">输赢</th>}<th>状态</th>
                 </tr></thead>
                 <tbody>
-                  {list.map(b => {
-                    const colSpan = showFinanceCols ? 12 : 10;
-                    const isOpen = expanded.has(b.id);
-                    return (<React.Fragment key={b.id}>
-                    <tr>
-                      <td style={{textAlign:"center",cursor:"pointer",userSelect:"none"}} onClick={()=>toggle(b.id)}><span className="text-cool">{isOpen ? "▾" : "▸"}</span></td>
+                  {list.map(b => (
+                    <tr key={b.id}>
                       <td className="mono text-cool" style={{fontSize:11}}>{b.id}</td>
                       <td className="mono text-muted">{b.playerSysId}</td>
                       <td className="mono">{b.playerUser}</td>
@@ -971,61 +964,13 @@
                       <td className="text-muted" style={{fontSize:12}}>{b.betTime}</td>
                       <td className="text-muted" style={{fontSize:12}}>{b.settleTime}</td>
                       <td className="num text-right">{fmtAmount(b.stake)}</td>
-                      {showFinanceCols && <td className="num text-right">{b.status==="未结算"?<span className="text-faint">—</span>:fmtAmount(b.payout)}</td>}
-                      {showFinanceCols && <td className="num text-right" style={{color: b.status==="未结算" ? "#9AA4B5" : (b.winLoss > 0 ? "#5BC97C" : (b.winLoss < 0 ? "#FF6B6B" : "#9AA4B5"))}}>
-                        {b.status==="未结算" ? "—" : (b.winLoss > 0 ? "+" : "") + fmtAmount(b.winLoss)}
+                      {showFinanceCols && <td className="num text-right">{fmtAmount(b.payout)}</td>}
+                      {showFinanceCols && <td className="num text-right" style={{color: b.winLoss > 0 ? "#5BC97C" : (b.winLoss < 0 ? "#FF6B6B" : "#9AA4B5")}}>
+                        {(b.winLoss > 0 ? "+" : "") + fmtAmount(b.winLoss)}
                       </td>}
                       <td><StatusChip status={b.status}/></td>
                     </tr>
-                    {isOpen && <tr><td colSpan={colSpan} style={{padding:0,background:"#0B0F15"}}>
-                      <div style={{padding:"16px 24px",borderLeft:"3px solid #4A9EFF"}}>
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="text-cool font-semibold" style={{fontSize:14}}>{b.providerCode} {b.bundleType}</div>
-                          <div className="text-muted">{b.status === "未结算" ? "进行中" : b.status}</div>
-                        </div>
-                        {b.gameType.includes("体育") && <>
-                          <div className="flex items-baseline justify-between mb-1">
-                            <div className="text-base font-semibold">{b.selection}</div>
-                            <div className="text-base font-semibold">{b.odds.toFixed(2)}</div>
-                          </div>
-                          <div className="text-muted mb-1">{b.playMethod}</div>
-                          <div className="text-muted mb-2">{b.league}</div>
-                          <div className="bg-card border border-line rounded p-2 text-cool mb-3" style={{fontSize:13}}>
-                            {b.teamHome} vs {b.teamAway} {b.score && <span className="text-muted">[{b.score}]</span>}
-                          </div>
-                        </>}
-                        {b.gameType.includes("电子") && <>
-                          <div className="flex items-baseline justify-between mb-1">
-                            <div className="text-base font-semibold">{b.selection}</div>
-                            {b.odds > 0 && <div className="text-base font-semibold">{b.odds.toFixed(2)}</div>}
-                          </div>
-                          <div className="text-muted mb-1">{b.playMethod}</div>
-                          <div className="text-muted mb-3">{b.league}</div>
-                        </>}
-                        {b.gameType.includes("六合彩") && <>
-                          <div className="flex items-baseline justify-between mb-1">
-                            <div className="text-base font-semibold">{b.selection}</div>
-                            <div className="text-base font-semibold">{b.odds.toFixed(2)}</div>
-                          </div>
-                          <div className="text-muted mb-1">{b.playMethod}</div>
-                          <div className="text-muted mb-3">{b.league}</div>
-                        </>}
-                        <div className="text-muted" style={{fontSize:12}}>投注日期:{b.betTime}</div>
-                        <div className="text-muted" style={{fontSize:12}}>单号:<span className="mono">{b.id}</span></div>
-                        <div className="grid grid-cols-2 gap-4 mt-3 pt-3" style={{borderTop:"1px solid #2A3648"}}>
-                          <div>
-                            <div className="text-muted" style={{fontSize:11}}>投注额</div>
-                            <div className="text-base font-semibold">{fmtAmount(b.stake)} {b.currency}</div>
-                          </div>
-                          {showFinanceCols && <div>
-                            <div className="text-muted" style={{fontSize:11}}>赢取金额</div>
-                            <div className="text-base font-semibold" style={{color:"#F0B93A"}}>{b.status==="未结算" ? "—" : fmtAmount(b.payout) + " " + b.currency}</div>
-                          </div>}
-                        </div>
-                      </div>
-                    </td></tr>}
-                    </React.Fragment>);
-                  })}
+                  ))}
                 </tbody>
               </table>
             </div>
