@@ -78,7 +78,7 @@ const TOP_SCHEMES = [
 // 户口号规则:child_id = {parent_id}-{父下递增序号};顶代为 "qweqwe",直属下线即 qweqwe-1 / qweqwe-2 / ...
 const INIT_ACCOUNTS = [
   // PHP 线
-  { id:"qweqwe-1", parentId:"qweqwe", nick:"Carry",  user:"carry01",  type:"agent",  schemeId:"S_PHP", rate:0.5, balance:500000, totalBalance:708000, status:"on",  childCount:3, createdAt:"2026-02-10" }, // 50万 + Alice(20.5万 含Bob 0.5万) + Dave 0.3万 + Zoe 0 = 70.8万
+  { id:"qweqwe-1", parentId:"qweqwe", nick:"Carry",  user:"carry01",  type:"agent",  schemeId:"S_PHP", rate:0.5, balance:500000, totalBalance:708000, status:"on",  childCount:4, createdAt:"2026-02-10" }, // 50万 + Alice(20.5万 含Bob 0.5万) + Dave 0.3万 + Zoe 0 = 70.8万 ; childCount=4 穿透 (Alice+Bob+Dave+Zoe), 2026-04-29 跟 S 端 V0.2 对齐为穿透总下线数
   { id:"qweqwe-1-1", parentId:"qweqwe-1", nick:"Alice", user:"alice88", type:"agent",  schemeId:"S_PHP", rate:0.3, balance:200000, totalBalance:205000, status:"on",  childCount:1, createdAt:"2026-02-28" },
   { id:"qweqwe-1-1-1", parentId:"qweqwe-1-1", nick:"Bob", user:"bob_hi", type:"player", schemeId:"S_PHP", rate:0.1, balance:5000,   totalBalance:5000,   status:"on",  childCount:0, createdAt:"2026-03-15", winLoss:-1200, validBet:32000 },
   { id:"qweqwe-1-2", parentId:"qweqwe-1", nick:"Dave",  user:"dave_y",  type:"player", schemeId:"S_PHP", rate:0.2, balance:3000,   totalBalance:3000,   status:"on",  childCount:0, createdAt:"2026-03-02", winLoss:800, validBet:12000 },
