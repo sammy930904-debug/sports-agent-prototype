@@ -161,8 +161,8 @@
     // 电子: providerCode/playMethod(机台)/selection(局次)/odds(倍率)
     // 六合彩: providerCode/league(期号)/selection(号码)/odds(赔率)
     const MOCK_BETS = [
-      { id:"519346028101500970", playerId:"P-qw-008", topAgent:"qweqwe", provider:"UUS 体育", providerCode:"UUS", gameType:"体育 ⚽", league:"足球 / 印度锡金甲组联赛", teamHome:"霹雳北联", teamAway:"红熊猫", score:"2-1", playMethod:"滚球 全场.独赢盘", selection:"霹雳北联", odds:1.34, bundleType:"1 单注", betTime:"2026-04-30 20:47:50", stake:1_0000, payout:1_3400, winLoss:0, currency:"KRW", status:"未结算" },
-      { id:"BET-20260429-0042", playerId:"P-qw-008", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 韩国 K 联赛", teamHome:"全北现代", teamAway:"水原三星", score:"1-1", playMethod:"全场.让球", selection:"全北现代 -1.5", odds:2.10, bundleType:"1 单注", betTime:"2026-04-29 16:08:22", stake:120_000, payout:0, winLoss:0, currency:"KRW", status:"未结算" },
+      { id:"519346028101500970", playerId:"P-qw-008", topAgent:"qweqwe", provider:"UUS 体育", providerCode:"UUS", gameType:"体育 ⚽", league:"足球 / 印度锡金甲组联赛", teamHome:"霹雳北联", teamAway:"红熊猫", score:"2-1", playMethod:"滚球 全场.独赢盘", selection:"霹雳北联", odds:1.34, bundleType:"1 单注", betTime:"2026-04-30 20:47:50", stake:1_0000, payout:1_3400, winLoss:3_400, currency:"KRW", status:"已结算" },
+      { id:"BET-20260429-0042", playerId:"P-qw-008", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 韩国 K 联赛", teamHome:"全北现代", teamAway:"水原三星", score:"1-1", playMethod:"全场.让球", selection:"全北现代 -1.5", odds:2.10, bundleType:"1 单注", betTime:"2026-04-29 16:08:22", stake:120_000, payout:0, winLoss:-120_000, currency:"KRW", status:"已结算" },
       { id:"BET-20260429-0041", playerId:"P-dia-021", topAgent:"diamond", provider:"PG SOFT", providerCode:"PG", gameType:"电子 🎰", league:"PG 老虎机", teamHome:"", teamAway:"", score:"", playMethod:"夜店女王 旋转", selection:"局次 #2891", odds:3.70, bundleType:"单局", betTime:"2026-04-29 16:05:11", stake:50, payout:185, winLoss:135, currency:"USD", status:"已结算" },
       { id:"BET-20260429-0040", playerId:"P-qw-008", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 西甲", teamHome:"皇家马德里", teamAway:"巴塞罗那", score:"3-2", playMethod:"全场.大小盘", selection:"大 4.5", odds:1.90, bundleType:"1 单注", betTime:"2026-04-29 15:58:03", stake:200_000, payout:380_000, winLoss:180_000, currency:"KRW", status:"已结算" },
       { id:"BET-20260429-0039", playerId:"P-sap-014", topAgent:"sapphire", provider:"VR 六合彩", providerCode:"VR", gameType:"六合彩 🎱", league:"VR 六合彩 第 240430 期", teamHome:"", teamAway:"", score:"", playMethod:"特码 单选", selection:"号码 38", odds:48.00, bundleType:"单选", betTime:"2026-04-29 15:30:00", stake:500_000, payout:0, winLoss:-500_000, currency:"KRW", status:"已结算" },
@@ -922,14 +922,13 @@
     // ============== 注单记录页 ==============
     function BetsPage({ role }) {
       const [search, setSearch] = useState("");
-      const [status, setStatus] = useState("all");
       const [expanded, setExpanded] = useState(new Set());
       const toggle = (id) => { const n = new Set(expanded); n.has(id) ? n.delete(id) : n.add(id); setExpanded(n); };
 
-      // 硬过滤: 只显示体育注单 (Sammy 2026-04-30 拍, S 端注单记录收窄到只体育)
+      // 硬过滤: 只显示体育注单 + 只显示已结算 (Sammy 2026-04-30 拍, 跟体育场次记录数据源对齐)
       const list = MOCK_BETS.filter(b => {
         if (!b.gameType.includes("体育")) return false;
-        if (status !== "all" && b.status !== status) return false;
+        if (b.status !== "已结算") return false;
         if (search && !(b.id.includes(search) || b.playerId.includes(search) || b.topAgent.includes(search))) return false;
         return true;
       });
@@ -941,16 +940,13 @@
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-xl font-semibold">体育注单记录</h2>
-              <p className="text-xs text-muted mt-1">三方体育游戏商每笔回调,准实时  ·  含未结算 / 已结算两种状态  ·  只显示体育注单(电子 / 六合彩 暂不在 S 端展示)</p>
+              <p className="text-xs text-muted mt-1">只保存已结算的体育注单(跟体育场次记录数据源一致)  ·  电子 / 六合彩 暂不在 S 端展示</p>
             </div>
             <button className="btn btn-ghost">导出 CSV</button>
           </div>
           <div className="bg-panel border border-line rounded-lg p-4 mb-4 flex gap-3 items-center flex-wrap">
             <input className="input flex-1 max-w-xs" placeholder="搜索注单号 / 玩家 / 顶代" value={search} onChange={e=>setSearch(e.target.value)}/>
-            <select className="input w-32" value={status} onChange={e=>setStatus(e.target.value)}>
-              <option value="all">全部状态</option><option value="未结算">未结算</option><option value="已结算">已结算</option>
-            </select>
-            <span className="text-xs text-faint">共 {list.length} 条</span>
+            <span className="text-xs text-faint">共 {list.length} 条已结算注单</span>
           </div>
           <div className="bg-panel border border-line rounded-lg overflow-hidden">
             <div className="scroll-x">
