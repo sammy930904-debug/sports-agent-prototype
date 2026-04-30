@@ -1919,6 +1919,20 @@
       const [opPwd, setOpPwd] = useState("");
       const [opErr, setOpErr] = useState("");
 
+      // 筛选 (提交触发, 跟其他列表页一致)
+      const [inIP, setInIP] = useState(""), [ipQ, setIpQ] = useState("");
+      const [inStatus, setInStatus] = useState("all"), [statusQ, setStatusQ] = useState("all");
+      const [pageNum, setPageNum] = useState(0);
+      const doSearch = () => { setIpQ(inIP.trim()); setStatusQ(inStatus); setPageNum(0); };
+      const resetSearch = () => { setInIP(""); setInStatus("all"); setIpQ(""); setStatusQ("all"); setPageNum(0); };
+
+      const filtered = list.filter(w => {
+        if (ipQ && !w.ip.includes(ipQ) && !(w.label || "").includes(ipQ)) return false;
+        if (statusQ === "enabled" && !w.enabled) return false;
+        if (statusQ === "disabled" && w.enabled) return false;
+        return true;
+      });
+
       const enabledCount = list.filter(w => w.enabled).length;
       const isCurrentIPAllowed = enabledCount === 0 || list.filter(w => w.enabled).some(w => ipMatches(currentLoginIP, w.ip));
 
@@ -1964,6 +1978,21 @@
               {" "}· <b>启用项 {enabledCount} 条</b>(0 条 = 所有 IP 均可登录)· 校验范围:LoginPage 提交时;停用 / 删除最后一条启用项有防自锁拦截
             </span>
           </div>
+          <div className="bg-panel border border-line rounded-lg p-3 mb-4">
+            <div className="flex flex-wrap gap-2 items-center">
+              <input className="input mono" style={{width:280,fontSize:13}} placeholder="搜索 IP / IP 段 / 备注" value={inIP} onChange={e=>setInIP(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <select className="input" style={{width:120}} value={inStatus} onChange={e=>setInStatus(e.target.value)}>
+                <option value="all">全部状态</option>
+                <option value="enabled">启用</option>
+                <option value="disabled">已停用</option>
+              </select>
+              <button className="btn btn-primary" style={{padding:"8px 18px"}} onClick={doSearch}>搜索</button>
+              <button className="btn btn-ghost" style={{padding:"8px 14px"}} onClick={resetSearch}>重置</button>
+            </div>
+            <div className="flex items-center mt-2 text-xs text-faint">
+              <span>共 {filtered.length} 条</span>
+            </div>
+          </div>
           <div className="bg-panel border border-line rounded-lg overflow-hidden">
             <div className="scroll-x">
               <table>
@@ -1971,7 +2000,7 @@
                   <th>IP / IP 段</th><th>备注</th><th>状态</th><th>创建时间</th><th>操作</th>
                 </tr></thead>
                 <tbody>
-                  {list.map(item => (
+                  {filtered.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).map(item => (
                     <tr key={item.id}>
                       <td className="mono text-cool">{item.ip}</td>
                       <td className="text-muted" style={{fontSize:12}}>{item.label}</td>
@@ -1983,10 +2012,11 @@
                       </td>
                     </tr>
                   ))}
-                  {list.length === 0 && <tr><td colSpan="5" style={{textAlign:"center",padding:"20px",color:"#6B7280"}}>暂无白名单(所有 IP 均可登录)</td></tr>}
+                  {filtered.length === 0 && <tr><td colSpan="5" style={{textAlign:"center",padding:"20px",color:"#6B7280"}}>{list.length === 0 ? "暂无白名单(所有 IP 均可登录)" : "无匹配数据"}</td></tr>}
                 </tbody>
               </table>
             </div>
+            <Pagination total={filtered.length} pageNum={pageNum} setPageNum={setPageNum}/>
           </div>
           {showAdd && <AddIPModal onClose={()=>setShowAdd(false)} onSubmit={handleAdd} existingIPs={list.map(w=>w.ip)}/>}
           {confirmAction && (
