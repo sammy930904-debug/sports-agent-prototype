@@ -492,6 +492,10 @@
         const k = account.key;
         if (!next[k]) return;
         const wasFrozen = next[k].status === "frozen";
+        // 重置密码: V0.2 mock 仅 alert 演示, 真实开发对接后端写库 + 强制 next-login-must-change
+        if (data.resetPwd) {
+          alert("已重置 " + account.user + " 的登录密码 (mock 不真改);该下线下次登录将强制修改密码");
+        }
         next[k] = { ...next[k], nick: data.nick, phone: data.phone, phone2: data.phone2, accountType: data.accountType || next[k].accountType, shareRatio: data.shareRatio == null ? next[k].shareRatio : data.shareRatio, refRate: data.refRate == null ? next[k].refRate : data.refRate, status: data.status };
         // 级联冻结子树
         if (data.status === "frozen" && !wasFrozen) {
@@ -947,6 +951,7 @@
           shareRatio: isTop ? account.shareRatio : (refShareRatio === "" ? null : (+refShareRatio / 100)),
           refRate: isTop ? account.refRate : (refRate === "" ? null : (+refRate / 100)),
           status: accStatus,
+          resetPwd: resetPwd || null,  // 修 bug (Sammy 2026-04-30 challenge): 之前 onSubmit 没回传 resetPwd, 重置密码字段相当于无效
         });
       };
 
