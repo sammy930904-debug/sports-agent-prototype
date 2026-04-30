@@ -340,32 +340,35 @@
 
     // 玩家操作日志 = "被管对象"在 B/C 端的写动作 (S 端视角下,代理也是被管对象)
     // 真实动作面 (扫 B 端 + C 端原型 onClick / onSubmit 摘出):
-    //   B 端 (代理): 登录 / 登出 / 新增下线 / 修改资料 / 上分 / 下分 / 禁用 / 启用 / 修改交收方案 (顶代独有) / 修改密码
-    //   C 端 (玩家): 登录 / 登出 / 选交收方案 / 进入游戏 / 返回大厅
+    //   B 端 (代理): 登录 / 登出 / 新增下线 / 修改资料 / 上分 / 下分 / 禁用 / 启用 / 修改交收方案 (顶代独有) / 修改密码 / 切换语言
+    //   C 端 (玩家): 登录 / 登出 / 选交收方案 / 选游戏分类 / 进入游戏 / 返回大厅 / 切换语言
     // 砍掉旧 mock 里:
     //   - "投注 BET-XXX": 投注是三方回调流水, 不是用户主动审计动作
     //   - "AH-001 (账房) 账房上分": 账房不是被管对象, 走流水即可
     //   - "隐藏佣金率列": UI 本地偏好, 不进审计
     const MOCK_AUDIT_PLAYER = [
       // C 端玩家动作
-      { time:"2026-04-29 16:30:11", actorType:"玩家", actor:"P-qw-008",        action:"返回大厅",     target:"BBIN 体育 → 大厅 (回收余额)",                ip:"175.213.x.x", reason:"-" },
-      { time:"2026-04-29 16:08:22", actorType:"玩家", actor:"P-qw-008",        action:"进入游戏",     target:"BBIN 体育",                                  ip:"175.213.x.x", reason:"-" },
-      { time:"2026-04-29 16:08:00", actorType:"玩家", actor:"P-qw-008",        action:"选交收方案",   target:"KRW-80% (qweqwe-1-1)",                       ip:"175.213.x.x", reason:"-" },
-      { time:"2026-04-29 16:05:11", actorType:"玩家", actor:"P-qw-008",        action:"登录",         target:"C 端 STAR VIP GAME",                         ip:"175.213.x.x", reason:"-" },
-      { time:"2026-04-29 14:30:00", actorType:"玩家", actor:"P-dia-014",       action:"选交收方案",   target:"USD-30% (diamond-1-1)",                      ip:"172.58.x.x",  reason:"-" },
-      { time:"2026-04-29 13:20:00", actorType:"玩家", actor:"P-luk-002",       action:"登录",         target:"C 端 STAR VIP GAME",                         ip:"180.190.x.x", reason:"-" },
-      { time:"2026-04-29 12:00:18", actorType:"玩家", actor:"P-luk-005",       action:"登出",         target:"C 端 STAR VIP GAME",                         ip:"180.190.x.x", reason:"-" },
+      { time:"2026-04-29 16:30:11", actorType:"玩家", actor:"P-qw-008",        action:"返回大厅",     target:"BBIN 体育 → 大厅 (回收余额)",                                       ip:"175.213.x.x", reason:"-" },
+      { time:"2026-04-29 16:08:22", actorType:"玩家", actor:"P-qw-008",        action:"进入游戏",     target:"BBIN 体育",                                                         ip:"175.213.x.x", reason:"-" },
+      { time:"2026-04-29 16:08:10", actorType:"玩家", actor:"P-qw-008",        action:"选游戏分类",   target:"体育",                                                              ip:"175.213.x.x", reason:"-" },
+      { time:"2026-04-29 16:08:00", actorType:"玩家", actor:"P-qw-008",        action:"选交收方案",   target:"KRW-80% (qweqwe-1-1)",                                              ip:"175.213.x.x", reason:"-" },
+      { time:"2026-04-29 16:05:11", actorType:"玩家", actor:"P-qw-008",        action:"登录",         target:"C 端 STAR VIP GAME",                                                 ip:"175.213.x.x", reason:"-" },
+      { time:"2026-04-29 14:30:00", actorType:"玩家", actor:"P-dia-014",       action:"选交收方案",   target:"USD-30% (diamond-1-1)",                                             ip:"172.58.x.x",  reason:"-" },
+      { time:"2026-04-29 13:25:30", actorType:"玩家", actor:"P-dia-014",       action:"切换语言",     target:"zh → en (C 端)",                                                    ip:"172.58.x.x",  reason:"-" },
+      { time:"2026-04-29 13:20:00", actorType:"玩家", actor:"P-luk-002",       action:"登录",         target:"C 端 STAR VIP GAME",                                                 ip:"180.190.x.x", reason:"-" },
+      { time:"2026-04-29 12:00:18", actorType:"玩家", actor:"P-luk-005",       action:"登出",         target:"C 端 STAR VIP GAME",                                                 ip:"180.190.x.x", reason:"-" },
       // B 端代理动作
-      { time:"2026-04-29 15:30:42", actorType:"代理", actor:"qweqwe (顶代)",   action:"上分",         target:"下线 qw-008 (qweqwe-1)  +200,000 KRW",       ip:"118.139.x.x", reason:"-" },
-      { time:"2026-04-29 14:22:18", actorType:"代理", actor:"qweqwe (顶代)",   action:"新增下线",     target:"代理 carry01 (qweqwe-3)  KRW",                ip:"118.139.x.x", reason:"-" },
-      { time:"2026-04-29 13:45:22", actorType:"代理", actor:"lucky88 (顶代)",  action:"下分",         target:"下线 luk-002 (lucky88-1)  -1,000 PHP",       ip:"203.177.x.x", reason:"-" },
-      { time:"2026-04-29 11:00:08", actorType:"代理", actor:"qweqwe (顶代)",   action:"修改交收方案", target:"下线子树 ≥5 条  KRW-100% → KRW-80%",         ip:"118.139.x.x", reason:"-" },
-      { time:"2026-04-29 10:45:14", actorType:"代理", actor:"qweqwe (顶代)",   action:"修改资料",     target:"下线 qw-003 (qweqwe-2)  佣金率 5.0% → 6.0%", ip:"118.139.x.x", reason:"-" },
-      { time:"2026-04-29 10:12:33", actorType:"代理", actor:"lucky88 (顶代)",  action:"禁用账号",     target:"下线 luk-005 (lucky88-2) + 子树级联",         ip:"203.177.x.x", reason:"-" },
-      { time:"2026-04-29 09:48:02", actorType:"代理", actor:"sapphire (顶代)", action:"修改密码",     target:"自身账号 sapphire (强制重登)",                ip:"61.74.x.x",   reason:"-" },
-      { time:"2026-04-29 09:30:55", actorType:"代理", actor:"qweqwe (顶代)",   action:"启用账号",     target:"下线 qw-005 (qweqwe-5)",                      ip:"118.139.x.x", reason:"-" },
-      { time:"2026-04-29 09:15:00", actorType:"代理", actor:"qweqwe (顶代)",   action:"登录",         target:"B 端代理后台",                                ip:"118.139.x.x", reason:"-" },
-      { time:"2026-04-28 19:08:44", actorType:"代理", actor:"qweqwe (顶代)",   action:"登出",         target:"B 端代理后台",                                ip:"118.139.x.x", reason:"-" },
+      { time:"2026-04-29 15:30:42", actorType:"代理", actor:"qweqwe (顶代)",   action:"上分",         target:"下线 qw-008 (qweqwe-1)  +200,000 KRW",                              ip:"118.139.x.x", reason:"-" },
+      { time:"2026-04-29 14:22:18", actorType:"代理", actor:"qweqwe (顶代)",   action:"新增下线",     target:"代理 carry01 (qweqwe-3)  KRW",                                       ip:"118.139.x.x", reason:"-" },
+      { time:"2026-04-29 13:45:22", actorType:"代理", actor:"lucky88 (顶代)",  action:"下分",         target:"下线 luk-002 (lucky88-1)  -1,000 PHP",                              ip:"203.177.x.x", reason:"-" },
+      { time:"2026-04-29 11:00:08", actorType:"代理", actor:"qweqwe (顶代)",   action:"修改交收方案", target:"下线子树 ≥5 条  KRW-100% → KRW-80%",                                ip:"118.139.x.x", reason:"-" },
+      { time:"2026-04-29 10:45:14", actorType:"代理", actor:"qweqwe (顶代)",   action:"修改资料",     target:"下线 qw-003 (qweqwe-2)  昵称 三号 → 三号哥 / 佣金率 5.0% → 6.0%", ip:"118.139.x.x", reason:"-" },
+      { time:"2026-04-29 10:12:33", actorType:"代理", actor:"lucky88 (顶代)",  action:"禁用账号",     target:"下线 luk-005 (lucky88-2) + 子树级联",                                ip:"203.177.x.x", reason:"-" },
+      { time:"2026-04-29 09:48:02", actorType:"代理", actor:"sapphire (顶代)", action:"修改密码",     target:"自身账号 sapphire (强制重登)",                                       ip:"61.74.x.x",   reason:"-" },
+      { time:"2026-04-29 09:30:55", actorType:"代理", actor:"qweqwe (顶代)",   action:"启用账号",     target:"下线 qw-005 (qweqwe-5)",                                             ip:"118.139.x.x", reason:"-" },
+      { time:"2026-04-29 09:20:14", actorType:"代理", actor:"lucky88 (顶代)",  action:"切换语言",     target:"zh → ko (B 端)",                                                    ip:"203.177.x.x", reason:"-" },
+      { time:"2026-04-29 09:15:00", actorType:"代理", actor:"qweqwe (顶代)",   action:"登录",         target:"B 端代理后台",                                                       ip:"118.139.x.x", reason:"-" },
+      { time:"2026-04-28 19:08:44", actorType:"代理", actor:"qweqwe (顶代)",   action:"登出",         target:"B 端代理后台",                                                       ip:"118.139.x.x", reason:"-" },
     ];
 
     // ============== 工具函数 ==============
