@@ -412,8 +412,10 @@
               <div className="flex items-center gap-1 bg-app border border-line rounded-md px-2" style={{height:36}}>
                 <span className="text-xs text-faint" style={{padding:"0 4px"}}>开户</span>
                 <input type="datetime-local" step="1" className="text-sm outline-none" style={{background:"transparent",color:"#E6EAF0",border:"none",padding:"4px",colorScheme:"dark",width:175}} value={inDateFrom} onChange={e=>setInDateFrom(e.target.value)}/>
+                {inDateFrom && <span className="cursor-pointer text-faint" onClick={()=>setInDateFrom("")} title="清空开始时间" style={{padding:"0 4px",fontSize:11,userSelect:"none"}}>✕</span>}
                 <span className="text-muted text-sm">→</span>
                 <input type="datetime-local" step="1" className="text-sm outline-none" style={{background:"transparent",color:"#E6EAF0",border:"none",padding:"4px",colorScheme:"dark",width:175}} value={inDateTo} onChange={e=>setInDateTo(e.target.value)}/>
+                {inDateTo && <span className="cursor-pointer text-faint" onClick={()=>setInDateTo("")} title="清空结束时间" style={{padding:"0 4px",fontSize:11,userSelect:"none"}}>✕</span>}
               </div>
               <button className="btn btn-primary" style={{padding:"8px 18px"}} onClick={doSearch}>搜索</button>
               <button className="btn btn-ghost" style={{padding:"8px 14px"}} onClick={resetSearch}>重置</button>
