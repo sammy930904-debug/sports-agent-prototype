@@ -540,8 +540,10 @@
           appendSystemLog && appendSystemLog("重置下线密码", account.user+" ("+account.sysId+") 强制下次登录改密");
         }
         // 操作日志: 记录关键 diff (status / nick / shareRatio / refRate)
+        // status 翻译成中文跟 StatusChip 文案对齐 (Sammy 2026-04-30 二扫)
+        const statusTxt = { active:"启用", frozen:"禁用" };
         const diffs = [];
-        if (data.status !== next[k].status) diffs.push("状态: "+next[k].status+" → "+data.status);
+        if (data.status !== next[k].status) diffs.push("状态: "+(statusTxt[next[k].status]||next[k].status)+" → "+(statusTxt[data.status]||data.status));
         if (data.nick !== next[k].nick) diffs.push("昵称: "+(next[k].nick||"-")+" → "+data.nick);
         if (data.shareRatio != null && data.shareRatio !== next[k].shareRatio) diffs.push("占成: "+(next[k].shareRatio==null?"-":(next[k].shareRatio*100).toFixed(2)+"%")+" → "+(data.shareRatio*100).toFixed(2)+"%");
         if (data.refRate != null && data.refRate !== next[k].refRate) diffs.push("佣金率: "+(next[k].refRate==null?"-":(next[k].refRate*100).toFixed(2)+"%")+" → "+(data.refRate*100).toFixed(2)+"%");
