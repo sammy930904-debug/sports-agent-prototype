@@ -262,7 +262,7 @@
               {fields}
               <div>
                 <label className="block text-xs text-muted mb-1">操作密码 <span className="text-cool">*</span></label>
-                <input type="password" className="input" placeholder="Mock: 123456" value={pwd} onChange={e=>setPwd(e.target.value)}/>
+                <input type="password" className="input" placeholder="当前登录员工的登录密码 (Mock: 123456)" value={pwd} onChange={e=>setPwd(e.target.value)}/>
               </div>
               {err && <div className="text-xs" style={{color:"#FF6B6B"}}>{err}</div>}
             </div>
@@ -283,6 +283,15 @@
       const [accounts, setAccounts] = useState(() => ({...ACCOUNTS}));
       const [topKeys, setTopKeys] = useState(() => [...TOP_AGENT_KEYS]);
       const cols = ROLES[role].agentCols;
+      // 修改资料: 把 form 字段 merge 到节点上 (mock 内存中改, 不持久化)
+      const handleEditProfile = (account, data) => {
+        const next = {...accounts};
+        const k = account.key;
+        if (!next[k]) return;
+        next[k] = { ...next[k], nick: data.nick, phone: data.phone, phone2: data.phone2, remark: data.remark, shareRatio: data.shareRatio == null ? next[k].shareRatio : data.shareRatio, status: data.status };
+        setAccounts(next);
+        setModal(null);
+      };
       // 新增下线: 派生 sysId / 加节点 / 更新父级 children / 沿祖先链 +subCount
       const handleNewSub = (parent, data) => {
         const next = {...accounts};
@@ -509,7 +518,8 @@
             </div>
           </div>
           {modal && modal.type === "newSub" && <NewSubModal parent={modal.agent} accounts={accounts} onClose={()=>setModal(null)} onSubmit={(data)=>handleNewSub(modal.agent, data)}/>}
-          {modal && modal.type !== "newSub" && <ActionModal modal={modal} onClose={()=>setModal(null)} onConfirm={()=>{ alert("已提交  ·  操作日志已记录"); setModal(null); }}/>}
+          {modal && modal.type === "editProfile" && <EditProfileModal account={modal.agent} onClose={()=>setModal(null)} onSubmit={(data)=>handleEditProfile(modal.agent, data)}/>}
+          {modal && modal.type !== "newSub" && modal.type !== "editProfile" && <ActionModal modal={modal} onClose={()=>setModal(null)} onConfirm={()=>{ alert("已提交  ·  操作日志已记录"); setModal(null); }}/>}
         </div>
       );
     }
@@ -635,8 +645,105 @@
               <div className="section-title">⑥ 安全校验</div>
               <div>
                 <label className="block text-xs text-muted mb-1">操作密码 *</label>
-                <input type="password" className="input" placeholder="Mock: 123456" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
+                <input type="password" className="input" placeholder="当前登录员工的登录密码 (Mock: 123456)" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
               </div>
+              {err && <div className="text-xs" style={{color:"#FF6B6B"}}>{err}</div>}
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <button className="btn btn-ghost" onClick={onClose}>取消</button>
+              <button className="btn btn-primary" onClick={submit}>确认提交</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 修改资料弹窗 (独立组件, 对齐 B 端 V1.12 EditProfileModal / FN-ACC-05)
+    // 3 段:只读信息 / 低敏感字段(无需密码) / 高敏感字段(动态触发操作密码)
+    function EditProfileModal({ account, onClose, onSubmit }) {
+      const initShareRatio = account.shareRatio == null ? "" : (account.shareRatio * 100).toFixed(2);
+      const [nick, setNick] = useState(account.nick || account.user);
+      const [phone, setPhone] = useState(account.phone || "");
+      const [phone2, setPhone2] = useState(account.phone2 || "");
+      const [remark, setRemark] = useState(account.remark || "");
+      const [rate, setRate] = useState(initShareRatio);
+      const [resetPwd, setResetPwd] = useState("");
+      const [accStatus, setAccStatus] = useState(account.status);
+      const [opPwd, setOpPwd] = useState("");
+      const [err, setErr] = useState("");
+
+      // 高敏感字段是否被改动
+      const highSensitive = rate !== initShareRatio || resetPwd !== "" || accStatus !== account.status;
+
+      const submit = () => {
+        if (!nick.trim()) { setErr("请输入账户昵称"); return; }
+        if (rate !== "" && isNaN(+rate)) { setErr("显示佣金率必须是数字"); return; }
+        if (highSensitive && !opPwd) { setErr("修改了高敏感字段,请输入操作密码"); return; }
+        if (highSensitive && opPwd !== "123456") { setErr("操作密码错误"); return; }
+        onSubmit({
+          nick, phone, phone2, remark,
+          shareRatio: rate === "" ? null : (+rate / 100),
+          status: accStatus,
+        });
+      };
+
+      return (
+        <div className="modal-backdrop" onClick={onClose}>
+          <div className="modal modal-wide" onClick={e=>e.stopPropagation()}>
+            <h3 className="text-base font-semibold mb-1">修改资料:{account.user}</h3>
+            <p className="text-xs text-faint mb-4">沿用 B 端 V1.12 EditProfileModal 字段集 · 高敏感字段才触发操作密码</p>
+            <div className="space-y-3">
+              <div className="section-title">只读信息</div>
+              <div className="bg-card border border-line rounded p-3 text-xs grid grid-cols-3 gap-2">
+                <div><span className="text-muted">系统户口号:</span> <span className="mono text-cool">{account.sysId}</span></div>
+                <div><span className="text-muted">用户账号:</span> <span className="mono">{account.user}</span></div>
+                <div><span className="text-muted">币种:</span> <span className="chip chip-cool">{account.currency}</span></div>
+                <div><span className="text-muted">账号类型:</span> {account.accountType}</div>
+                <div><span className="text-muted">创建时间:</span> {account.createdAt}</div>
+                <div><span className="text-muted">余额:</span> <span className="num">{fmtAmount(account.balance)}</span></div>
+              </div>
+
+              <div className="section-title">低敏感字段(无需操作密码)</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs text-muted mb-1">账户昵称</label><input className="input" value={nick} onChange={e=>setNick(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">电话号码</label><input className="input" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="选填"/></div>
+                <div><label className="block text-xs text-muted mb-1">备用电话</label><input className="input" value={phone2} onChange={e=>setPhone2(e.target.value)} placeholder="选填"/></div>
+                <div><label className="block text-xs text-muted mb-1">备注(最长 200 字)</label><input className="input" value={remark} onChange={e=>setRemark(e.target.value)} maxLength={200} placeholder="商务/风控备注"/></div>
+              </div>
+
+              <div className="section-title">高敏感字段(修改时触发操作密码)</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-muted mb-1">显示佣金率</label>
+                  <div className="flex items-center gap-2">
+                    <input type="number" step="0.01" className="input flex-1" value={rate} onChange={e=>setRate(e.target.value)}/>
+                    <span className="text-muted">%</span>
+                  </div>
+                  {account.accountType !== "普通(顶代)" && <div className="text-faint mt-1" style={{fontSize:11}}>下线层显示参考占成,Q-S11 议题待</div>}
+                </div>
+                <div>
+                  <label className="block text-xs text-muted mb-1">重置登录密码(选填)</label>
+                  <input type="password" className="input" value={resetPwd} onChange={e=>setResetPwd(e.target.value)} placeholder="留空=不重置"/>
+                  <div className="text-faint mt-1" style={{fontSize:11}}>填写则强制下线下次登录修改</div>
+                </div>
+                <div>
+                  <label className="block text-xs text-muted mb-1">账号状态</label>
+                  <div className="flex gap-4 text-sm" style={{paddingTop:6}}>
+                    <label><input type="radio" checked={accStatus==="active"} onChange={()=>setAccStatus("active")}/> <span className="ml-1">启用</span></label>
+                    <label><input type="radio" checked={accStatus==="frozen"} onChange={()=>setAccStatus("frozen")}/> <span className="ml-1">禁用</span></label>
+                  </div>
+                </div>
+              </div>
+
+              {highSensitive && (
+                <>
+                  <div className="section-title">安全校验(因高敏感字段被修改而出现)</div>
+                  <div>
+                    <label className="block text-xs text-muted mb-1">操作密码 *</label>
+                    <input type="password" className="input" value={opPwd} onChange={e=>setOpPwd(e.target.value)} placeholder="当前登录员工的登录密码 (Mock: 123456)"/>
+                  </div>
+                </>
+              )}
               {err && <div className="text-xs" style={{color:"#FF6B6B"}}>{err}</div>}
             </div>
             <div className="flex justify-end gap-2 mt-5">
@@ -664,7 +771,8 @@
 
       if (type === "newSub") return null; // 由 AgentsPage 直接渲染 NewSubModal
 
-      if (type === "editProfile") {
+      if (type === "editProfile") return null; // 由 AgentsPage 直接渲染 EditProfileModal
+      if (false && type === "editProfile") {
         return <PasswordModal title={"修改资料:" + agent.user} onClose={onClose} onConfirm={onConfirm}
           fields={<>
             <InfoCard/>
