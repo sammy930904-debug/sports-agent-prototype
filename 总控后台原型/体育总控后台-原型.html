@@ -290,7 +290,7 @@
         const next = {...accounts};
         const k = account.key;
         if (!next[k]) return;
-        next[k] = { ...next[k], nick: data.nick, phone: data.phone, phone2: data.phone2, shareRatio: data.shareRatio == null ? next[k].shareRatio : data.shareRatio, status: data.status };
+        next[k] = { ...next[k], nick: data.nick, phone: data.phone, phone2: data.phone2, accountType: data.accountType || next[k].accountType, shareRatio: data.shareRatio == null ? next[k].shareRatio : data.shareRatio, status: data.status };
         setAccounts(next);
         setModal(null);
       };
@@ -691,11 +691,15 @@
       const [rate, setRate] = useState(initShareRatio);
       const [resetPwd, setResetPwd] = useState("");
       const [accStatus, setAccStatus] = useState(account.status);
+      const [accType, setAccType] = useState(account.accountType);
       const [opPwd, setOpPwd] = useState("");
       const [err, setErr] = useState("");
 
+      // 账号类型升降级规则: 游戏 → 代理 (升级 OK) / 代理 → 游戏 (禁止) / 顶代 不可改
+      const canChangeType = account.accountType === "游戏";
+
       // 高敏感字段是否被改动 (顶代不算 rate, 因为该字段不显示)
-      const highSensitive = (!isTop && rate !== initShareRatio) || resetPwd !== "" || accStatus !== account.status;
+      const highSensitive = (!isTop && rate !== initShareRatio) || resetPwd !== "" || accStatus !== account.status || accType !== account.accountType;
 
       const submit = () => {
         if (!nick.trim()) { setErr("请输入账户昵称"); return; }
@@ -705,6 +709,7 @@
         if (highSensitive && opPwd !== "123456") { setErr("操作密码错误"); return; }
         onSubmit({
           nick, phone, phone2,
+          accountType: accType,
           shareRatio: isTop ? account.shareRatio : (rate === "" ? null : (+rate / 100)),
           status: accStatus,
         });
@@ -756,6 +761,15 @@
                     <label><input type="radio" checked={accStatus==="frozen"} onChange={()=>setAccStatus("frozen")}/> <span className="ml-1">禁用</span></label>
                   </div>
                 </div>
+                {!isTop && <div style={{gridColumn:"span 2"}}>
+                  <label className="block text-xs text-muted mb-1">账号类型 {canChangeType && <span className="text-cool" style={{fontSize:10}}>(可升级)</span>}</label>
+                  <div className="flex gap-4 text-sm" style={{paddingTop:6}}>
+                    <label style={canChangeType ? {} : {opacity:0.5}}><input type="radio" checked={accType==="游戏"} disabled={!canChangeType} onChange={()=>setAccType("游戏")}/> <span className="ml-1">游戏(玩家)</span></label>
+                    <label style={canChangeType || account.accountType === "代理" ? {} : {opacity:0.5}}><input type="radio" checked={accType==="代理"} disabled={!canChangeType && account.accountType !== "代理"} onChange={()=>setAccType("代理")}/> <span className="ml-1">代理</span></label>
+                  </div>
+                  {account.accountType === "游戏" && <div className="text-faint mt-1" style={{fontSize:11}}>游戏(玩家)可升级为代理 → 开通发展下线能力</div>}
+                  {account.accountType === "代理" && <div className="text-faint mt-1" style={{fontSize:11}}>代理无法降级为游戏(可能已有下线 / 历史数据复杂)</div>}
+                </div>}
               </div>
 
               {highSensitive && (
