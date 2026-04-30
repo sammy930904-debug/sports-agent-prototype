@@ -1040,6 +1040,7 @@
       const [topAgent, setTopAgent] = useState("all");
 
       const list = MOCK_SPORTS_SESSIONS.filter(s => {
+        if ((s.validStake || 0) === 0) return false; // 过滤无有效投注的场次 (空跑批不展示)
         if (date !== "all" && s.date !== date) return false;
         if (topAgent !== "all" && s.topAgent !== topAgent) return false;
         return true;
@@ -1096,13 +1097,12 @@
                       <td className="num text-right">{fmtAmount(s.shareAmount)}</td>
                       <td className="num text-right">{fmtPct(s.rate)}</td>
                       <td className="num text-right text-cool">{fmtAmount(s.commission)}</td>
-                      <td className="text-right">
+                      <td className="text-right" style={{whiteSpace:"nowrap"}}>
                         {Array.isArray(s.submitRate) ? s.submitRate.map((r,i) => (
-                          <div key={i} style={{whiteSpace:"nowrap",fontSize:11}}>
-                            <span className="text-faint">{r.sysId}</span>
-                            <span className="text-muted">:</span>
-                            <span className="num ml-1">{fmtPct(r.rate)}</span>
-                          </div>
+                          <React.Fragment key={i}>
+                            {i > 0 && <span className="text-faint" style={{margin:"0 4px"}}>|</span>}
+                            <span>{r.sysId}:{(+(r.rate * 100).toFixed(2)) + "%"}</span>
+                          </React.Fragment>
                         )) : <span className="text-faint">—</span>}
                       </td>
                       <td className="text-muted" style={{fontSize:12}}>{s.workStartAt}</td>
