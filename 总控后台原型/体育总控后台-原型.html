@@ -288,17 +288,17 @@
       // 字段集 (Sammy 2026-04-29 拍 13 列, 砍昵称/佣金率上限/本月投注/本月佣金/最近登录入详情)
       // 占成对下线层占位显 — (Sammy 2026-04-29 「下线层暂未支持占成」)
       const colDefs = [
-        { id:1, label:"系统户口号", render:a => <span className="mono text-muted">{a.sysId}</span> },
-        { id:2, label:"用户账号", render:a => (
+        { id:1, label:"系统户口号", render:a => (
           <span className="inline-flex items-center" style={{paddingLeft: a.depth * 16}}>
             {(a.children && a.children.length > 0) ? (
               <span className="cursor-pointer text-cool" onClick={()=>toggle(a.key)} style={{marginRight:6,userSelect:"none",width:14,display:"inline-block"}}>
                 {expanded.has(a.key) ? "▾" : "▸"}
               </span>
             ) : <span style={{display:"inline-block",width:20}}></span>}
-            <span className={a.depth === 0 ? "mono text-cool" : "mono"}>{a.user}</span>
+            <span className="mono text-muted">{a.sysId}</span>
           </span>
         ) },
+        { id:2, label:"用户账号", render:a => <span className={a.depth === 0 ? "mono text-cool" : "mono"}>{a.user}</span> },
         { id:3, label:"下线数", render:a => <span className="num">{a.subCount}</span> },
         { id:4, label:"账号状态", render:a => <StatusChip status={a.status}/> },
         { id:5, label:"币种", render:a => <span className="chip chip-cool">{a.currency}</span> },
