@@ -2153,8 +2153,16 @@
     // ============== 数据看板 (V0.2 简洁版门户页) ==============
     function DashboardPage({ role, auditSystem, setActive }) {
       const r = ROLES[role];
+      // 按"人"算顶代户口数 (Sammy 2026-04-30 拍): 1 顶代多币种 = 多行, 但只算 1 个人 (distinct user)
+      // 启用 / 冻结状态:任一币种行 active 就算"启用人",全部行都 frozen 才算"冻结人"
       const topAgentRows = Object.values(ACCOUNTS).filter(a => a.accountType === "普通(顶代)");
-      const topActiveCount = topAgentRows.filter(a => a.status === "active").length;
+      const topAgentUsers = {};  // user → { hasActive }
+      topAgentRows.forEach(a => {
+        if (!topAgentUsers[a.user]) topAgentUsers[a.user] = { hasActive: false };
+        if (a.status === "active") topAgentUsers[a.user].hasActive = true;
+      });
+      const topAgentPeople = Object.keys(topAgentUsers).length;
+      const topActivePeople = Object.values(topAgentUsers).filter(u => u.hasActive).length;
       const totalSessions = MOCK_SPORTS_SESSIONS.filter(s => (s.validStake||0) > 0).length;
       const todayBets = MOCK_BETS.filter(b => b.gameType.includes("体育") && b.status === "已结算").length;
       const recent = auditSystem.slice(0, 10);
@@ -2172,7 +2180,7 @@
             <p className="text-xs text-muted mt-1">V0.2 简洁版概览  ·  欢迎 <span className="text-cool">{r.name}</span>  ·  完整指标版本待 Q-S2 议</p>
           </div>
           <div className="grid grid-cols-4 gap-4 mb-5">
-            <Card label="顶代户口数" value={topAgentRows.length+" 行"} sub={"启用 "+topActiveCount+" / 冻结 "+(topAgentRows.length-topActiveCount)} color="#4A9EFF"/>
+            <Card label="顶代户口数" value={topAgentPeople+" 人"} sub={"启用 "+topActivePeople+" / 冻结 "+(topAgentPeople-topActivePeople)+"  ·  共 "+topAgentRows.length+" 行(多币种拆分)"} color="#4A9EFF"/>
             <Card label="累计体育场次" value={totalSessions+" 条"} sub="跨日已结算" color="#5BC97C"/>
             <Card label="累计已结算注单" value={todayBets+" 条"} sub="体育游戏" color="#F0B93A"/>
             <Card label="最近系统动作" value={auditSystem.length+" 条"} sub="点下方查看明细" color="#9B7FE8"/>
