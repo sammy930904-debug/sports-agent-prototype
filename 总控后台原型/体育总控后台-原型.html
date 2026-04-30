@@ -272,21 +272,23 @@
       const cols = ROLES[role].agentCols;
 
       // Tree 扁平化: 顶代行先过筛选; 下线行只在父级展开时才出现 (V0.1 同款懒加载)
+      // topShareRatio 一路下传, 让下线行显示「参考占成」(顶代继承值)
       const rows = useMemo(() => {
         const out = [];
-        function walk(key, depth) {
+        function walk(key, depth, topShareRatio) {
           const node = ACCOUNTS[key];
           if (!node) return;
           if (depth === 0) {
             if (statusFilter !== "all" && node.status !== statusFilter) return;
             if (search && !(node.user.includes(search) || node.sysId.toLowerCase().includes(search.toLowerCase()))) return;
+            topShareRatio = node.shareRatio; // 顶代行记下自己, 传给所有下线
           }
-          out.push({ ...node, key, depth });
+          out.push({ ...node, key, depth, topShareRatio });
           if (expanded.has(key)) {
-            (node.children || []).forEach(child => walk(child, depth + 1));
+            (node.children || []).forEach(child => walk(child, depth + 1, topShareRatio));
           }
         }
-        TOP_AGENT_KEYS.forEach(k => walk(k, 0));
+        TOP_AGENT_KEYS.forEach(k => walk(k, 0, null));
         return out;
       }, [search, statusFilter, expanded]);
 
@@ -313,7 +315,12 @@
         { id:3, label:"下线数", render:a => <span className="num">{a.subCount}</span> },
         { id:4, label:"账号状态", render:a => <StatusChip status={a.status}/> },
         { id:5, label:"币种", render:a => <span className="chip chip-cool">{a.currency}</span> },
-        { id:6, label:"占成", render:a => a.shareRatio == null ? <span className="text-faint">—</span> : <span className="num">{fmtPct(a.shareRatio)}</span> },
+        { id:6, label:"占成", render:a => {
+          if (a.depth === 0) return <span className="num">{fmtPct(a.shareRatio)}</span>;
+          // 下线层显示参考占成 (继承顶代值, 下线层自己尚未支持独立占成 - Q-S11)
+          if (a.topShareRatio == null) return <span className="text-faint">—</span>;
+          return <span className="num text-faint" title="参考占成 = 顶代占成,下线尚未支持独立占成">{fmtPct(a.topShareRatio)} <span style={{fontSize:9,marginLeft:2}}>(参考)</span></span>;
+        }},
         { id:7, label:"账户余额", render:a => <span className="num">{fmtAmount(a.balance)}</span> },
         { id:8, label:"下线余额", render:a => <span className="num text-muted">{fmtAmount(a.subBalance)}</span> },
         { id:9, label:"总线余额", render:a => <span className="num text-cool">{fmtAmount(a.totalBalance)}</span> },
@@ -395,10 +402,10 @@
         const isSubAccount = agent.accountType !== "普通(顶代)";
         return <PasswordModal title={"调整占成:" + agent.user + " · " + agent.currency} onClose={onClose} onConfirm={onConfirm}
           fields={<>
-            {isSubAccount && <div className="text-xs p-2 rounded" style={{background:"#2A2415",color:"#F0B93A"}}>⚠ 下线层占成尚未支持,本字段仅占位。Q-S11 议题待。</div>}
+            {isSubAccount && <div className="text-xs p-2 rounded" style={{background:"#2A2415",color:"#F0B93A"}}>⚠ 下线层显示的是「参考占成」(继承顶代),下线自己的独立占成 V0.2 尚未支持。Q-S11 议题待。</div>}
             <div className="bg-card border border-line rounded p-3 text-xs">
               <div>{agent.accountType}:<span className="mono text-cool">{agent.user}</span>  ·  币种 {agent.currency}</div>
-              <div className="mt-1 text-muted">当前占成:{agent.shareRatio == null ? "— (占位)" : fmtPct(agent.shareRatio)}</div>
+              <div className="mt-1 text-muted">当前占成:{isSubAccount ? (agent.topShareRatio == null ? "— (无参考)" : fmtPct(agent.topShareRatio) + " (参考自顶代)") : fmtPct(agent.shareRatio)}</div>
               <div className="mt-1 text-muted">当前余额:{fmtAmount(agent.balance) + " " + agent.currency}</div>
             </div>
             <div><label className="block text-xs text-muted mb-1">新占成 *</label><input className="input" placeholder="例:25%(0~100)" disabled={isSubAccount}/></div>
