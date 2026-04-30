@@ -1112,23 +1112,13 @@
 
           {/* Main */}
           <main className="flex-1 flex flex-col bg-app">
-            <header className="border-b border-line px-6 py-3 flex items-center justify-between bg-panel">
+            <header className="border-b border-line px-6 py-3 flex items-center bg-panel">
               <div className="text-xs text-faint">
                 {active === "agents" && "账号管理 / 顶代户口"}
                 {active === "reports.bets" && "报表管理 / 注单记录"}
                 {active === "reports.sports" && "报表管理 / 体育场次记录"}
                 {active === "reports.ledger" && "报表管理 / 交易流水记录"}
                 {active === "sys.audit" && "系统管理 / 操作日志"}
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-muted">当前角色</span>
-                <select className="input w-32" value={role} onChange={e=>setRole(e.target.value)} style={{padding:"6px 10px"}}>
-                  <option value="operator">平台运营</option>
-                  <option value="risk">风控审计</option>
-                  <option value="finance">财务对账</option>
-                </select>
-                <span className="chip chip-cool">{r.desc}</span>
-                <span className="text-xs text-muted">admin@platform</span>
               </div>
             </header>
             <div className="flex-1 overflow-auto">
