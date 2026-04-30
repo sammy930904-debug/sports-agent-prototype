@@ -1444,7 +1444,45 @@
     // ============== 操作日志页 ==============
     function AuditPage({ role }) {
       const [tab, setTab] = useState("system");
-      const data = tab === "system" ? MOCK_AUDIT_SYSTEM : MOCK_AUDIT_PLAYER;
+
+      // 提交触发模式 (跟其他报表页一致)
+      const [inActor, setInActor] = useState(""), [actorQ, setActorQ] = useState("");
+      const [inActorType, setInActorType] = useState("all"), [actorTypeQ, setActorTypeQ] = useState("all");
+      const [inDateFrom, setInDateFrom] = useState(""), [dateFrom, setDateFrom] = useState("");
+      const [inDateTo, setInDateTo] = useState(""), [dateTo, setDateTo] = useState("");
+
+      const doSearch = () => {
+        setActorQ(inActor.trim()); setActorTypeQ(inActorType); setDateFrom(inDateFrom); setDateTo(inDateTo);
+      };
+      const resetSearch = () => {
+        setInActor(""); setInActorType("all"); setInDateFrom(""); setInDateTo("");
+        setActorQ(""); setActorTypeQ("all"); setDateFrom(""); setDateTo("");
+      };
+      // 切 tab 时重置筛选 (避免上个 tab 的过滤值串入下个 tab)
+      const switchTab = (t) => { setTab(t); resetSearch(); };
+
+      const raw = tab === "system" ? MOCK_AUDIT_SYSTEM : MOCK_AUDIT_PLAYER;
+      const data = raw.filter(r => {
+        if (actorQ && !(r.actor || "").includes(actorQ)) return false;
+        if (actorTypeQ !== "all" && r.actorType !== actorTypeQ) return false;
+        if (dateFrom) {
+          let fromCmp = dateFrom.replace("T", " ");
+          if (fromCmp.length === 16) fromCmp += ":00";
+          if (r.time < fromCmp) return false;
+        }
+        if (dateTo) {
+          let toCmp = dateTo.replace("T", " ");
+          if (toCmp.length === 16) toCmp += ":59";
+          if (r.time > toCmp) return false;
+        }
+        return true;
+      });
+
+      // 主体类型下拉选项随 tab 变
+      const actorTypeOptions = tab === "system"
+        ? [{v:"all",l:"全部主体类型"},{v:"员工",l:"员工"}]
+        : [{v:"all",l:"全部主体类型"},{v:"玩家",l:"玩家"},{v:"代理",l:"代理"}];
+      const actorPlaceholder = tab === "system" ? "搜索员工账号" : "搜索玩家 / 代理账号";
 
       return (
         <div className="p-6">
@@ -1453,14 +1491,42 @@
             <p className="text-xs text-muted mt-1">系统 = 平台员工动作  ·  玩家 = C 端玩家 + B 端代理动作 (在 S 端视角下,代理也是被管对象)</p>
           </div>
           <div className="border-b border-line mb-4 flex">
-            <div className={"tab " + (tab==="system"?"active":"")} onClick={()=>setTab("system")}>系统 ({MOCK_AUDIT_SYSTEM.length})</div>
-            <div className={"tab " + (tab==="player"?"active":"")} onClick={()=>setTab("player")}>玩家 ({MOCK_AUDIT_PLAYER.length})</div>
+            <div className={"tab " + (tab==="system"?"active":"")} onClick={()=>switchTab("system")}>系统 ({MOCK_AUDIT_SYSTEM.length})</div>
+            <div className={"tab " + (tab==="player"?"active":"")} onClick={()=>switchTab("player")}>玩家 ({MOCK_AUDIT_PLAYER.length})</div>
+          </div>
+          <div className="bg-panel border border-line rounded-lg p-3 mb-4">
+            <div className="flex flex-wrap gap-2 items-center">
+              <input className="input" style={{width:240}} placeholder={actorPlaceholder} value={inActor} onChange={e=>setInActor(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <select className="input" style={{width:160}} value={inActorType} onChange={e=>setInActorType(e.target.value)}>
+                {actorTypeOptions.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+              </select>
+              <ConfigProvider locale={zhCN}>
+                <RangePicker
+                  showTime={{ format: "HH:mm:ss" }}
+                  format="YYYY-MM-DD HH:mm:ss"
+                  placeholder={["操作开始时间","结束时间"]}
+                  allowEmpty={[true, true]}
+                  value={[inDateFrom ? moment(inDateFrom.replace("T"," ")) : null, inDateTo ? moment(inDateTo.replace("T"," ")) : null]}
+                  onChange={(vals) => {
+                    if (!vals) { setInDateFrom(""); setInDateTo(""); return; }
+                    setInDateFrom(vals[0] ? vals[0].format("YYYY-MM-DDTHH:mm:ss") : "");
+                    setInDateTo(vals[1] ? vals[1].format("YYYY-MM-DDTHH:mm:ss") : "");
+                  }}
+                  style={{ height: 36, width: 380 }}
+                />
+              </ConfigProvider>
+              <button className="btn btn-primary" style={{padding:"8px 18px"}} onClick={doSearch}>搜索</button>
+              <button className="btn btn-ghost" style={{padding:"8px 14px"}} onClick={resetSearch}>重置</button>
+            </div>
+            <div className="flex items-center mt-2 text-xs text-faint">
+              <span>共 {data.length} 条</span>
+            </div>
           </div>
           <div className="bg-panel border border-line rounded-lg overflow-hidden">
             <div className="scroll-x">
               <table>
                 <thead><tr>
-                  <th>时间</th><th>主体类型</th><th>主体</th><th>动作</th><th>目标</th><th>IP</th><th>{tab === "system" ? "审计原因" : "备注"}</th>
+                  <th>时间</th><th>主体类型</th><th>主体</th><th>动作</th><th>目标</th><th>IP</th>
                 </tr></thead>
                 <tbody>
                   {data.map((r, i) => (
@@ -1471,7 +1537,6 @@
                       <td>{r.action}</td>
                       <td className="text-muted" style={{fontSize:12}}>{r.target}</td>
                       <td className="mono text-faint" style={{fontSize:11}}>{r.ip}</td>
-                      <td className="text-muted" style={{fontSize:12}}>{r.reason}</td>
                     </tr>
                   ))}
                 </tbody>
