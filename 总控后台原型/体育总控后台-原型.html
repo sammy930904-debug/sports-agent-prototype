@@ -308,8 +308,8 @@
         const pad = (n) => String(n).padStart(2, "0");
         const createdAt = now.getFullYear() + "-" + pad(now.getMonth()+1) + "-" + pad(now.getDate()) + " " + pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds());
         next[newKey] = {
-          sysId: newSysId, user: data.user, accountType: data.type, currency: data.currency,
-          shareRatio: data.shareRatio, balance: 0, subBalance: 0, totalBalance: 0,
+          sysId: newSysId, user: data.user, nick: data.nick, accountType: data.type, currency: data.currency,
+          shareRatio: data.shareRatio, refRate: data.refRate, balance: 0, subBalance: 0, totalBalance: 0,
           subCount: 0, status: data.status, createdAt, children: [],
         };
         next[parentKey] = { ...parentNode, children: [...(parentNode.children || []), newKey], subCount: (parentNode.subCount || 0) + 1 };
@@ -542,27 +542,29 @@
       const [accType, setAccType] = useState("代理");
       const [accStatus, setAccStatus] = useState("active");
       const [schemeIdx, setSchemeIdx] = useState(0);
-      const [rate, setRate] = useState("");
+      const [refShareRatio, setRefShareRatio] = useState(""); // 参考占成 (对应 shareRatio 字段)
+      const [refRate, setRefRate] = useState(""); // 参考佣金率 (新字段, 上级给该下线的提成)
       const [opPwd, setOpPwd] = useState("");
       const [err, setErr] = useState("");
 
-      // 显示佣金率上限: 顶代下挂=选中方案占成 / 代理下挂=parent.shareRatio
-      const rateUpper = isTopParent ? (topSchemes[schemeIdx]?.shareRatio || 0) : (parent.shareRatio || 0);
-      const rateUpperPct = (rateUpper * 100).toFixed(2);
+      // 参考占成上限: 顶代下挂=选中方案占成 / 代理下挂=parent.shareRatio
+      const shareUpper = isTopParent ? (topSchemes[schemeIdx]?.shareRatio || 0) : (parent.shareRatio || 0);
+      const shareUpperPct = (shareUpper * 100).toFixed(2);
 
       const submit = () => {
         if (!/^[A-Za-z0-9]{6,20}$/.test(user)) { setErr("用户账号需 6-20 位英文+数字"); return; }
-        if (!nick.trim()) { setErr("请输入账户昵称"); return; }
         if (!pwd) { setErr("请输入登录密码"); return; }
         if (pwd !== pwdC) { setErr("两次密码不一致"); return; }
-        if (rate === "" || isNaN(+rate)) { setErr("请输入显示佣金率"); return; }
-        if (+rate > +rateUpperPct) { setErr("佣金率不能超过上限 " + rateUpperPct + "%"); return; }
+        if (refShareRatio === "" || isNaN(+refShareRatio)) { setErr("请输入参考占成"); return; }
+        if (+refShareRatio > +shareUpperPct) { setErr("参考占成不能超过上限 " + shareUpperPct + "%"); return; }
+        if (refRate === "" || isNaN(+refRate)) { setErr("请输入参考佣金率"); return; }
         if (opPwd !== "123456") { setErr("操作密码错误"); return; }
         const targetCurrency = isTopParent ? topSchemes[schemeIdx].currency : parent.currency;
         onSubmit({
-          user, nick, type: accType, status: accStatus,
+          user, nick: nick.trim() || user, type: accType, status: accStatus,
           currency: targetCurrency,
-          shareRatio: +rate / 100, // 显示佣金率作为下线 shareRatio mock
+          shareRatio: +refShareRatio / 100, // 参考占成 → mock 里的 shareRatio (列表"占成"列展示)
+          refRate: +refRate / 100, // 参考佣金率 (新字段, 列表暂不展示)
         });
       };
 
@@ -581,10 +583,10 @@
 
               <div className="section-title">② 基本信息</div>
               <div className="grid grid-cols-2 gap-3">
-                <div><label className="block text-xs text-muted mb-1">用户账号 *</label><input className="input" placeholder="6-20 位英数" value={user} onChange={e=>setUser(e.target.value)}/></div>
-                <div><label className="block text-xs text-muted mb-1">账户昵称 *</label><input className="input" value={nick} onChange={e=>setNick(e.target.value)}/></div>
-                <div><label className="block text-xs text-muted mb-1">密码 *</label><input type="password" className="input" value={pwd} onChange={e=>setPwd(e.target.value)}/></div>
-                <div><label className="block text-xs text-muted mb-1">确认密码 *</label><input type="password" className="input" value={pwdC} onChange={e=>setPwdC(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">用户账号 <span className="text-cool">*</span></label><input className="input" placeholder="6-20 位英数" value={user} onChange={e=>setUser(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">账户昵称</label><input className="input" placeholder="选填" value={nick} onChange={e=>setNick(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">密码 <span className="text-cool">*</span></label><input type="password" className="input" value={pwd} onChange={e=>setPwd(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">确认密码 <span className="text-cool">*</span></label><input type="password" className="input" value={pwdC} onChange={e=>setPwdC(e.target.value)}/></div>
                 <div><label className="block text-xs text-muted mb-1">电话号码</label><input className="input" placeholder="选填" value={phone} onChange={e=>setPhone(e.target.value)}/></div>
                 <div><label className="block text-xs text-muted mb-1">备用电话</label><input className="input" placeholder="选填" value={phone2} onChange={e=>setPhone2(e.target.value)}/></div>
               </div>
@@ -639,19 +641,29 @@
                 </div>
               )}
 
-              <div className="section-title">⑤ 游戏条件(显示佣金率)</div>
-              <div>
-                <label className="block text-xs text-muted mb-1">显示佣金率 *</label>
-                <div className="flex items-center gap-2">
-                  <input type="number" step="0.01" className="input flex-1" value={rate} onChange={e=>setRate(e.target.value)} placeholder={"上限 " + rateUpperPct + "%, 例如 " + (rateUpper * 80).toFixed(2)}/>
-                  <span className="text-muted">%</span>
+              <div className="section-title">⑤ 游戏条件</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-muted mb-1">参考占成 <span className="text-cool">*</span></label>
+                  <div className="flex items-center gap-2">
+                    <input type="number" step="0.01" className="input flex-1" value={refShareRatio} onChange={e=>setRefShareRatio(e.target.value)} placeholder={"上限 " + shareUpperPct + "%, 例如 " + (shareUpper * 80).toFixed(2)}/>
+                    <span className="text-muted">%</span>
+                  </div>
+                  <div className="text-faint mt-1" style={{fontSize:11}}>上限 <span className="text-cool">{shareUpperPct}%</span> ({isTopParent ? "继承自所选方案" : "继承自上级"});列表「占成」列展示</div>
                 </div>
-                <div className="text-faint mt-1" style={{fontSize:11}}>上限 <span className="text-cool">{rateUpperPct}%</span> ({isTopParent ? "继承自所选方案" : "继承自上级"});代理与玩家均必填。本字段在该下线的「占成」列显示(参考)。</div>
+                <div>
+                  <label className="block text-xs text-muted mb-1">参考佣金率 <span className="text-cool">*</span></label>
+                  <div className="flex items-center gap-2">
+                    <input type="number" step="0.01" className="input flex-1" value={refRate} onChange={e=>setRefRate(e.target.value)} placeholder="例: 0.30"/>
+                    <span className="text-muted">%</span>
+                  </div>
+                  <div className="text-faint mt-1" style={{fontSize:11}}>上级给该下线的提成比例(对齐 B 端 rate);Q 议题:V0.2 上限规则待</div>
+                </div>
               </div>
 
               <div className="section-title">⑥ 安全校验</div>
               <div>
-                <label className="block text-xs text-muted mb-1">操作密码 *</label>
+                <label className="block text-xs text-muted mb-1">操作密码 <span className="text-cool">*</span></label>
                 <input type="password" className="input" placeholder="当前登录员工的登录密码 (Mock: 123456)" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
               </div>
               {err && <div className="text-xs" style={{color:"#FF6B6B"}}>{err}</div>}
