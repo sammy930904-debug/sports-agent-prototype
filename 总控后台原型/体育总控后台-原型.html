@@ -317,13 +317,16 @@
               if (shareRatioFilter === "20to30" && (r < 0.20 || r >= 0.30)) return;
               if (shareRatioFilter === "gte30" && r < 0.30) return;
             }
-            // datetime-local 输入格式 YYYY-MM-DDTHH:mm, createdAt 是 "YYYY-MM-DD HH:mm:ss", 比较前 normalize
+            // datetime-local step=1 时返回 YYYY-MM-DDTHH:mm:ss (19 字符), 否则 YYYY-MM-DDTHH:mm (16 字符)
+            // createdAt 是 "YYYY-MM-DD HH:mm:ss", 比较前 normalize: replace T + 必要时补秒
             if (dateFrom) {
-              const fromCmp = dateFrom.replace("T", " ") + ":00";
+              let fromCmp = dateFrom.replace("T", " ");
+              if (fromCmp.length === 16) fromCmp += ":00";
               if (node.createdAt < fromCmp) return;
             }
             if (dateTo) {
-              const toCmp = dateTo.replace("T", " ") + ":59";
+              let toCmp = dateTo.replace("T", " ");
+              if (toCmp.length === 16) toCmp += ":59";
               if (node.createdAt > toCmp) return;
             }
             if (ls && !hasMatchInSubtree(key)) return;
@@ -425,9 +428,9 @@
               <div style={{gridColumn:"span 2"}}>
                 <label className="block text-xs text-muted mb-1">开户时间</label>
                 <div className="flex items-center gap-1 bg-app border border-line rounded-md px-2" style={{height:36}}>
-                  <input type="datetime-local" className="flex-1 text-sm outline-none" style={{background:"transparent",color:"#E6EAF0",border:"none",padding:"4px",colorScheme:"dark"}} value={inDateFrom} onChange={e=>setInDateFrom(e.target.value)}/>
+                  <input type="datetime-local" step="1" className="flex-1 text-sm outline-none" style={{background:"transparent",color:"#E6EAF0",border:"none",padding:"4px",colorScheme:"dark"}} value={inDateFrom} onChange={e=>setInDateFrom(e.target.value)}/>
                   <span className="text-muted text-sm" style={{padding:"0 4px"}}>→</span>
-                  <input type="datetime-local" className="flex-1 text-sm outline-none" style={{background:"transparent",color:"#E6EAF0",border:"none",padding:"4px",colorScheme:"dark"}} value={inDateTo} onChange={e=>setInDateTo(e.target.value)}/>
+                  <input type="datetime-local" step="1" className="flex-1 text-sm outline-none" style={{background:"transparent",color:"#E6EAF0",border:"none",padding:"4px",colorScheme:"dark"}} value={inDateTo} onChange={e=>setInDateTo(e.target.value)}/>
                   <span className="text-muted" style={{fontSize:14,padding:"0 4px"}}>📅</span>
                 </div>
               </div>
