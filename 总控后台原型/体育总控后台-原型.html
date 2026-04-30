@@ -278,17 +278,30 @@
       const cols = ROLES[role].agentCols;
 
       // Tree 扁平化: 顶代行先过筛选; 下线行只在父级展开时才出现 (V0.1 同款懒加载)
+      // 搜索逻辑: 树状穿透 - 任何后代匹配, 整条祖先链都显示并自动展开 (大小写不敏感)
       const rows = useMemo(() => {
         const out = [];
+        const ls = (search || "").toLowerCase().trim();
+        const matches = (node) => !ls || node.user.toLowerCase().includes(ls) || node.sysId.toLowerCase().includes(ls);
+        // 当前节点或任意后代匹配 (用于决定是否显示顶代行 / 是否强制展开)
+        const hasMatchInSubtree = (key) => {
+          const node = ACCOUNTS[key];
+          if (!node) return false;
+          if (matches(node)) return true;
+          return (node.children || []).some(c => hasMatchInSubtree(c));
+        };
         function walk(key, depth) {
           const node = ACCOUNTS[key];
           if (!node) return;
           if (depth === 0) {
             if (statusFilter !== "all" && node.status !== statusFilter) return;
-            if (search && !(node.user.includes(search) || node.sysId.toLowerCase().includes(search.toLowerCase()))) return;
+            if (ls && !hasMatchInSubtree(key)) return;
           }
           out.push({ ...node, key, depth });
-          if (expanded.has(key)) {
+          // 搜索时: 子树有匹配则自动展开;否则按用户 expanded
+          const autoExpand = ls && (node.children || []).some(c => hasMatchInSubtree(c));
+          const shouldExpand = expanded.has(key) || autoExpand;
+          if (shouldExpand) {
             (node.children || []).forEach(child => walk(child, depth + 1));
           }
         }
