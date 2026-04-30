@@ -485,7 +485,8 @@
 
     const StatusChip = ({ status }) => {
       const map = { active:"chip-active", frozen:"chip-frozen", settled:"chip-settled", void:"chip-void", "未结算":"chip-warn", "已结算":"chip-settled" };
-      const txt = { active:"启用", frozen:"已冻结", settled:"已结算", void:"作废" };
+      // V0.2 状态文案统一 (Sammy 2026-04-30 拍): 账号 frozen → "禁用" (跟修改资料弹窗 radio 对齐)
+      const txt = { active:"启用", frozen:"禁用", settled:"已结算", void:"作废" };
       return <span className={"chip " + (map[status] || "chip-info")}>{txt[status] || status}</span>;
     };
 
@@ -764,7 +765,7 @@
               <select className="input" style={{width:130}} value={inStatus} onChange={e=>setInStatus(e.target.value)}>
                 <option value="all">全部状态</option>
                 <option value="active">启用</option>
-                <option value="frozen">已冻结</option>
+                <option value="frozen">禁用</option>
               </select>
               <select className="input" style={{width:120}} value={inCurrency} onChange={e=>setInCurrency(e.target.value)}>
                 <option value="all">全部币种</option>
@@ -1191,10 +1192,10 @@
             <div><label className="block text-xs text-muted mb-1">账号状态 *</label>
               <select className="input" defaultValue={agent.status}>
                 <option value="active">启用</option>
-                <option value="frozen">已冻结</option>
+                <option value="frozen">禁用</option>
               </select>
             </div>
-            <div className="text-xs" style={{color:"#F0B93A"}}>⚠ 切换为「已冻结」后,该账号 + 币种维度无法登录上下分;余额保留。</div>
+            <div className="text-xs" style={{color:"#F0B93A"}}>⚠ 切换为「禁用」后,该账号 + 币种维度无法登录上下分;余额保留。</div>
           </>}/>;
       }
 
@@ -1823,6 +1824,7 @@
       const [editRoleModal, setEditRoleModal] = useState(null);
 
       const handleEditRole = (s, newRole) => {
+        if (s.user === "admin") { alert("⚠ admin 是系统超级账号\nadmin 角色不可修改,确保始终至少有 1 个 operator 能管理系统"); return; }
         const oldRole = s.role;
         setStaff(staff.map(x => x.user === s.user ? { ...x, role: newRole } : x));
         setEditRoleModal(null);
@@ -1838,6 +1840,7 @@
         appendSystemLog && appendSystemLog("新增员工", data.user+" / 角色 "+ROLES[data.role].name);
       };
       const handleDel = (s) => {
+        if (s.user === "admin") { alert("⚠ admin 是系统超级账号\nadmin 不可删除,确保始终至少有 1 个 operator 能管理系统"); return; }
         if (s.user === currentUser.user) { alert("⚠ 不能删除当前登录账号\n请先用其他 operator 账号登录,再删除当前账号"); return; }
         setStaff(staff.filter(x => x.user !== s.user));
         setDelConfirm(null);
@@ -1862,14 +1865,14 @@
                 <tbody>
                   {staff.map(s => (
                     <tr key={s.user}>
-                      <td className="mono text-cool">{s.user}{s.user === currentUser.user && <span className="text-faint ml-2" style={{fontSize:10}}>(当前登录)</span>}</td>
+                      <td className="mono text-cool">{s.user}{s.user === currentUser.user && <span className="text-faint ml-2" style={{fontSize:10}}>(当前登录)</span>}{s.user === "admin" && <span className="ml-2" style={{fontSize:10,color:"#F0B93A"}}>★ 超级账号</span>}</td>
                       <td><span className="chip" style={{background:ROLES[s.role].color+"22",color:ROLES[s.role].color}}>{ROLES[s.role].name}</span></td>
                       <td className="mono text-muted" style={{fontSize:12}}>{s.phone}</td>
                       <td className="text-muted" style={{fontSize:12}}>{s.createdAt}</td>
                       <td className="text-muted" style={{fontSize:12}}>{s.lastLogin}</td>
                       <td>
-                        <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,marginRight:4}} onClick={()=>setEditRoleModal(s)} disabled={s.user === currentUser.user}>修改角色</button>
-                        <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,color:"#FF6B6B"}} onClick={()=>setDelConfirm(s)} disabled={s.user === currentUser.user}>删除</button>
+                        <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,marginRight:4}} onClick={()=>setEditRoleModal(s)} disabled={s.user === currentUser.user || s.user === "admin"} title={s.user === "admin" ? "admin 是系统超级账号,角色不可修改" : ""}>修改角色</button>
+                        <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,color:"#FF6B6B"}} onClick={()=>setDelConfirm(s)} disabled={s.user === currentUser.user || s.user === "admin"} title={s.user === "admin" ? "admin 是系统超级账号,不可删除" : ""}>删除</button>
                       </td>
                     </tr>
                   ))}
@@ -2340,6 +2343,7 @@
           </main>
           {showChangePwd && <ChangePwdModal user={currentUser} onClose={()=>setShowChangePwd(false)} onConfirm={()=>{
             appendSystemLog("修改密码", "自身账号 "+currentUser.user+" (强制重登)");
+            appendSystemLog("登出", "S 端 / 角色: "+role+" (改密强制)");
             setShowChangePwd(false); alert("密码修改成功,请用新密码重新登录"); setCurrentUser(null);
           }}/>}
         </div>
