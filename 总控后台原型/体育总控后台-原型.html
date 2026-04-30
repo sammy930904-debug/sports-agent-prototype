@@ -156,19 +156,24 @@
     // 顶代行 = 列表起点 (按多币种 N 行)
     const TOP_AGENT_KEYS = ["qweqwe::KRW","qweqwe::USD","lucky88::PHP","diamond::USD","emerald::USD","sapphire::KRW","goldenstar::KRW","bigwhale::CNY","rookie01::THB"];
 
+    // 注单 mock - 三方游戏商每笔回调 (Sammy 2026-04-30 截图对齐字段)
+    // 体育: providerCode/league/teamHome/teamAway/score/playMethod/selection/odds/bundleType
+    // 电子: providerCode/playMethod(机台)/selection(局次)/odds(倍率)
+    // 六合彩: providerCode/league(期号)/selection(号码)/odds(赔率)
     const MOCK_BETS = [
-      { id:"BET-20260429-0042", playerId:"P-qw-008", topAgent:"qweqwe", provider:"BBIN 体育", gameType:"体育 ⚽", betTime:"2026-04-29 16:08:22", stake:120_000, payout:0, winLoss:0, currency:"KRW", status:"未结算" },
-      { id:"BET-20260429-0041", playerId:"P-dia-021", topAgent:"diamond", provider:"PG SOFT", gameType:"电子 🎰", betTime:"2026-04-29 16:05:11", stake:50, payout:185, winLoss:135, currency:"USD", status:"已结算" },
-      { id:"BET-20260429-0040", playerId:"P-qw-008", topAgent:"qweqwe", provider:"BBIN 体育", gameType:"体育 ⚽", betTime:"2026-04-29 15:58:03", stake:200_000, payout:380_000, winLoss:180_000, currency:"KRW", status:"已结算" },
-      { id:"BET-20260429-0039", playerId:"P-sap-014", topAgent:"sapphire", provider:"VR 六合彩", gameType:"六合彩 🎱", betTime:"2026-04-29 15:30:00", stake:500_000, payout:0, winLoss:-500_000, currency:"KRW", status:"已结算" },
-      { id:"BET-20260429-0038", playerId:"P-luk-005", topAgent:"lucky88", provider:"PG SOFT", gameType:"电子 🎰", betTime:"2026-04-29 15:22:47", stake:200, payout:0, winLoss:-200, currency:"PHP", status:"已结算" },
-      { id:"BET-20260429-0037", playerId:"P-qw-003", topAgent:"qweqwe", provider:"BBIN 体育", gameType:"体育 ⚽", betTime:"2026-04-29 14:50:18", stake:80_000, payout:152_000, winLoss:72_000, currency:"KRW", status:"已结算" },
-      { id:"BET-20260429-0036", playerId:"P-dia-014", topAgent:"diamond", provider:"BBIN 体育", gameType:"体育 ⚽", betTime:"2026-04-29 14:30:00", stake:1500, payout:2700, winLoss:1200, currency:"USD", status:"已结算" },
-      { id:"BET-20260429-0035", playerId:"P-qw-008", topAgent:"qweqwe", provider:"VR 六合彩", gameType:"六合彩 🎱", betTime:"2026-04-29 14:00:05", stake:50_000, payout:0, winLoss:-50_000, currency:"KRW", status:"已结算" },
-      { id:"BET-20260429-0034", playerId:"P-sap-002", topAgent:"sapphire", provider:"BBIN 体育", gameType:"体育 ⚽", betTime:"2026-04-29 13:42:30", stake:300_000, payout:0, winLoss:-300_000, currency:"KRW", status:"已结算" },
-      { id:"BET-20260429-0033", playerId:"P-luk-002", topAgent:"lucky88", provider:"BBIN 体育", gameType:"体育 ⚽", betTime:"2026-04-29 13:20:11", stake:1000, payout:1850, winLoss:850, currency:"PHP", status:"已结算" },
-      { id:"BET-20260429-0032", playerId:"P-qw-001", topAgent:"qweqwe", provider:"BBIN 体育", gameType:"体育 ⚽", betTime:"2026-04-29 12:55:00", stake:150_000, payout:0, winLoss:-150_000, currency:"KRW", status:"已结算" },
-      { id:"BET-20260429-0031", playerId:"P-dia-008", topAgent:"diamond", provider:"PG SOFT", gameType:"电子 🎰", betTime:"2026-04-29 12:30:42", stake:200, payout:0, winLoss:-200, currency:"USD", status:"已结算" },
+      { id:"519346028101500970", playerId:"P-qw-008", topAgent:"qweqwe", provider:"UUS 体育", providerCode:"UUS", gameType:"体育 ⚽", league:"足球 / 印度锡金甲组联赛", teamHome:"霹雳北联", teamAway:"红熊猫", score:"2-1", playMethod:"滚球 全场.独赢盘", selection:"霹雳北联", odds:1.34, bundleType:"1 单注", betTime:"2026-04-30 20:47:50", stake:1_0000, payout:1_3400, winLoss:0, currency:"KRW", status:"未结算" },
+      { id:"BET-20260429-0042", playerId:"P-qw-008", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 韩国 K 联赛", teamHome:"全北现代", teamAway:"水原三星", score:"1-1", playMethod:"全场.让球", selection:"全北现代 -1.5", odds:2.10, bundleType:"1 单注", betTime:"2026-04-29 16:08:22", stake:120_000, payout:0, winLoss:0, currency:"KRW", status:"未结算" },
+      { id:"BET-20260429-0041", playerId:"P-dia-021", topAgent:"diamond", provider:"PG SOFT", providerCode:"PG", gameType:"电子 🎰", league:"PG 老虎机", teamHome:"", teamAway:"", score:"", playMethod:"夜店女王 旋转", selection:"局次 #2891", odds:3.70, bundleType:"单局", betTime:"2026-04-29 16:05:11", stake:50, payout:185, winLoss:135, currency:"USD", status:"已结算" },
+      { id:"BET-20260429-0040", playerId:"P-qw-008", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 西甲", teamHome:"皇家马德里", teamAway:"巴塞罗那", score:"3-2", playMethod:"全场.大小盘", selection:"大 4.5", odds:1.90, bundleType:"1 单注", betTime:"2026-04-29 15:58:03", stake:200_000, payout:380_000, winLoss:180_000, currency:"KRW", status:"已结算" },
+      { id:"BET-20260429-0039", playerId:"P-sap-014", topAgent:"sapphire", provider:"VR 六合彩", providerCode:"VR", gameType:"六合彩 🎱", league:"VR 六合彩 第 240430 期", teamHome:"", teamAway:"", score:"", playMethod:"特码 单选", selection:"号码 38", odds:48.00, bundleType:"单选", betTime:"2026-04-29 15:30:00", stake:500_000, payout:0, winLoss:-500_000, currency:"KRW", status:"已结算" },
+      { id:"BET-20260429-0038", playerId:"P-luk-005", topAgent:"lucky88", provider:"PG SOFT", providerCode:"PG", gameType:"电子 🎰", league:"PG 捕鱼达人", teamHome:"", teamAway:"", score:"", playMethod:"金鲨炮 ×3", selection:"局次 #18247", odds:0, bundleType:"单局", betTime:"2026-04-29 15:22:47", stake:200, payout:0, winLoss:-200, currency:"PHP", status:"已结算" },
+      { id:"BET-20260429-0037", playerId:"P-qw-003", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 英超", teamHome:"曼联", teamAway:"利物浦", score:"2-1", playMethod:"全场.独赢盘 串 2", selection:"曼联 / 阿森纳", odds:1.90, bundleType:"2 串 1", betTime:"2026-04-29 14:50:18", stake:80_000, payout:152_000, winLoss:72_000, currency:"KRW", status:"已结算" },
+      { id:"BET-20260429-0036", playerId:"P-dia-014", topAgent:"diamond", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"篮球 / NBA", teamHome:"湖人", teamAway:"勇士", score:"112-108", playMethod:"全场.让分", selection:"湖人 +3.5", odds:1.80, bundleType:"1 单注", betTime:"2026-04-29 14:30:00", stake:1500, payout:2700, winLoss:1200, currency:"USD", status:"已结算" },
+      { id:"BET-20260429-0035", playerId:"P-qw-008", topAgent:"qweqwe", provider:"VR 六合彩", providerCode:"VR", gameType:"六合彩 🎱", league:"VR 六合彩 第 240429 期", teamHome:"", teamAway:"", score:"", playMethod:"两面.大小", selection:"大", odds:1.95, bundleType:"单选", betTime:"2026-04-29 14:00:05", stake:50_000, payout:0, winLoss:-50_000, currency:"KRW", status:"已结算" },
+      { id:"BET-20260429-0034", playerId:"P-sap-002", topAgent:"sapphire", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 意甲", teamHome:"AC 米兰", teamAway:"国际米兰", score:"0-2", playMethod:"全场.波胆", selection:"1-1", odds:7.50, bundleType:"1 单注", betTime:"2026-04-29 13:42:30", stake:300_000, payout:0, winLoss:-300_000, currency:"KRW", status:"已结算" },
+      { id:"BET-20260429-0033", playerId:"P-luk-002", topAgent:"lucky88", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 菲律宾联赛", teamHome:"马尼拉雄狮", teamAway:"宿务 FC", score:"2-0", playMethod:"全场.独赢盘", selection:"马尼拉雄狮", odds:1.85, bundleType:"1 单注", betTime:"2026-04-29 13:20:11", stake:1000, payout:1850, winLoss:850, currency:"PHP", status:"已结算" },
+      { id:"BET-20260429-0032", playerId:"P-qw-001", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 德甲", teamHome:"拜仁慕尼黑", teamAway:"多特蒙德", score:"1-3", playMethod:"全场.让球", selection:"拜仁 -1.5", odds:1.70, bundleType:"1 单注", betTime:"2026-04-29 12:55:00", stake:150_000, payout:0, winLoss:-150_000, currency:"KRW", status:"已结算" },
+      { id:"BET-20260429-0031", playerId:"P-dia-008", topAgent:"diamond", provider:"PG SOFT", providerCode:"PG", gameType:"电子 🎰", league:"PG 麻将胡了", teamHome:"", teamAway:"", score:"", playMethod:"赏金 ×5", selection:"局次 #99012", odds:0, bundleType:"单局", betTime:"2026-04-29 12:30:42", stake:200, payout:0, winLoss:-200, currency:"USD", status:"已结算" },
     ];
 
     const MOCK_SPORTS_SESSIONS = [
@@ -919,6 +924,8 @@
       const [search, setSearch] = useState("");
       const [gameType, setGameType] = useState("all");
       const [status, setStatus] = useState("all");
+      const [expanded, setExpanded] = useState(new Set());
+      const toggle = (id) => { const n = new Set(expanded); n.has(id) ? n.delete(id) : n.add(id); setExpanded(n); };
 
       const list = MOCK_BETS.filter(b => {
         if (gameType !== "all" && !b.gameType.includes(gameType)) return false;
@@ -927,7 +934,7 @@
         return true;
       });
 
-      const showFinanceCols = role !== "risk";  // risk 不看具体金额详情(简化:此处保留所有列,实际可按需精简)
+      const showFinanceCols = role !== "risk";
 
       return (
         <div className="p-6">
@@ -952,12 +959,17 @@
             <div className="scroll-x">
               <table>
                 <thead><tr>
+                  <th style={{width:24}}></th>
                   <th>注单号</th><th>玩家 ID</th><th>顶代</th><th>三方商</th><th>游戏类型</th><th>币种</th><th>投注时间</th>
                   <th className="text-right">投注金额</th>{showFinanceCols && <th className="text-right">派彩金额</th>}{showFinanceCols && <th className="text-right">输赢</th>}<th>状态</th>
                 </tr></thead>
                 <tbody>
-                  {list.map(b => (
-                    <tr key={b.id}>
+                  {list.map(b => {
+                    const colSpan = showFinanceCols ? 12 : 10;
+                    const isOpen = expanded.has(b.id);
+                    return (<React.Fragment key={b.id}>
+                    <tr>
+                      <td style={{textAlign:"center",cursor:"pointer",userSelect:"none"}} onClick={()=>toggle(b.id)}><span className="text-cool">{isOpen ? "▾" : "▸"}</span></td>
                       <td className="mono text-cool">{b.id}</td>
                       <td className="mono text-muted">{b.playerId}</td>
                       <td className="mono">{b.topAgent}</td>
@@ -972,7 +984,55 @@
                       </td>}
                       <td><StatusChip status={b.status}/></td>
                     </tr>
-                  ))}
+                    {isOpen && <tr><td colSpan={colSpan} style={{padding:0,background:"#0B0F15"}}>
+                      <div style={{padding:"16px 24px",borderLeft:"3px solid #4A9EFF"}}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="text-cool font-semibold" style={{fontSize:14}}>{b.providerCode} {b.bundleType}</div>
+                          <div className="text-muted">{b.status === "未结算" ? "进行中" : b.status}</div>
+                        </div>
+                        {b.gameType.includes("体育") && <>
+                          <div className="flex items-baseline justify-between mb-1">
+                            <div className="text-base font-semibold">{b.selection}</div>
+                            <div className="text-base font-semibold">{b.odds.toFixed(2)}</div>
+                          </div>
+                          <div className="text-muted mb-1">{b.playMethod}</div>
+                          <div className="text-muted mb-2">{b.league}</div>
+                          <div className="bg-card border border-line rounded p-2 text-cool mb-3" style={{fontSize:13}}>
+                            {b.teamHome} vs {b.teamAway} {b.score && <span className="text-muted">[{b.score}]</span>}
+                          </div>
+                        </>}
+                        {b.gameType.includes("电子") && <>
+                          <div className="flex items-baseline justify-between mb-1">
+                            <div className="text-base font-semibold">{b.selection}</div>
+                            {b.odds > 0 && <div className="text-base font-semibold">{b.odds.toFixed(2)}</div>}
+                          </div>
+                          <div className="text-muted mb-1">{b.playMethod}</div>
+                          <div className="text-muted mb-3">{b.league}</div>
+                        </>}
+                        {b.gameType.includes("六合彩") && <>
+                          <div className="flex items-baseline justify-between mb-1">
+                            <div className="text-base font-semibold">{b.selection}</div>
+                            <div className="text-base font-semibold">{b.odds.toFixed(2)}</div>
+                          </div>
+                          <div className="text-muted mb-1">{b.playMethod}</div>
+                          <div className="text-muted mb-3">{b.league}</div>
+                        </>}
+                        <div className="text-muted" style={{fontSize:12}}>投注日期:{b.betTime}</div>
+                        <div className="text-muted" style={{fontSize:12}}>单号:<span className="mono">{b.id}</span></div>
+                        <div className="grid grid-cols-2 gap-4 mt-3 pt-3" style={{borderTop:"1px solid #2A3648"}}>
+                          <div>
+                            <div className="text-muted" style={{fontSize:11}}>投注额</div>
+                            <div className="text-base font-semibold">{fmtAmount(b.stake)} {b.currency}</div>
+                          </div>
+                          {showFinanceCols && <div>
+                            <div className="text-muted" style={{fontSize:11}}>赢取金额</div>
+                            <div className="text-base font-semibold" style={{color:"#F0B93A"}}>{b.status==="未结算" ? "—" : fmtAmount(b.payout) + " " + b.currency}</div>
+                          </div>}
+                        </div>
+                      </div>
+                    </td></tr>}
+                    </React.Fragment>);
+                  })}
                 </tbody>
               </table>
             </div>
