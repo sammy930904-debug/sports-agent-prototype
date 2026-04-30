@@ -527,12 +527,10 @@
     }
 
     // 新增下线弹窗 (独立组件 / 内部 state / 提交时回传完整数据)
-    // 对齐 B 端 V1.12 AddSubModal (FN-ACC-04): 6 个 Section + 顶代/代理 角色分支
+    // 注意: S 端列表是 1 顶代多币种 = N 行, 每行已经是具体币种行
+    //       从哪行点「新增下级」就在哪个币种线下创建, 不再让用户选币种 / 方案
+    //       业务硬规则: 单个币种发展下线整条线币种一致 (Sammy 2026-04-29 拍)
     function NewSubModal({ parent, accounts, onClose, onSubmit }) {
-      const isTopParent = parent.accountType === "普通(顶代)";
-      const topSchemes = isTopParent
-        ? Object.values(accounts).filter(n => n.user === parent.user && n.accountType === "普通(顶代)")
-        : [];
       const [user, setUser] = useState("");
       const [nick, setNick] = useState("");
       const [pwd, setPwd] = useState("");
@@ -541,14 +539,13 @@
       const [phone2, setPhone2] = useState("");
       const [accType, setAccType] = useState("代理");
       const [accStatus, setAccStatus] = useState("active");
-      const [schemeIdx, setSchemeIdx] = useState(0);
-      const [refShareRatio, setRefShareRatio] = useState(""); // 参考占成 (对应 shareRatio 字段)
-      const [refRate, setRefRate] = useState(""); // 参考佣金率 (新字段, 上级给该下线的提成)
+      const [refShareRatio, setRefShareRatio] = useState(""); // 参考占成
+      const [refRate, setRefRate] = useState(""); // 参考佣金率
       const [opPwd, setOpPwd] = useState("");
       const [err, setErr] = useState("");
 
-      // 参考占成上限: 顶代下挂=选中方案占成 / 代理下挂=parent.shareRatio
-      const shareUpper = isTopParent ? (topSchemes[schemeIdx]?.shareRatio || 0) : (parent.shareRatio || 0);
+      // 参考占成上限 = 父级 shareRatio (无论父级是顶代还是代理, 同一币种线整条继承)
+      const shareUpper = parent.shareRatio || 0;
       const shareUpperPct = (shareUpper * 100).toFixed(2);
 
       const submit = () => {
@@ -559,12 +556,11 @@
         if (+refShareRatio > +shareUpperPct) { setErr("参考占成不能超过上限 " + shareUpperPct + "%"); return; }
         if (refRate === "" || isNaN(+refRate)) { setErr("请输入参考佣金率"); return; }
         if (opPwd !== "123456") { setErr("操作密码错误"); return; }
-        const targetCurrency = isTopParent ? topSchemes[schemeIdx].currency : parent.currency;
         onSubmit({
           user, nick: nick.trim() || user, type: accType, status: accStatus,
-          currency: targetCurrency,
-          shareRatio: +refShareRatio / 100, // 参考占成 → mock 里的 shareRatio (列表"占成"列展示)
-          refRate: +refRate / 100, // 参考佣金率 (新字段, 列表暂不展示)
+          currency: parent.currency, // 直接继承父级币种, 不让用户选
+          shareRatio: +refShareRatio / 100,
+          refRate: +refRate / 100,
         });
       };
 
@@ -609,37 +605,12 @@
                 </div>
               </div>
 
-              <div className="section-title">④ 交收方案(单选)</div>
-              {isTopParent ? (
-                <div className="bg-card border border-line rounded overflow-hidden">
-                  <table style={{width:"100%",fontSize:12}}>
-                    <thead>
-                      <tr style={{background:"#0F141C"}}>
-                        <th style={{padding:"6px",fontWeight:500,color:"#9AA4B5",textAlign:"center",width:36}}></th>
-                        <th style={{padding:"6px",fontWeight:500,color:"#9AA4B5",textAlign:"left"}}>币种</th>
-                        <th style={{padding:"6px",fontWeight:500,color:"#9AA4B5",textAlign:"left"}}>占成</th>
-                        <th style={{padding:"6px",fontWeight:500,color:"#9AA4B5",textAlign:"right"}}>账户余额</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {topSchemes.map((s,i) => (
-                        <tr key={i} style={{borderTop:"1px solid #1F2733",cursor:"pointer"}} onClick={()=>setSchemeIdx(i)}>
-                          <td style={{padding:"8px 6px",textAlign:"center"}}><input type="radio" checked={schemeIdx===i} onChange={()=>setSchemeIdx(i)}/></td>
-                          <td style={{padding:"8px 6px"}}><span className="chip chip-cool">{s.currency}</span></td>
-                          <td style={{padding:"8px 6px"}} className="num">{fmtPct(s.shareRatio)}</td>
-                          <td style={{padding:"8px 6px",textAlign:"right"}} className="num">{fmtAmount(s.balance)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <div className="text-faint" style={{fontSize:11,padding:"6px 8px",borderTop:"1px solid #1F2733"}}>下线创建后终身单一币种 / 单一交收方案,切换须走切币种高危流程。</div>
-                </div>
-              ) : (
-                <div className="bg-card border border-line rounded p-3 text-xs">
-                  <div>下线账号继承上级交收方案,不可更换</div>
-                  <div className="text-muted mt-1">币种:<span className="chip chip-cool">{parent.currency}</span>  ·  占成:{parent.shareRatio == null ? "—" : fmtPct(parent.shareRatio) + " (参考)"}</div>
-                </div>
-              )}
+              <div className="section-title">④ 交收方案(继承上级,不可改)</div>
+              <div className="bg-card border border-line rounded p-3 text-xs">
+                <div>下线账号<b>整条线</b>继承上级币种 + 方案,不可更换</div>
+                <div className="text-muted mt-1">币种:<span className="chip chip-cool">{parent.currency}</span>  ·  上级占成:{parent.shareRatio == null ? "—" : fmtPct(parent.shareRatio)}</div>
+                <div className="text-faint mt-1" style={{fontSize:11}}>如需另外币种,请回到顶代户口列表,在该顶代的「{parent.currency} 之外的其他币种行」点「新增下级」</div>
+              </div>
 
               <div className="section-title">⑤ 游戏条件</div>
               <div className="grid grid-cols-2 gap-3">
