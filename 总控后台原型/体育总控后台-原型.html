@@ -518,7 +518,7 @@
             </div>
           </div>
           {modal && modal.type === "newSub" && <NewSubModal parent={modal.agent} accounts={accounts} onClose={()=>setModal(null)} onSubmit={(data)=>handleNewSub(modal.agent, data)}/>}
-          {modal && modal.type === "editProfile" && <EditProfileModal account={modal.agent} onClose={()=>setModal(null)} onSubmit={(data)=>handleEditProfile(modal.agent, data)}/>}
+          {modal && modal.type === "editProfile" && <EditProfileModal account={modal.agent} accounts={accounts} onClose={()=>setModal(null)} onSubmit={(data)=>handleEditProfile(modal.agent, data)}/>}
           {modal && modal.type !== "newSub" && modal.type !== "editProfile" && <ActionModal modal={modal} onClose={()=>setModal(null)} onConfirm={()=>{ alert("已提交  ·  操作日志已记录"); setModal(null); }}/>}
         </div>
       );
@@ -544,13 +544,18 @@
       const [opPwd, setOpPwd] = useState("");
       const [err, setErr] = useState("");
 
+      // 显示佣金率上限: 顶代下挂=选中方案占成 / 代理下挂=parent.shareRatio
+      const rateUpper = isTopParent ? (topSchemes[schemeIdx]?.shareRatio || 0) : (parent.shareRatio || 0);
+      const rateUpperPct = (rateUpper * 100).toFixed(2);
+
       const submit = () => {
         if (!/^[A-Za-z0-9]{6,20}$/.test(user)) { setErr("用户账号需 6-20 位英文+数字"); return; }
         if (!nick.trim()) { setErr("请输入账户昵称"); return; }
         if (!pwd) { setErr("请输入登录密码"); return; }
         if (pwd !== pwdC) { setErr("两次密码不一致"); return; }
         if (rate === "" || isNaN(+rate)) { setErr("请输入显示佣金率"); return; }
-        if (opPwd !== "123456") { setErr("操作密码错误 (Mock: 123456)"); return; }
+        if (+rate > +rateUpperPct) { setErr("佣金率不能超过上限 " + rateUpperPct + "%"); return; }
+        if (opPwd !== "123456") { setErr("操作密码错误"); return; }
         const targetCurrency = isTopParent ? topSchemes[schemeIdx].currency : parent.currency;
         onSubmit({
           user, nick, type: accType, status: accStatus,
@@ -636,10 +641,10 @@
               <div>
                 <label className="block text-xs text-muted mb-1">显示佣金率 *</label>
                 <div className="flex items-center gap-2">
-                  <input type="number" step="0.01" className="input flex-1" value={rate} onChange={e=>setRate(e.target.value)} placeholder="例: 12.5"/>
+                  <input type="number" step="0.01" className="input flex-1" value={rate} onChange={e=>setRate(e.target.value)} placeholder={"上限 " + rateUpperPct + "%, 例如 " + (rateUpper * 80).toFixed(2)}/>
                   <span className="text-muted">%</span>
                 </div>
-                <div className="text-faint mt-1" style={{fontSize:11}}>上限继承上级;代理与玩家均必填。本字段在该下线的「占成」列显示(参考)。</div>
+                <div className="text-faint mt-1" style={{fontSize:11}}>上限 <span className="text-cool">{rateUpperPct}%</span> ({isTopParent ? "继承自所选方案" : "继承自上级"});代理与玩家均必填。本字段在该下线的「占成」列显示(参考)。</div>
               </div>
 
               <div className="section-title">⑥ 安全校验</div>
@@ -660,7 +665,13 @@
 
     // 修改资料弹窗 (独立组件, 对齐 B 端 V1.12 EditProfileModal / FN-ACC-05)
     // 3 段:只读信息 / 低敏感字段(无需密码) / 高敏感字段(动态触发操作密码)
-    function EditProfileModal({ account, onClose, onSubmit }) {
+    function EditProfileModal({ account, accounts, onClose, onSubmit }) {
+      const isTop = account.accountType === "普通(顶代)";
+      // 反向找直属父级 (非顶代用)
+      const parentNode = isTop ? null : Object.values(accounts).find(n => n.children && n.children.includes(account.key));
+      const rateUpper = isTop ? null : (parentNode ? parentNode.shareRatio : 0);
+      const rateUpperPct = rateUpper == null ? null : (rateUpper * 100).toFixed(2);
+
       const initShareRatio = account.shareRatio == null ? "" : (account.shareRatio * 100).toFixed(2);
       const [nick, setNick] = useState(account.nick || account.user);
       const [phone, setPhone] = useState(account.phone || "");
@@ -678,6 +689,7 @@
       const submit = () => {
         if (!nick.trim()) { setErr("请输入账户昵称"); return; }
         if (rate !== "" && isNaN(+rate)) { setErr("显示佣金率必须是数字"); return; }
+        if (rate !== "" && rateUpperPct != null && +rate > +rateUpperPct) { setErr("佣金率不能超过上限 " + rateUpperPct + "%"); return; }
         if (highSensitive && !opPwd) { setErr("修改了高敏感字段,请输入操作密码"); return; }
         if (highSensitive && opPwd !== "123456") { setErr("操作密码错误"); return; }
         onSubmit({
@@ -716,10 +728,11 @@
                 <div>
                   <label className="block text-xs text-muted mb-1">显示佣金率</label>
                   <div className="flex items-center gap-2">
-                    <input type="number" step="0.01" className="input flex-1" value={rate} onChange={e=>setRate(e.target.value)}/>
+                    <input type="number" step="0.01" className="input flex-1" value={rate} onChange={e=>setRate(e.target.value)} placeholder={rateUpperPct ? "上限 " + rateUpperPct + "%" : ""}/>
                     <span className="text-muted">%</span>
                   </div>
-                  {account.accountType !== "普通(顶代)" && <div className="text-faint mt-1" style={{fontSize:11}}>下线层显示参考占成,Q-S11 议题待</div>}
+                  {!isTop && rateUpperPct != null && <div className="text-faint mt-1" style={{fontSize:11}}>上限 <span className="text-cool">{rateUpperPct}%</span> (继承自上级 {parentNode ? parentNode.user : "—"})</div>}
+                  {isTop && <div className="text-faint mt-1" style={{fontSize:11}}>顶代占成无上限提示(由账房侧商务谈定)</div>}
                 </div>
                 <div>
                   <label className="block text-xs text-muted mb-1">重置登录密码(选填)</label>
