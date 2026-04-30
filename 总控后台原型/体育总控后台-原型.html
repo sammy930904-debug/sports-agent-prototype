@@ -303,20 +303,20 @@
     ];
 
     const MOCK_LEDGER = [
-      { id:"TX-20260429-3201", time:"2026-04-29 16:08:30", type:"transfer_in", typeLabel:"三方体育转入", from:"sapphire (代理)", to:"BBIN 体育 (三方平台)", amount:500_000, currency:"KRW", status:"成功" },
-      { id:"TX-20260429-3200", time:"2026-04-29 15:58:18", type:"transfer_out", typeLabel:"三方体育转出", from:"BBIN 体育 (三方平台)", to:"qweqwe (代理)", amount:380_000, currency:"KRW", status:"成功" },
-      { id:"TX-20260429-3199", time:"2026-04-29 15:30:42", type:"agent_credit", typeLabel:"为下线上分", from:"qweqwe (顶代)", to:"qw-008 (下线)", amount:200_000, currency:"KRW", status:"成功" },
-      { id:"TX-20260429-3198", time:"2026-04-29 14:55:00", type:"house_credit", typeLabel:"账房上分到顶代", from:"AH-001 (账房)", to:"qweqwe (顶代)", amount:5_000_000, currency:"KRW", status:"成功" },
-      { id:"TX-20260429-3197", time:"2026-04-29 14:30:00", type:"transfer_in", typeLabel:"三方体育转入", from:"P-dia-014 (玩家)", to:"BBIN 体育 (三方平台)", amount:1500, currency:"USD", status:"成功" },
-      { id:"TX-20260429-3196", time:"2026-04-29 13:45:22", type:"agent_debit", typeLabel:"从下线下分", from:"lucky88 (顶代)", to:"luk-002 (下线)", amount:1000, currency:"PHP", status:"成功" },
-      { id:"TX-20260429-3195", time:"2026-04-29 13:20:11", type:"transfer_out", typeLabel:"三方体育转出", from:"BBIN 体育 (三方平台)", to:"P-luk-002 (玩家)", amount:1850, currency:"PHP", status:"成功" },
-      { id:"TX-20260429-3194", time:"2026-04-29 12:08:45", type:"house_debit", typeLabel:"顶代下分到账房", from:"diamond (顶代)", to:"AH-003 (账房)", amount:8_500, currency:"USD", status:"成功" },
-      { id:"TX-20260429-3193", time:"2026-04-29 11:42:30", type:"transfer_in", typeLabel:"三方体育转入", from:"P-qw-008 (玩家)", to:"BBIN 体育 (三方平台)", amount:50_000, currency:"KRW", status:"成功" },
-      { id:"TX-20260429-3192", time:"2026-04-29 11:15:00", type:"agent_credit", typeLabel:"为下线上分", from:"qweqwe (顶代)", to:"qw-003 (下线)", amount:80_000, currency:"KRW", status:"成功" },
-      { id:"TX-20260429-3191", time:"2026-04-29 10:30:18", type:"transfer_out", typeLabel:"三方体育转出", from:"BBIN 体育 (三方平台)", to:"P-luk-005 (玩家)", amount:0, currency:"PHP", status:"成功" },
-      { id:"TX-20260429-3190", time:"2026-04-29 09:50:44", type:"house_credit", typeLabel:"账房上分到顶代", from:"AH-002 (账房)", to:"lucky88 (顶代)", amount:200_000, currency:"PHP", status:"成功" },
-      { id:"TX-20260429-3189", time:"2026-04-29 09:08:33", type:"transfer_in", typeLabel:"三方体育转入", from:"P-dia-021 (玩家)", to:"BBIN 体育 (三方平台)", amount:50, currency:"USD", status:"成功" },
-      { id:"TX-20260428-3188", time:"2026-04-28 22:14:09", type:"transfer_out", typeLabel:"三方体育转出", from:"BBIN 体育 (三方平台)", to:"P-sap-014 (玩家)", amount:0, currency:"KRW", status:"超时重试" },
+      { id:"TX-20260429-3201", time:"2026-04-29 16:08:30", type:"transfer_in", typeLabel:"三方体育上分", from:"sapphire (代理)", to:"BBIN 体育 (三方平台)", amount:500_000, currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3200", time:"2026-04-29 15:58:18", type:"transfer_out", typeLabel:"三方体育下分", from:"BBIN 体育 (三方平台)", to:"qweqwe (代理)", amount:380_000, currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3199", time:"2026-04-29 15:30:42", type:"agent_credit", typeLabel:"上分", from:"qweqwe (顶代)", to:"qw-008 (下线)", amount:200_000, currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3198", time:"2026-04-29 14:55:00", type:"house_credit", typeLabel:"上分", from:"AH-001 (账房)", to:"qweqwe (顶代)", amount:5_000_000, currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3197", time:"2026-04-29 14:30:00", type:"transfer_in", typeLabel:"三方体育上分", from:"P-dia-014 (玩家)", to:"BBIN 体育 (三方平台)", amount:1500, currency:"USD", status:"成功" },
+      { id:"TX-20260429-3196", time:"2026-04-29 13:45:22", type:"agent_debit", typeLabel:"下分", from:"lucky88 (顶代)", to:"luk-002 (下线)", amount:1000, currency:"PHP", status:"成功" },
+      { id:"TX-20260429-3195", time:"2026-04-29 13:20:11", type:"transfer_out", typeLabel:"三方体育下分", from:"BBIN 体育 (三方平台)", to:"P-luk-002 (玩家)", amount:1850, currency:"PHP", status:"成功" },
+      { id:"TX-20260429-3194", time:"2026-04-29 12:08:45", type:"house_debit", typeLabel:"下分", from:"diamond (顶代)", to:"AH-003 (账房)", amount:8_500, currency:"USD", status:"成功" },
+      { id:"TX-20260429-3193", time:"2026-04-29 11:42:30", type:"transfer_in", typeLabel:"三方体育上分", from:"P-qw-008 (玩家)", to:"BBIN 体育 (三方平台)", amount:50_000, currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3192", time:"2026-04-29 11:15:00", type:"agent_credit", typeLabel:"上分", from:"qweqwe (顶代)", to:"qw-003 (下线)", amount:80_000, currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3191", time:"2026-04-29 10:30:18", type:"transfer_out", typeLabel:"三方体育下分", from:"BBIN 体育 (三方平台)", to:"P-luk-005 (玩家)", amount:0, currency:"PHP", status:"成功" },
+      { id:"TX-20260429-3190", time:"2026-04-29 09:50:44", type:"house_credit", typeLabel:"上分", from:"AH-002 (账房)", to:"lucky88 (顶代)", amount:200_000, currency:"PHP", status:"成功" },
+      { id:"TX-20260429-3189", time:"2026-04-29 09:08:33", type:"transfer_in", typeLabel:"三方体育上分", from:"P-dia-021 (玩家)", to:"BBIN 体育 (三方平台)", amount:50, currency:"USD", status:"成功" },
+      { id:"TX-20260428-3188", time:"2026-04-28 22:14:09", type:"transfer_out", typeLabel:"三方体育下分", from:"BBIN 体育 (三方平台)", to:"P-sap-014 (玩家)", amount:0, currency:"KRW", status:"超时重试" },
     ];
 
     const MOCK_AUDIT_SYSTEM = [
@@ -1296,7 +1296,12 @@
     function LedgerPage({ role }) {
       const [type, setType] = useState("all");
 
-      const list = MOCK_LEDGER.filter(l => type === "all" || l.type === type);
+      const list = MOCK_LEDGER.filter(l => {
+        if (type === "all") return true;
+        if (type === "credit") return l.type === "house_credit" || l.type === "agent_credit";
+        if (type === "debit") return l.type === "house_debit" || l.type === "agent_debit";
+        return l.type === type; // transfer_in / transfer_out
+      });
 
       return (
         <div className="p-6">
@@ -1310,12 +1315,10 @@
           <div className="bg-panel border border-line rounded-lg p-4 mb-4 flex gap-3 items-center">
             <select className="input w-56" value={type} onChange={e=>setType(e.target.value)}>
               <option value="all">全部类型</option>
-              <option value="house_credit">账房上分到顶代</option>
-              <option value="house_debit">顶代下分到账房</option>
-              <option value="agent_credit">为下线上分</option>
-              <option value="agent_debit">从下线下分</option>
-              <option value="transfer_in">三方体育转入</option>
-              <option value="transfer_out">三方体育转出</option>
+              <option value="credit">上分</option>
+              <option value="debit">下分</option>
+              <option value="transfer_in">三方体育上分</option>
+              <option value="transfer_out">三方体育下分</option>
             </select>
             <span className="text-xs text-faint">共 {list.length} 条</span>
           </div>
