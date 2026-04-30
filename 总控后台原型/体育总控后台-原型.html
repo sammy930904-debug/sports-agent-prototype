@@ -1298,15 +1298,6 @@
 
       const list = MOCK_LEDGER.filter(l => type === "all" || l.type === type);
 
-      const groupLabel = {
-        house_credit: "账房 ↔ 顶代",
-        house_debit: "账房 ↔ 顶代",
-        agent_credit: "代理后台内部",
-        agent_debit: "代理后台内部",
-        transfer_in: "代理 / 玩家 ↔ 三方平台",
-        transfer_out: "代理 / 玩家 ↔ 三方平台",
-      };
-
       return (
         <div className="p-6">
           <div className="flex items-center justify-between mb-5">
@@ -1329,7 +1320,7 @@
             <div className="scroll-x">
               <table>
                 <thead><tr>
-                  <th>流水号</th><th>分类</th><th>类型</th><th>转入/转出</th><th>来源</th><th>去向</th><th>币种</th><th className="text-right">金额</th><th>时间</th><th>状态</th>
+                  <th>流水号</th><th>类型</th><th>转入/转出</th><th>来源</th><th>去向</th><th>币种</th><th className="text-right">金额</th><th>时间</th><th>状态</th>
                 </tr></thead>
                 <tbody>
                   {list.map(l => {
@@ -1337,7 +1328,6 @@
                     return (
                     <tr key={l.id}>
                       <td className="mono text-cool" style={{fontSize:11}}>{l.id}</td>
-                      <td><span className="chip chip-info" style={{fontSize:10}}>{groupLabel[l.type]}</span></td>
                       <td>{l.typeLabel}</td>
                       <td><span className={"chip " + (isIn ? "chip-active" : "chip-warn")} style={{fontSize:11}}>{isIn ? "转入" : "转出"}</span></td>
                       <td className="text-muted" style={{fontSize:12}}>{l.from}</td>
