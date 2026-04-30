@@ -521,12 +521,10 @@
     }
 
     // ============== 顶代户口页 ==============
-    function AgentsPage({ role, canWrite, appendSystemLog }) {
+    function AgentsPage({ role, canWrite, appendSystemLog, accounts, setAccounts, topKeys, setTopKeys }) {
       const [modal, setModal] = useState(null);
       const [expanded, setExpanded] = useState(new Set());
-      // mock 数据放 state 里, 让"新增下线"等动作能真更新列表
-      const [accounts, setAccounts] = useState(() => ({...ACCOUNTS}));
-      const [topKeys, setTopKeys] = useState(() => [...TOP_AGENT_KEYS]);
+      // accounts / topKeys 由 App 层 lift (V0.2 修 bug, Sammy 2026-04-30): 切菜单不丢 state
       const cols = ROLES[role].agentCols;
       // 修改资料: 把 form 字段 merge 到节点上 (mock 内存中改, 不持久化)
       // 级联冻结 (Sammy 2026-04-30 拍): status 改成 frozen 时递归把所有 children 也置 frozen, 跟 B 端 V1.12 setStatus 'off' 级联对齐
@@ -1183,22 +1181,6 @@
       if (type === "newSub") return null; // 由 AgentsPage 直接渲染 NewSubModal
 
       if (type === "editProfile") return null; // 由 AgentsPage 直接渲染 EditProfileModal
-      if (false && type === "editProfile") {
-        return <PasswordModal title={"修改资料:" + agent.user} onClose={onClose} onConfirm={onConfirm}
-          fields={<>
-            <InfoCard/>
-            <div><label className="block text-xs text-muted mb-1">昵称</label><input className="input" placeholder="选填"/></div>
-            <div><label className="block text-xs text-muted mb-1">备注</label><textarea className="input" rows="2" placeholder="风控备注 / 商务备注"/></div>
-            <div><label className="block text-xs text-muted mb-1">账号状态 *</label>
-              <select className="input" defaultValue={agent.status}>
-                <option value="active">启用</option>
-                <option value="frozen">禁用</option>
-              </select>
-            </div>
-            <div className="text-xs" style={{color:"#F0B93A"}}>⚠ 切换为「禁用」后,该账号 + 币种维度无法登录上下分;余额保留。</div>
-          </>}/>;
-      }
-
       if (type === "credit" || type === "debit") return null; // 由 AgentsPage 直接渲染 CreditDebitModal
       return null;
     }
@@ -1719,7 +1701,7 @@
     // V0.2 加 IP 白名单校验 (Sammy 2026-04-30 拍 B 方案):
     //   登录提交时检查 simIP 是否命中 ipWhitelist 启用项;无启用项 = 不限制
     //   simIP 为"模拟登录 IP"输入框, 真实开发由后端从 request 取
-    function LoginPage({ onLogin, ipWhitelist }) {
+    function LoginPage({ onLogin, ipWhitelist, staffList }) {
       const [user, setUser] = useState("");
       const [pwd, setPwd] = useState("");
       const [showPwd, setShowPwd] = useState(false);
@@ -1731,10 +1713,10 @@
           setErr("IP "+simIP+" 不在白名单内,拒绝登录");
           return;
         }
-        const staff = INITIAL_STAFF.find(s => s.user === user.trim());
-        if (!staff) { setErr("员工账号不存在"); return; }
+        const matched = staffList.find(s => s.user === user.trim());
+        if (!matched) { setErr("员工账号不存在"); return; }
         if (pwd !== "123456") { setErr("登录密码错误"); return; }  // V0.2 mock: 所有员工密码统一 123456
-        onLogin(staff, simIP);
+        onLogin(matched, simIP);
       };
       return (
         <div className="min-h-screen bg-app flex items-center justify-center" style={{padding:"24px"}}>
@@ -1817,8 +1799,8 @@
     }
 
     // ============== 员工账号页 (权限管理 / 员工账号) ==============
-    function StaffPage({ currentUser, appendSystemLog }) {
-      const [staff, setStaff] = useState(() => [...INITIAL_STAFF]);
+    function StaffPage({ currentUser, appendSystemLog, staff, setStaff }) {
+      // staff / setStaff 由 App 层 lift (V0.2 修 bug, Sammy 2026-04-30): 新员工立即可登录, 删除立即生效
       const [showAdd, setShowAdd] = useState(false);
       const [delConfirm, setDelConfirm] = useState(null);
       const [editRoleModal, setEditRoleModal] = useState(null);
@@ -2010,7 +1992,7 @@
             setOpErr("不能停用最后一条启用的白名单(否则所有 IP 都将拒登)"); return;
           }
           setList(list.map(w => w.id === item.id ? { ...w, enabled: !w.enabled } : w));
-          appendSystemLog && appendSystemLog((item.enabled ? "停用" : "启用")+"IP 白名单", item.ip+" ("+item.label+")");
+          appendSystemLog && appendSystemLog((item.enabled ? "停用" : "启用")+" IP 白名单", item.ip+" ("+item.label+")");
         } else if (type === "delete") {
           if (item.enabled && enabledCount === 1) {
             setOpErr("不能删除最后一条启用的白名单(否则所有 IP 都将拒登)"); return;
@@ -2154,11 +2136,12 @@
     }
 
     // ============== 数据看板 (V0.2 简洁版门户页) ==============
-    function DashboardPage({ role, auditSystem, setActive }) {
+    function DashboardPage({ role, auditSystem, setActive, accounts }) {
       const r = ROLES[role];
       // 按"人"算顶代户口数 (Sammy 2026-04-30 拍): 1 顶代多币种 = 多行, 但只算 1 个人 (distinct user)
       // 启用 / 冻结状态:任一币种行 active 就算"启用人",全部行都 frozen 才算"冻结人"
-      const topAgentRows = Object.values(ACCOUNTS).filter(a => a.accountType === "普通(顶代)");
+      // accounts 由 App 层 lift (V0.2 修 bug): 顶代被冻结 / 上下分余额变化都立即反映到 KPI
+      const topAgentRows = Object.values(accounts).filter(a => a.accountType === "普通(顶代)");
       const topAgentUsers = {};  // user → { hasActive }
       topAgentRows.forEach(a => {
         if (!topAgentUsers[a.user]) topAgentUsers[a.user] = { hasActive: false };
@@ -2225,6 +2208,11 @@
       const [ipWhitelist, setIpWhitelist] = useState(() => [...INITIAL_IPWHITE]);
       const [auditSystem, setAuditSystem] = useState(() => [...INITIAL_AUDIT_SYSTEM]);
       const [auditPlayer, setAuditPlayer] = useState(() => [...INITIAL_AUDIT_PLAYER]);
+      // V0.2 修 bug (Sammy 2026-04-30): accounts / topKeys / staff lift 到 App 层
+      // 避免切菜单 unmount 子组件时 mock state 销毁 (顶代余额改了切走再回来就回退、新员工不能登录等)
+      const [accounts, setAccounts] = useState(() => ({...ACCOUNTS}));
+      const [topKeys, setTopKeys] = useState(() => [...TOP_AGENT_KEYS]);
+      const [staff, setStaff] = useState(() => [...INITIAL_STAFF]);
 
       // 写动作回写系统操作日志 (Sammy 2026-04-30 拍 A 方案):
       // 所有 S 端写动作都 unshift 一条到 auditSystem,真实演示动作 ↔ 日志的实时关联
@@ -2251,10 +2239,10 @@
       }, [role]);
 
       // 所有 hooks 调用完毕后再 early return (避免登录前后 hook 数量不一致引发 React 报错)
-      if (!currentUser) return <LoginPage onLogin={(staff, ip)=>{
-        setCurrentUser(staff); setLoginIP(ip);
-        appendSystemLog("登录", "S 端 / 角色: "+staff.role, { user: staff, ip });
-      }} ipWhitelist={ipWhitelist}/>;
+      if (!currentUser) return <LoginPage onLogin={(s, ip)=>{
+        setCurrentUser(s); setLoginIP(ip);
+        appendSystemLog("登录", "S 端 / 角色: "+s.role, { user: s, ip });
+      }} ipWhitelist={ipWhitelist} staffList={staff}/>;
 
       const Menu = ({ id, label, icon }) => visibleMenus.includes(id) && (
         <div className={"menu-item " + (active===id?"active":"")} onClick={()=>setActive(id)}>
@@ -2331,12 +2319,12 @@
               </div>
             </header>
             <div className="flex-1 overflow-auto">
-              {active === "dashboard" && <DashboardPage role={role} auditSystem={auditSystem} setActive={setActive}/>}
-              {active === "agents" && <AgentsPage role={role} canWrite={r.canWrite} appendSystemLog={appendSystemLog}/>}
+              {active === "dashboard" && <DashboardPage role={role} auditSystem={auditSystem} setActive={setActive} accounts={accounts}/>}
+              {active === "agents" && <AgentsPage role={role} canWrite={r.canWrite} appendSystemLog={appendSystemLog} accounts={accounts} setAccounts={setAccounts} topKeys={topKeys} setTopKeys={setTopKeys}/>}
               {active === "reports.bets" && <BetsPage role={role} appendSystemLog={appendSystemLog}/>}
               {active === "reports.sports" && <SportsSessionsPage role={role} appendSystemLog={appendSystemLog}/>}
               {active === "reports.ledger" && <LedgerPage role={role} appendSystemLog={appendSystemLog}/>}
-              {active === "perm.staff" && <StaffPage currentUser={currentUser} appendSystemLog={appendSystemLog}/>}
+              {active === "perm.staff" && <StaffPage currentUser={currentUser} appendSystemLog={appendSystemLog} staff={staff} setStaff={setStaff}/>}
               {active === "sys.audit" && <AuditPage role={role} system={auditSystem} player={auditPlayer}/>}
               {active === "sys.ipwhite" && <IPWhitelistPage list={ipWhitelist} setList={setIpWhitelist} currentLoginIP={loginIP || "10.4.2.18"} appendSystemLog={appendSystemLog}/>}
             </div>
