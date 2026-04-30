@@ -302,21 +302,22 @@
       { id:"SP-202604280230-002", date:"2026-04-27", topAgent:"diamond", sysId:"diamond", user:"diamond", currency:"USD", shareRatio:0.225,  validStake:241_200,     shareAmount:54_270,     totalWinLoss:-12_400,   rate:0.0800, commission:19_296,     submitRate:[{sysId:"qweqwe",rate:0.018},{sysId:"lucky88",rate:0.012}],                                 workStartAt:"2026-04-27 00:00:00", workEndAt:"2026-04-27 23:59:59", status:"已结算" },
     ];
 
+    // 主体 = 这条流水的"被影响账号" (非账房非三方平台);sysId 用层级派生 (顶代=user, 下线=父-N, 玩家=父-N-M)
     const MOCK_LEDGER = [
-      { id:"TX-20260429-3201", time:"2026-04-29 16:08:30", type:"transfer_in", typeLabel:"三方体育上分", from:"sapphire (代理)", to:"BBIN 体育 (三方平台)", amount:500_000, currency:"KRW", status:"成功" },
-      { id:"TX-20260429-3200", time:"2026-04-29 15:58:18", type:"transfer_out", typeLabel:"三方体育下分", from:"BBIN 体育 (三方平台)", to:"qweqwe (代理)", amount:380_000, currency:"KRW", status:"成功" },
-      { id:"TX-20260429-3199", time:"2026-04-29 15:30:42", type:"agent_credit", typeLabel:"上分", from:"qweqwe (顶代)", to:"qw-008 (下线)", amount:200_000, currency:"KRW", status:"成功" },
-      { id:"TX-20260429-3198", time:"2026-04-29 14:55:00", type:"house_credit", typeLabel:"上分", from:"AH-001 (账房)", to:"qweqwe (顶代)", amount:5_000_000, currency:"KRW", status:"成功" },
-      { id:"TX-20260429-3197", time:"2026-04-29 14:30:00", type:"transfer_in", typeLabel:"三方体育上分", from:"P-dia-014 (玩家)", to:"BBIN 体育 (三方平台)", amount:1500, currency:"USD", status:"成功" },
-      { id:"TX-20260429-3196", time:"2026-04-29 13:45:22", type:"agent_debit", typeLabel:"下分", from:"lucky88 (顶代)", to:"luk-002 (下线)", amount:1000, currency:"PHP", status:"成功" },
-      { id:"TX-20260429-3195", time:"2026-04-29 13:20:11", type:"transfer_out", typeLabel:"三方体育下分", from:"BBIN 体育 (三方平台)", to:"P-luk-002 (玩家)", amount:1850, currency:"PHP", status:"成功" },
-      { id:"TX-20260429-3194", time:"2026-04-29 12:08:45", type:"house_debit", typeLabel:"下分", from:"diamond (顶代)", to:"AH-003 (账房)", amount:8_500, currency:"USD", status:"成功" },
-      { id:"TX-20260429-3193", time:"2026-04-29 11:42:30", type:"transfer_in", typeLabel:"三方体育上分", from:"P-qw-008 (玩家)", to:"BBIN 体育 (三方平台)", amount:50_000, currency:"KRW", status:"成功" },
-      { id:"TX-20260429-3192", time:"2026-04-29 11:15:00", type:"agent_credit", typeLabel:"上分", from:"qweqwe (顶代)", to:"qw-003 (下线)", amount:80_000, currency:"KRW", status:"成功" },
-      { id:"TX-20260429-3191", time:"2026-04-29 10:30:18", type:"transfer_out", typeLabel:"三方体育下分", from:"BBIN 体育 (三方平台)", to:"P-luk-005 (玩家)", amount:0, currency:"PHP", status:"成功" },
-      { id:"TX-20260429-3190", time:"2026-04-29 09:50:44", type:"house_credit", typeLabel:"上分", from:"AH-002 (账房)", to:"lucky88 (顶代)", amount:200_000, currency:"PHP", status:"成功" },
-      { id:"TX-20260429-3189", time:"2026-04-29 09:08:33", type:"transfer_in", typeLabel:"三方体育上分", from:"P-dia-021 (玩家)", to:"BBIN 体育 (三方平台)", amount:50, currency:"USD", status:"成功" },
-      { id:"TX-20260428-3188", time:"2026-04-28 22:14:09", type:"transfer_out", typeLabel:"三方体育下分", from:"BBIN 体育 (三方平台)", to:"P-sap-014 (玩家)", amount:0, currency:"KRW", status:"超时重试" },
+      { id:"TX-20260429-3201", time:"2026-04-29 16:08:30", type:"transfer_in",  typeLabel:"三方体育上分", mainSysId:"sapphire",     mainUser:"sapphire", from:"sapphire (顶代)",     to:"BBIN 体育 (三方平台)",  amount:500_000,   currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3200", time:"2026-04-29 15:58:18", type:"transfer_out", typeLabel:"三方体育下分", mainSysId:"qweqwe",       mainUser:"qweqwe",   from:"BBIN 体育 (三方平台)", to:"qweqwe (顶代)",       amount:380_000,   currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3199", time:"2026-04-29 15:30:42", type:"agent_credit", typeLabel:"上分",         mainSysId:"qweqwe-1",     mainUser:"qw-008",   from:"qweqwe (顶代)",       to:"qw-008 (下线)",       amount:200_000,   currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3198", time:"2026-04-29 14:55:00", type:"house_credit", typeLabel:"上分",         mainSysId:"qweqwe",       mainUser:"qweqwe",   from:"AH-001 (账房)",       to:"qweqwe (顶代)",       amount:5_000_000, currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3197", time:"2026-04-29 14:30:00", type:"transfer_in",  typeLabel:"三方体育上分", mainSysId:"diamond-1-1",  mainUser:"dia-014",  from:"P-dia-014 (玩家)",     to:"BBIN 体育 (三方平台)",  amount:1500,      currency:"USD", status:"成功" },
+      { id:"TX-20260429-3196", time:"2026-04-29 13:45:22", type:"agent_debit",  typeLabel:"下分",         mainSysId:"lucky88-1",    mainUser:"luk-002",  from:"lucky88 (顶代)",      to:"luk-002 (下线)",      amount:1000,      currency:"PHP", status:"成功" },
+      { id:"TX-20260429-3195", time:"2026-04-29 13:20:11", type:"transfer_out", typeLabel:"三方体育下分", mainSysId:"lucky88-1-1",  mainUser:"luk-002",  from:"BBIN 体育 (三方平台)", to:"P-luk-002 (玩家)",     amount:1850,      currency:"PHP", status:"成功" },
+      { id:"TX-20260429-3194", time:"2026-04-29 12:08:45", type:"house_debit",  typeLabel:"下分",         mainSysId:"diamond",      mainUser:"diamond",  from:"diamond (顶代)",       to:"AH-003 (账房)",        amount:8_500,     currency:"USD", status:"成功" },
+      { id:"TX-20260429-3193", time:"2026-04-29 11:42:30", type:"transfer_in",  typeLabel:"三方体育上分", mainSysId:"qweqwe-1-1",   mainUser:"qw-008",   from:"P-qw-008 (玩家)",     to:"BBIN 体育 (三方平台)",  amount:50_000,    currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3192", time:"2026-04-29 11:15:00", type:"agent_credit", typeLabel:"上分",         mainSysId:"qweqwe-2",     mainUser:"qw-003",   from:"qweqwe (顶代)",       to:"qw-003 (下线)",       amount:80_000,    currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3191", time:"2026-04-29 10:30:18", type:"transfer_out", typeLabel:"三方体育下分", mainSysId:"lucky88-2-1",  mainUser:"luk-005",  from:"BBIN 体育 (三方平台)", to:"P-luk-005 (玩家)",     amount:0,         currency:"PHP", status:"成功" },
+      { id:"TX-20260429-3190", time:"2026-04-29 09:50:44", type:"house_credit", typeLabel:"上分",         mainSysId:"lucky88",      mainUser:"lucky88",  from:"AH-002 (账房)",       to:"lucky88 (顶代)",      amount:200_000,   currency:"PHP", status:"成功" },
+      { id:"TX-20260429-3189", time:"2026-04-29 09:08:33", type:"transfer_in",  typeLabel:"三方体育上分", mainSysId:"diamond-2-1",  mainUser:"dia-021",  from:"P-dia-021 (玩家)",     to:"BBIN 体育 (三方平台)",  amount:50,        currency:"USD", status:"成功" },
+      { id:"TX-20260428-3188", time:"2026-04-28 22:14:09", type:"transfer_out", typeLabel:"三方体育下分", mainSysId:"sapphire-1-1", mainUser:"sap-014",  from:"BBIN 体育 (三方平台)", to:"P-sap-014 (玩家)",     amount:0,         currency:"KRW", status:"超时重试" },
     ];
 
     const MOCK_AUDIT_SYSTEM = [
@@ -1326,7 +1327,7 @@
             <div className="scroll-x">
               <table>
                 <thead><tr>
-                  <th>流水号</th><th>类型</th><th>转入/转出</th><th>来源</th><th>去向</th><th>币种</th><th className="text-right">金额</th><th>时间</th><th>状态</th>
+                  <th>流水号</th><th>系统户口号</th><th>用户账号</th><th>类型</th><th>转入/转出</th><th>来源</th><th>去向</th><th>币种</th><th className="text-right">金额</th><th>时间</th><th>状态</th>
                 </tr></thead>
                 <tbody>
                   {list.map(l => {
@@ -1334,6 +1335,8 @@
                     return (
                     <tr key={l.id}>
                       <td className="mono text-cool" style={{fontSize:11}}>{l.id}</td>
+                      <td className="mono text-muted">{l.mainSysId || "—"}</td>
+                      <td className="mono">{l.mainUser || "—"}</td>
                       <td>{l.typeLabel}</td>
                       <td><span className={"chip " + (isIn ? "chip-active" : "chip-warn")} style={{fontSize:11}}>{isIn ? "转入" : "转出"}</span></td>
                       <td className="text-muted" style={{fontSize:12}}>{l.from}</td>
