@@ -82,20 +82,52 @@
     };
 
     // ============== Mock 数据 ==============
-    // 顶代户口 mock - 1 顶代多币种 = N 行 (Sammy 2026-04-29 拍)
-    // 字段:系统户口号 sysId / 用户账号 user / 账号类型 accountType / 币种 currency
-    //      占成 shareRatio / 账户余额 balance / 下线余额 subBalance / 总线余额 totalBalance (= balance + subBalance)
-    //      下线数 subCount / 账号状态 status / 开户时间 createdAt
+    // 顶代户口 + 下线树 mock (Sammy 2026-04-29 拍)
+    // - 1 顶代多币种 = N 行 (按币种拆); 下线币种继承父级
+    // - 字段:系统户口号 sysId / 用户账号 user / 账号类型 accountType / 币种 currency
+    //        占成 shareRatio (下线层占位 = null, 显示 —) / 账户余额 balance / 下线余额 subBalance
+    //        总线余额 totalBalance (= balance + subBalance, 沿用 B 端递归算法)
+    //        下线数 subCount / 账号状态 status / 开户时间 createdAt / children 直属下线 keys
     // B↔S 数据契约:subCount / subBalance / totalBalance / shareRatio 主信源在 B 端
-    const TOP_AGENTS = [
-      { sysId:"AH-001", user:"qweqwe", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.20, balance:12_580_000, subBalance:84_320_000, totalBalance:96_900_000, subCount:48, status:"active", createdAt:"2025-11-12 09:14:33" },
-      { sysId:"AH-001", user:"qweqwe", accountType:"普通(顶代)", currency:"USD", shareRatio:0.30, balance:8_240, subBalance:42_180, totalBalance:50_420, subCount:48, status:"active", createdAt:"2025-11-12 09:14:33" },
-      { sysId:"AH-002", user:"lucky88", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.15, balance:894_320, subBalance:2_140_500, totalBalance:3_034_820, subCount:23, status:"active", createdAt:"2025-12-03 11:22:08" },
-      { sysId:"AH-003", user:"diamond", accountType:"普通(顶代)", currency:"USD", shareRatio:0.25, balance:24_890.55, subBalance:38_120.20, totalBalance:63_010.75, subCount:67, status:"active", createdAt:"2025-09-25 15:48:19" },
-      { sysId:"AH-004", user:"emerald", accountType:"普通(顶代)", currency:"USD", shareRatio:0.20, balance:0, subBalance:0, totalBalance:0, subCount:12, status:"frozen", createdAt:"2026-01-08 14:25:11" },
-      { sysId:"AH-005", user:"sapphire", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.18, balance:3_240_000, subBalance:11_840_000, totalBalance:15_080_000, subCount:34, status:"active", createdAt:"2026-02-14 16:32:55" },
-      { sysId:"AH-006", user:"goldenstar", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.22, balance:1_200_000, subBalance:0, totalBalance:1_200_000, subCount:0, status:"pending", createdAt:"2026-04-25 10:14:22" },
-    ];
+    // key 复合 = "user::currency",保证多币种顶代每行 key 唯一
+    const ACCOUNTS = {
+      // === qweqwe / KRW 树 (4 层:顶代→代理→孙代理→玩家) ===
+      "qweqwe::KRW": { sysId:"AH-001", user:"qweqwe", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.20, balance:12_580_000, subBalance:84_320_000, totalBalance:96_900_000, subCount:48, status:"active", createdAt:"2025-11-12 09:14:33", children:["carry01::KRW","eva_ph::KRW"] },
+      "carry01::KRW": { sysId:"AH-001-S1", user:"carry01", accountType:"代理", currency:"KRW", shareRatio:null, balance:50_000_000, subBalance:34_320_000, totalBalance:84_320_000, subCount:3, status:"active", createdAt:"2026-02-10", children:["alice88::KRW","dave_y::KRW","zoe_ph::KRW"] },
+      "alice88::KRW": { sysId:"AH-001-S1-1", user:"alice88", accountType:"代理", currency:"KRW", shareRatio:null, balance:30_000_000, subBalance:1_500_000, totalBalance:31_500_000, subCount:1, status:"active", createdAt:"2026-02-28", children:["bob_hi::KRW"] },
+      "bob_hi::KRW": { sysId:"AH-001-S1-1-1", user:"bob_hi", accountType:"游戏", currency:"KRW", shareRatio:null, balance:1_500_000, subBalance:0, totalBalance:1_500_000, subCount:0, status:"active", createdAt:"2026-03-15", children:[] },
+      "dave_y::KRW": { sysId:"AH-001-S1-2", user:"dave_y", accountType:"游戏", currency:"KRW", shareRatio:null, balance:1_320_000, subBalance:0, totalBalance:1_320_000, subCount:0, status:"active", createdAt:"2026-03-02", children:[] },
+      "zoe_ph::KRW": { sysId:"AH-001-S1-3", user:"zoe_ph", accountType:"游戏", currency:"KRW", shareRatio:null, balance:0, subBalance:0, totalBalance:0, subCount:0, status:"frozen", createdAt:"2026-02-15", children:[] },
+      "eva_ph::KRW": { sysId:"AH-001-S2", user:"eva_ph", accountType:"游戏", currency:"KRW", shareRatio:null, balance:8_000_000, subBalance:0, totalBalance:8_000_000, subCount:0, status:"active", createdAt:"2026-02-20", children:[] },
+
+      // === qweqwe / USD 树 ===
+      "qweqwe::USD": { sysId:"AH-001", user:"qweqwe", accountType:"普通(顶代)", currency:"USD", shareRatio:0.30, balance:8_240, subBalance:42_180, totalBalance:50_420, subCount:48, status:"active", createdAt:"2025-11-12 09:14:33", children:["frank_us::USD"] },
+      "frank_us::USD": { sysId:"AH-001-S3", user:"frank_us", accountType:"代理", currency:"USD", shareRatio:null, balance:30_000, subBalance:12_180, totalBalance:42_180, subCount:1, status:"active", createdAt:"2026-03-01", children:["gina_us::USD"] },
+      "gina_us::USD": { sysId:"AH-001-S3-1", user:"gina_us", accountType:"游戏", currency:"USD", shareRatio:null, balance:12_180, subBalance:0, totalBalance:12_180, subCount:0, status:"active", createdAt:"2026-03-20", children:[] },
+
+      // === lucky88 / PHP 树 ===
+      "lucky88::PHP": { sysId:"AH-002", user:"lucky88", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.15, balance:894_320, subBalance:2_140_500, totalBalance:3_034_820, subCount:23, status:"active", createdAt:"2025-12-03 11:22:08", children:["luk-002::PHP","luk-005::PHP"] },
+      "luk-002::PHP": { sysId:"AH-002-S1", user:"luk-002", accountType:"游戏", currency:"PHP", shareRatio:null, balance:1_500, subBalance:0, totalBalance:1_500, subCount:0, status:"active", createdAt:"2026-04-12", children:[] },
+      "luk-005::PHP": { sysId:"AH-002-S2", user:"luk-005", accountType:"游戏", currency:"PHP", shareRatio:null, balance:2_139_000, subBalance:0, totalBalance:2_139_000, subCount:0, status:"active", createdAt:"2026-04-20", children:[] },
+
+      // === diamond / USD 树 ===
+      "diamond::USD": { sysId:"AH-003", user:"diamond", accountType:"普通(顶代)", currency:"USD", shareRatio:0.25, balance:24_890.55, subBalance:38_120.20, totalBalance:63_010.75, subCount:67, status:"active", createdAt:"2025-09-25 15:48:19", children:["dia-014::USD","dia-021::USD"] },
+      "dia-014::USD": { sysId:"AH-003-S1", user:"dia-014", accountType:"游戏", currency:"USD", shareRatio:null, balance:1_200, subBalance:0, totalBalance:1_200, subCount:0, status:"active", createdAt:"2026-04-15", children:[] },
+      "dia-021::USD": { sysId:"AH-003-S2", user:"dia-021", accountType:"游戏", currency:"USD", shareRatio:null, balance:36_920.20, subBalance:0, totalBalance:36_920.20, subCount:0, status:"active", createdAt:"2026-04-22", children:[] },
+
+      // === emerald / USD 树 (frozen, 无下线) ===
+      "emerald::USD": { sysId:"AH-004", user:"emerald", accountType:"普通(顶代)", currency:"USD", shareRatio:0.20, balance:0, subBalance:0, totalBalance:0, subCount:12, status:"frozen", createdAt:"2026-01-08 14:25:11", children:[] },
+
+      // === sapphire / KRW 树 ===
+      "sapphire::KRW": { sysId:"AH-005", user:"sapphire", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.18, balance:3_240_000, subBalance:11_840_000, totalBalance:15_080_000, subCount:34, status:"active", createdAt:"2026-02-14 16:32:55", children:["sap-014::KRW","sap-002::KRW"] },
+      "sap-014::KRW": { sysId:"AH-005-S1", user:"sap-014", accountType:"游戏", currency:"KRW", shareRatio:null, balance:7_840_000, subBalance:0, totalBalance:7_840_000, subCount:0, status:"active", createdAt:"2026-03-30", children:[] },
+      "sap-002::KRW": { sysId:"AH-005-S2", user:"sap-002", accountType:"游戏", currency:"KRW", shareRatio:null, balance:4_000_000, subBalance:0, totalBalance:4_000_000, subCount:0, status:"active", createdAt:"2026-04-05", children:[] },
+
+      // === goldenstar / KRW 树 (pending, 无下线) ===
+      "goldenstar::KRW": { sysId:"AH-006", user:"goldenstar", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.22, balance:1_200_000, subBalance:0, totalBalance:1_200_000, subCount:0, status:"pending", createdAt:"2026-04-25 10:14:22", children:[] },
+    };
+    // 顶代行 = 列表起点 (按多币种 N 行)
+    const TOP_AGENT_KEYS = ["qweqwe::KRW","qweqwe::USD","lucky88::PHP","diamond::USD","emerald::USD","sapphire::KRW","goldenstar::KRW"];
 
     const MOCK_BETS = [
       { id:"BET-20260429-0042", playerId:"P-qw-008", topAgent:"qweqwe", provider:"BBIN 体育", gameType:"体育 ⚽", betTime:"2026-04-29 16:08:22", stake:120_000, payout:0, winLoss:0, currency:"KRW", status:"未结算" },
@@ -225,26 +257,56 @@
       const [search, setSearch] = useState("");
       const [statusFilter, setStatusFilter] = useState("all");
       const [modal, setModal] = useState(null);
+      const [expanded, setExpanded] = useState(new Set());
       const cols = ROLES[role].agentCols;
 
-      const list = useMemo(() => TOP_AGENTS.filter(a => {
-        if (statusFilter !== "all" && a.status !== statusFilter) return false;
-        if (search && !(a.user.includes(search) || a.sysId.toLowerCase().includes(search.toLowerCase()))) return false;
-        return true;
-      }), [search, statusFilter]);
+      // Tree 扁平化: 顶代行先过筛选; 下线行只在父级展开时才出现 (V0.1 同款懒加载)
+      const rows = useMemo(() => {
+        const out = [];
+        function walk(key, depth) {
+          const node = ACCOUNTS[key];
+          if (!node) return;
+          if (depth === 0) {
+            if (statusFilter !== "all" && node.status !== statusFilter) return;
+            if (search && !(node.user.includes(search) || node.sysId.toLowerCase().includes(search.toLowerCase()))) return;
+          }
+          out.push({ ...node, key, depth });
+          if (expanded.has(key)) {
+            (node.children || []).forEach(child => walk(child, depth + 1));
+          }
+        }
+        TOP_AGENT_KEYS.forEach(k => walk(k, 0));
+        return out;
+      }, [search, statusFilter, expanded]);
+
+      const toggle = (key) => {
+        const next = new Set(expanded);
+        if (next.has(key)) next.delete(key); else next.add(key);
+        setExpanded(next);
+      };
 
       // 字段集 (Sammy 2026-04-29 拍 13 列, 砍昵称/佣金率上限/本月投注/本月佣金/最近登录入详情)
+      // 占成对下线层占位显 — (Sammy 2026-04-29 「下线层暂未支持占成」)
       const colDefs = [
         { id:1, label:"系统户口号", render:a => <span className="mono text-muted">{a.sysId}</span> },
-        { id:2, label:"用户账号", render:a => <span className="mono text-cool">{a.user}</span> },
+        { id:2, label:"用户账号", render:a => (
+          <span className="inline-flex items-center" style={{paddingLeft: a.depth * 16}}>
+            {(a.children && a.children.length > 0) ? (
+              <span className="cursor-pointer text-cool" onClick={()=>toggle(a.key)} style={{marginRight:6,userSelect:"none",width:14,display:"inline-block"}}>
+                {expanded.has(a.key) ? "▾" : "▸"}
+              </span>
+            ) : <span style={{display:"inline-block",width:20}}></span>}
+            <span className={a.depth === 0 ? "mono text-cool" : "mono"}>{a.user}</span>
+          </span>
+        ) },
         { id:3, label:"下线数", render:a => <span className="num">{a.subCount}</span> },
         { id:4, label:"账号状态", render:a => <StatusChip status={a.status}/> },
         { id:5, label:"币种", render:a => <span className="chip chip-cool">{a.currency}</span> },
-        { id:6, label:"占成", render:a => <span className="num">{fmtPct(a.shareRatio)}</span> },
+        { id:6, label:"占成", render:a => a.shareRatio == null ? <span className="text-faint">—</span> : <span className="num">{fmtPct(a.shareRatio)}</span> },
         { id:7, label:"账户余额", render:a => <span className="num">{fmtMoney(a.balance, a.currency)}</span> },
         { id:8, label:"下线余额", render:a => <span className="num text-muted">{fmtMoney(a.subBalance, a.currency)}</span> },
         { id:9, label:"总线余额", render:a => <span className="num text-cool">{fmtMoney(a.totalBalance, a.currency)}</span> },
-        { id:10, label:"账号类型", render:a => <span className="chip chip-info">{a.accountType}</span> },
+        { id:10, label:"账号类型", render:a => <span className={"chip " + (a.accountType === "普通(顶代)" ? "chip-cool" : a.accountType === "代理" ? "chip-warn" : "chip-info")}>{a.accountType}</span> },
         { id:11, label:"开户时间", render:a => <span className="text-muted" style={{fontSize:12}}>{a.createdAt}</span> },
       ].filter(c => cols.includes(c.id));
 
@@ -269,7 +331,8 @@
               <option value="frozen">已冻结</option>
               <option value="pending">待处理</option>
             </select>
-            <span className="text-xs text-faint">共 {list.length} 行</span>
+            <span className="text-xs text-faint">共 {rows.filter(r=>r.depth===0).length} 顶代行  ·  当前渲染 {rows.length} 行(含展开)</span>
+            <button className="btn btn-ghost" style={{padding:"6px 12px",fontSize:12}} onClick={()=>setExpanded(new Set())} disabled={expanded.size===0}>全部收起</button>
           </div>
           <div className="bg-panel border border-line rounded-lg overflow-hidden">
             <div className="scroll-x">
@@ -281,8 +344,8 @@
                   </tr>
                 </thead>
                 <tbody>
-                  {list.map(a => (
-                    <tr key={a.sysId + "-" + a.currency}>
+                  {rows.map(a => (
+                    <tr key={a.key} style={a.depth > 0 ? {background:"rgba(74,158,255,0.04)"} : {}}>
                       {colDefs.map(c => <td key={c.id}>{c.render(a)}</td>)}
                       {canWrite && <td>
                         <div className="flex gap-2">
@@ -333,26 +396,30 @@
           </>}/>;
       }
       if (type === "shareRatio") {
+        const isSubAccount = agent.accountType !== "普通(顶代)";
         return <PasswordModal title={"调整占成:" + agent.user + " · " + agent.currency} onClose={onClose} onConfirm={onConfirm}
           fields={<>
+            {isSubAccount && <div className="text-xs p-2 rounded" style={{background:"#2A2415",color:"#F0B93A"}}>⚠ 下线层占成尚未支持,本字段仅占位。Q-S11 议题待。</div>}
             <div className="bg-card border border-line rounded p-3 text-xs">
-              <div>顶代:<span className="mono text-cool">{agent.user}</span>  ·  币种 {agent.currency}</div>
-              <div className="mt-1 text-muted">当前占成:{fmtPct(agent.shareRatio)}</div>
+              <div>{agent.accountType}:<span className="mono text-cool">{agent.user}</span>  ·  币种 {agent.currency}</div>
+              <div className="mt-1 text-muted">当前占成:{agent.shareRatio == null ? "— (占位)" : fmtPct(agent.shareRatio)}</div>
               <div className="mt-1 text-muted">当前余额:{fmtMoney(agent.balance, agent.currency)}</div>
             </div>
-            <div><label className="block text-xs text-muted mb-1">新占成 *</label><input className="input" placeholder="例:25%(0~100)"/></div>
+            <div><label className="block text-xs text-muted mb-1">新占成 *</label><input className="input" placeholder="例:25%(0~100)" disabled={isSubAccount}/></div>
             <div className="text-xs text-faint">说明:占成只影响后续上下分扣款公式,不重算历史交易。同顶代的其他币种占成不受影响。</div>
           </>}/>;
       }
       if (type === "currency") {
+        const isPlayer = agent.accountType === "游戏";
         return <PasswordModal title={"调币种:" + agent.user + " · 当前 " + agent.currency} onClose={onClose} onConfirm={onConfirm}
           fields={<>
+            {isPlayer && <div className="text-xs p-2 rounded" style={{background:"#2A2415",color:"#F0B93A"}}>⚠ 玩家币种继承上级方案,本动作建议在代理层操作。</div>}
             <div className="bg-card border border-line rounded p-3 text-xs">
-              <div>顶代:<span className="mono text-cool">{agent.user}</span></div>
+              <div>{agent.accountType}:<span className="mono text-cool">{agent.user}</span></div>
               <div className="mt-1 text-muted">当前币种:<span className="chip chip-cool">{agent.currency}</span>  ·  当前余额 {fmtMoney(agent.balance, agent.currency)}</div>
             </div>
             <div><label className="block text-xs text-muted mb-1">目标币种 *</label><select className="input"><option>KRW</option><option>USD</option><option>PHP</option><option>CNY</option></select></div>
-            <div><label className="block text-xs text-muted mb-1">新币种占成 *</label><input className="input" placeholder="例:20%"/></div>
+            <div><label className="block text-xs text-muted mb-1">新币种占成 *</label><input className="input" placeholder="例:20%" disabled={agent.accountType !== "普通(顶代)"}/></div>
             <div className="text-xs" style={{color:"#FF6B6B"}}>⚠ 沿用 B 端 FN-ACC-12 规则:原币种余额非零时本动作硬阻断,需先回收三方平台余额 + 走"切币种"流程。本原型仅展示弹窗骨架。</div>
           </>}/>;
       }
