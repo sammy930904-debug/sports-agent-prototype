@@ -99,7 +99,7 @@
     //   B↔S 命名分歧: B 端字段叫 id, S 端字段叫 sysId (Q-S15 议题待对齐)
     const ACCOUNTS = {
       // === qweqwe / KRW 树 (4 层:顶代→代理→孙代理→玩家) ===
-      "qweqwe::KRW": { sysId:"qweqwe", user:"qweqwe", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.20, balance:12_580_000, subBalance:90_820_000, totalBalance:103_400_000, subCount:6, status:"active", createdAt:"2025-11-12 09:14:33", children:["carry01::KRW","eva_ph::KRW"] },
+      "qweqwe::KRW": { sysId:"qweqwe", user:"qweqwe", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.1875, balance:12_580_000, subBalance:90_820_000, totalBalance:103_400_000, subCount:6, status:"active", createdAt:"2025-11-12 09:14:33", children:["carry01::KRW","eva_ph::KRW"] },
       "carry01::KRW": { sysId:"qweqwe-1", user:"carry01", accountType:"代理", currency:"KRW", shareRatio:null, balance:50_000_000, subBalance:32_820_000, totalBalance:82_820_000, subCount:4, status:"active", createdAt:"2026-02-10", children:["alice88::KRW","dave_y::KRW","zoe_ph::KRW"] },
       "alice88::KRW": { sysId:"qweqwe-1-1", user:"alice88", accountType:"代理", currency:"KRW", shareRatio:null, balance:30_000_000, subBalance:1_500_000, totalBalance:31_500_000, subCount:1, status:"active", createdAt:"2026-02-28", children:["bob_hi::KRW"] },
       "bob_hi::KRW": { sysId:"qweqwe-1-1-1", user:"bob_hi", accountType:"游戏", currency:"KRW", shareRatio:null, balance:1_500_000, subBalance:0, totalBalance:1_500_000, subCount:0, status:"active", createdAt:"2026-03-15", children:[] },
@@ -108,33 +108,39 @@
       "eva_ph::KRW": { sysId:"qweqwe-2", user:"eva_ph", accountType:"游戏", currency:"KRW", shareRatio:null, balance:8_000_000, subBalance:0, totalBalance:8_000_000, subCount:0, status:"active", createdAt:"2026-02-20", children:[] },
 
       // === qweqwe / USD 树 ===
-      "qweqwe::USD": { sysId:"qweqwe", user:"qweqwe", accountType:"普通(顶代)", currency:"USD", shareRatio:0.30, balance:8_240, subBalance:42_180, totalBalance:50_420, subCount:2, status:"active", createdAt:"2025-11-12 09:14:33", children:["frank_us::USD"] },
+      "qweqwe::USD": { sysId:"qweqwe", user:"qweqwe", accountType:"普通(顶代)", currency:"USD", shareRatio:0.275, balance:8_240, subBalance:42_180, totalBalance:50_420, subCount:2, status:"active", createdAt:"2025-11-12 09:14:33", children:["frank_us::USD"] },
       "frank_us::USD": { sysId:"qweqwe-3", user:"frank_us", accountType:"代理", currency:"USD", shareRatio:null, balance:30_000, subBalance:12_180, totalBalance:42_180, subCount:1, status:"active", createdAt:"2026-03-01", children:["gina_us::USD"] },
       "gina_us::USD": { sysId:"qweqwe-3-1", user:"gina_us", accountType:"游戏", currency:"USD", shareRatio:null, balance:12_180, subBalance:0, totalBalance:12_180, subCount:0, status:"active", createdAt:"2026-03-20", children:[] },
 
       // === lucky88 / PHP 树 ===
-      "lucky88::PHP": { sysId:"lucky88", user:"lucky88", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.15, balance:894_320, subBalance:2_140_500, totalBalance:3_034_820, subCount:2, status:"active", createdAt:"2025-12-03 11:22:08", children:["luk-002::PHP","luk-005::PHP"] },
+      "lucky88::PHP": { sysId:"lucky88", user:"lucky88", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.125, balance:894_320, subBalance:2_140_500, totalBalance:3_034_820, subCount:2, status:"active", createdAt:"2025-12-03 11:22:08", children:["luk-002::PHP","luk-005::PHP"] },
       "luk-002::PHP": { sysId:"lucky88-1", user:"luk-002", accountType:"游戏", currency:"PHP", shareRatio:null, balance:1_500, subBalance:0, totalBalance:1_500, subCount:0, status:"active", createdAt:"2026-04-12", children:[] },
       "luk-005::PHP": { sysId:"lucky88-2", user:"luk-005", accountType:"游戏", currency:"PHP", shareRatio:null, balance:2_139_000, subBalance:0, totalBalance:2_139_000, subCount:0, status:"active", createdAt:"2026-04-20", children:[] },
 
       // === diamond / USD 树 ===
-      "diamond::USD": { sysId:"diamond", user:"diamond", accountType:"普通(顶代)", currency:"USD", shareRatio:0.25, balance:24_890.55, subBalance:38_120.20, totalBalance:63_010.75, subCount:2, status:"active", createdAt:"2025-09-25 15:48:19", children:["dia-014::USD","dia-021::USD"] },
+      "diamond::USD": { sysId:"diamond", user:"diamond", accountType:"普通(顶代)", currency:"USD", shareRatio:0.225, balance:24_890.55, subBalance:38_120.20, totalBalance:63_010.75, subCount:2, status:"active", createdAt:"2025-09-25 15:48:19", children:["dia-014::USD","dia-021::USD"] },
       "dia-014::USD": { sysId:"diamond-1", user:"dia-014", accountType:"游戏", currency:"USD", shareRatio:null, balance:1_200, subBalance:0, totalBalance:1_200, subCount:0, status:"active", createdAt:"2026-04-15", children:[] },
       "dia-021::USD": { sysId:"diamond-2", user:"dia-021", accountType:"游戏", currency:"USD", shareRatio:null, balance:36_920.20, subBalance:0, totalBalance:36_920.20, subCount:0, status:"active", createdAt:"2026-04-22", children:[] },
 
       // === emerald / USD 树 (frozen, 无下线) ===
-      "emerald::USD": { sysId:"emerald", user:"emerald", accountType:"普通(顶代)", currency:"USD", shareRatio:0.20, balance:0, subBalance:0, totalBalance:0, subCount:0, status:"frozen", createdAt:"2026-01-08 14:25:11", children:[] },
+      "emerald::USD": { sysId:"emerald", user:"emerald", accountType:"普通(顶代)", currency:"USD", shareRatio:0.05, balance:0, subBalance:0, totalBalance:0, subCount:0, status:"frozen", createdAt:"2025-06-08 14:25:11", children:[] },
 
       // === sapphire / KRW 树 ===
-      "sapphire::KRW": { sysId:"sapphire", user:"sapphire", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.18, balance:3_240_000, subBalance:11_840_000, totalBalance:15_080_000, subCount:2, status:"active", createdAt:"2026-02-14 16:32:55", children:["sap-014::KRW","sap-002::KRW"] },
+      "sapphire::KRW": { sysId:"sapphire", user:"sapphire", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.165, balance:3_240_000, subBalance:11_840_000, totalBalance:15_080_000, subCount:2, status:"active", createdAt:"2026-02-14 16:32:55", children:["sap-014::KRW","sap-002::KRW"] },
       "sap-014::KRW": { sysId:"sapphire-1", user:"sap-014", accountType:"游戏", currency:"KRW", shareRatio:null, balance:7_840_000, subBalance:0, totalBalance:7_840_000, subCount:0, status:"active", createdAt:"2026-03-30", children:[] },
       "sap-002::KRW": { sysId:"sapphire-2", user:"sap-002", accountType:"游戏", currency:"KRW", shareRatio:null, balance:4_000_000, subBalance:0, totalBalance:4_000_000, subCount:0, status:"active", createdAt:"2026-04-05", children:[] },
 
       // === goldenstar / KRW 树 (pending, 无下线) ===
-      "goldenstar::KRW": { sysId:"goldenstar", user:"goldenstar", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.22, balance:1_200_000, subBalance:0, totalBalance:1_200_000, subCount:0, status:"pending", createdAt:"2026-04-25 10:14:22", children:[] },
+      "goldenstar::KRW": { sysId:"goldenstar", user:"goldenstar", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.30, balance:1_200_000, subBalance:0, totalBalance:1_200_000, subCount:0, status:"pending", createdAt:"2026-04-25 10:14:22", children:[] },
+
+      // === bigwhale / CNY 大客户 (老顶代 / 低占成 / 大额) ===
+      "bigwhale::CNY": { sysId:"bigwhale", user:"bigwhale", accountType:"普通(顶代)", currency:"CNY", shareRatio:0.08, balance:50_000_000, subBalance:72_400_000, totalBalance:122_400_000, subCount:138, status:"active", createdAt:"2024-08-15 10:20:30", children:[] },
+
+      // === rookie01 / THB 新开户 (高占成 / 余额 0 / 待审核) ===
+      "rookie01::THB": { sysId:"rookie01", user:"rookie01", accountType:"普通(顶代)", currency:"THB", shareRatio:0.33, balance:0, subBalance:0, totalBalance:0, subCount:0, status:"pending", createdAt:"2026-04-28 18:42:11", children:[] },
     };
     // 顶代行 = 列表起点 (按多币种 N 行)
-    const TOP_AGENT_KEYS = ["qweqwe::KRW","qweqwe::USD","lucky88::PHP","diamond::USD","emerald::USD","sapphire::KRW","goldenstar::KRW"];
+    const TOP_AGENT_KEYS = ["qweqwe::KRW","qweqwe::USD","lucky88::PHP","diamond::USD","emerald::USD","sapphire::KRW","goldenstar::KRW","bigwhale::CNY","rookie01::THB"];
 
     const MOCK_BETS = [
       { id:"BET-20260429-0042", playerId:"P-qw-008", topAgent:"qweqwe", provider:"BBIN 体育", gameType:"体育 ⚽", betTime:"2026-04-29 16:08:22", stake:120_000, payout:0, winLoss:0, currency:"KRW", status:"未结算" },
