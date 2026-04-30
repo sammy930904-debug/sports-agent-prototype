@@ -131,13 +131,13 @@
       "sap-002::KRW": { sysId:"sapphire-2", user:"sap-002", accountType:"游戏", currency:"KRW", shareRatio:0.095, balance:4_000_000, subBalance:0, totalBalance:4_000_000, subCount:0, status:"active", createdAt:"2026-04-05 14:50:22", children:[] },
 
       // === goldenstar / KRW 树 (pending, 无下线) ===
-      "goldenstar::KRW": { sysId:"goldenstar", user:"goldenstar", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.30, balance:1_200_000, subBalance:0, totalBalance:1_200_000, subCount:0, status:"pending", createdAt:"2026-04-25 10:14:22", children:[] },
+      "goldenstar::KRW": { sysId:"goldenstar", user:"goldenstar", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.30, balance:1_200_000, subBalance:0, totalBalance:1_200_000, subCount:0, status:"active", createdAt:"2026-04-25 10:14:22", children:[] },
 
       // === bigwhale / CNY 大客户 (老顶代 / 低占成 / 大额) ===
       "bigwhale::CNY": { sysId:"bigwhale", user:"bigwhale", accountType:"普通(顶代)", currency:"CNY", shareRatio:0.08, balance:50_000_000, subBalance:72_400_000, totalBalance:122_400_000, subCount:138, status:"active", createdAt:"2024-08-15 10:20:30", children:[] },
 
       // === rookie01 / THB 新开户 (高占成 / 余额 0 / 待审核) ===
-      "rookie01::THB": { sysId:"rookie01", user:"rookie01", accountType:"普通(顶代)", currency:"THB", shareRatio:0.33, balance:0, subBalance:0, totalBalance:0, subCount:0, status:"pending", createdAt:"2026-04-28 18:42:11", children:[] },
+      "rookie01::THB": { sysId:"rookie01", user:"rookie01", accountType:"普通(顶代)", currency:"THB", shareRatio:0.33, balance:0, subBalance:0, totalBalance:0, subCount:0, status:"active", createdAt:"2026-04-28 18:42:11", children:[] },
     };
     // 顶代行 = 列表起点 (按多币种 N 行)
     const TOP_AGENT_KEYS = ["qweqwe::KRW","qweqwe::USD","lucky88::PHP","diamond::USD","emerald::USD","sapphire::KRW","goldenstar::KRW","bigwhale::CNY","rookie01::THB"];
@@ -228,8 +228,8 @@
     };
     const fmtPct = (n) => (n * 100).toFixed(2) + "%";
     const StatusChip = ({ status }) => {
-      const map = { active:"chip-active", frozen:"chip-frozen", pending:"chip-pending", settled:"chip-settled", void:"chip-void", "未结算":"chip-pending", "已结算":"chip-settled" };
-      const txt = { active:"启用", frozen:"已冻结", pending:"待处理", settled:"已结算", void:"作废" };
+      const map = { active:"chip-active", frozen:"chip-frozen", settled:"chip-settled", void:"chip-void", "未结算":"chip-pending", "已结算":"chip-settled" };
+      const txt = { active:"启用", frozen:"已冻结", settled:"已结算", void:"作废" };
       return <span className={"chip " + (map[status] || "chip-info")}>{txt[status] || status}</span>;
     };
 
@@ -392,7 +392,6 @@
                   <option value="all">全部</option>
                   <option value="active">启用</option>
                   <option value="frozen">已冻结</option>
-                  <option value="pending">待处理</option>
                 </select>
               </div>
               <div>
