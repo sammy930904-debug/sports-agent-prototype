@@ -459,11 +459,11 @@
                     <tr key={a.key} style={a.depth > 0 ? {background:"rgba(74,158,255,0.04)"} : {}}>
                       {colDefs.map(c => <td key={c.id}>{c.render(a)}</td>)}
                       {canWrite && <td>
-                        <div className="flex gap-2 flex-wrap">
-                          {(isTop || isAgent) && <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"newSub",agent:a})}>新增下级</button>}
+                        <div style={{display:"grid",gridTemplateColumns:"auto auto",gap:"4px"}}>
+                          {(isTop || isAgent) ? <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"newSub",agent:a})}>新增下级</button> : <span/>}
+                          {(isAgent || isPlayer) ? <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,color:"#5BC97C",borderColor:"#2A4534"}} onClick={()=>setModal({type:"credit",agent:a})}>上分</button> : <span/>}
                           <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setModal({type:"editProfile",agent:a})}>修改资料</button>
-                          {(isAgent || isPlayer) && <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,color:"#5BC97C",borderColor:"#2A4534"}} onClick={()=>setModal({type:"credit",agent:a})}>上分</button>}
-                          {(isAgent || isPlayer) && <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,color:"#FF8B6B",borderColor:"#5A2D33"}} onClick={()=>setModal({type:"debit",agent:a})}>下分</button>}
+                          {(isAgent || isPlayer) ? <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,color:"#FF8B6B",borderColor:"#5A2D33"}} onClick={()=>setModal({type:"debit",agent:a})}>下分</button> : <span/>}
                         </div>
                       </td>}
                     </tr>
