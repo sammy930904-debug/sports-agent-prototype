@@ -459,11 +459,11 @@
                     <tr key={a.key} style={a.depth > 0 ? {background:"rgba(74,158,255,0.04)"} : {}}>
                       {colDefs.map(c => <td key={c.id}>{c.render(a)}</td>)}
                       {canWrite && <td>
-                        <div style={{display:"grid",gridTemplateColumns:"82px 82px",gap:"4px"}}>
-                          {(isTop || isAgent) ? <button className="btn btn-ghost" style={{padding:"4px 0",fontSize:11,width:82,textAlign:"center"}} onClick={()=>setModal({type:"newSub",agent:a})}>新增下级</button> : <div style={{width:82,height:24}}/>}
-                          {(isAgent || isPlayer) ? <button className="btn btn-ghost" style={{padding:"4px 0",fontSize:11,width:82,textAlign:"center",color:"#5BC97C",borderColor:"#2A4534"}} onClick={()=>setModal({type:"credit",agent:a})}>上分</button> : <div style={{width:82,height:24}}/>}
-                          <button className="btn btn-ghost" style={{padding:"4px 0",fontSize:11,width:82,textAlign:"center"}} onClick={()=>setModal({type:"editProfile",agent:a})}>修改资料</button>
-                          {(isAgent || isPlayer) ? <button className="btn btn-ghost" style={{padding:"4px 0",fontSize:11,width:82,textAlign:"center",color:"#FF8B6B",borderColor:"#5A2D33"}} onClick={()=>setModal({type:"debit",agent:a})}>下分</button> : <div style={{width:82,height:24}}/>}
+                        <div style={{display:"flex",gap:"4px"}}>
+                          {(isTop || isAgent) ? <button className="btn btn-ghost" style={{padding:"4px 0",fontSize:11,width:70,textAlign:"center"}} onClick={()=>setModal({type:"newSub",agent:a})}>新增下级</button> : <div style={{width:70}}/>}
+                          <button className="btn btn-ghost" style={{padding:"4px 0",fontSize:11,width:70,textAlign:"center"}} onClick={()=>setModal({type:"editProfile",agent:a})}>修改资料</button>
+                          {(isAgent || isPlayer) ? <button className="btn btn-ghost" style={{padding:"4px 0",fontSize:11,width:54,textAlign:"center",color:"#5BC97C",borderColor:"#2A4534"}} onClick={()=>setModal({type:"credit",agent:a})}>上分</button> : <div style={{width:54}}/>}
+                          {(isAgent || isPlayer) ? <button className="btn btn-ghost" style={{padding:"4px 0",fontSize:11,width:54,textAlign:"center",color:"#FF8B6B",borderColor:"#5A2D33"}} onClick={()=>setModal({type:"debit",agent:a})}>下分</button> : <div style={{width:54}}/>}
                         </div>
                       </td>}
                     </tr>
