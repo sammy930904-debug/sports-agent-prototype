@@ -406,6 +406,48 @@
     };
     const fmtPct = (n) => (n * 100).toFixed(2) + "%";
 
+    // IP 白名单校验工具 (V0.2 支持 IPv4 单 IP + CIDR /N 段)
+    // 真实开发可换成 ip-cidr / netmask 库; mock 用纯 JS 实现
+    const ipToInt = (ip) => {
+      const parts = ip.split(".");
+      if (parts.length !== 4) return null;
+      let n = 0;
+      for (const p of parts) {
+        const v = parseInt(p, 10);
+        if (!Number.isFinite(v) || v < 0 || v > 255) return null;
+        n = (n * 256) + v;
+      }
+      return n;
+    };
+    const isValidIPv4 = (ip) => ipToInt(ip) !== null;
+    const isValidCIDR = (cidr) => {
+      const m = cidr.match(/^(\d{1,3}(?:\.\d{1,3}){3})\/(\d{1,2})$/);
+      if (!m) return false;
+      if (!isValidIPv4(m[1])) return false;
+      const n = parseInt(m[2], 10);
+      return n >= 0 && n <= 32;
+    };
+    const isValidIPOrCIDR = (s) => isValidIPv4(s) || isValidCIDR(s);
+    // 检查 ip 是否命中 entry (单 IP 完全匹配 OR CIDR 段包含)
+    const ipMatches = (ip, entry) => {
+      if (!entry.includes("/")) return ip === entry;
+      const m = entry.match(/^(\d{1,3}(?:\.\d{1,3}){3})\/(\d{1,2})$/);
+      if (!m) return false;
+      const baseInt = ipToInt(m[1]);
+      const ipInt = ipToInt(ip);
+      if (baseInt === null || ipInt === null) return false;
+      const prefix = parseInt(m[2], 10);
+      if (prefix === 0) return true;
+      const mask = (~((1 << (32 - prefix)) - 1)) >>> 0;
+      return (baseInt & mask) === (ipInt & mask);
+    };
+    // 白名单准入校验: 启用条目为空 = 不限制 (放行); 否则 ip 必须命中至少 1 条启用项
+    const checkIPAllowed = (ip, whitelist) => {
+      const enabled = whitelist.filter(w => w.enabled);
+      if (enabled.length === 0) return true; // 无启用项 = 不限制
+      return enabled.some(w => ipMatches(ip, w.ip));
+    };
+
     // 导出 Excel 工具 (V0.2 仅原型 alert, 真实开发用 xlsx 库)
     // 命名规则 (Sammy 2026-04-30 拍): YYYY-MM-DD_菜单名.xlsx, 全量导出 (不按筛选)
     const doExport = (menuName, totalCount) => {
@@ -1661,16 +1703,25 @@
     }
 
     // ============== 登录页 ==============
-    function LoginPage({ onLogin }) {
+    // V0.2 加 IP 白名单校验 (Sammy 2026-04-30 拍 B 方案):
+    //   登录提交时检查 simIP 是否命中 ipWhitelist 启用项;无启用项 = 不限制
+    //   simIP 为"模拟登录 IP"输入框, 真实开发由后端从 request 取
+    function LoginPage({ onLogin, ipWhitelist }) {
       const [user, setUser] = useState("");
       const [pwd, setPwd] = useState("");
       const [showPwd, setShowPwd] = useState(false);
+      const [simIP, setSimIP] = useState("10.4.2.18");  // 默认办公网内 (跟 mock 白名单 10.4.2.0/24 命中)
       const [err, setErr] = useState("");
       const submit = () => {
+        // IP 白名单校验先于账号密码 (跟生产顺序一致 - IP 命中拒登先过)
+        if (!checkIPAllowed(simIP, ipWhitelist)) {
+          setErr("IP "+simIP+" 不在白名单内,拒绝登录");
+          return;
+        }
         const staff = INITIAL_STAFF.find(s => s.user === user.trim());
         if (!staff) { setErr("员工账号不存在"); return; }
         if (pwd !== "123456") { setErr("登录密码错误"); return; }  // V0.2 mock: 所有员工密码统一 123456
-        onLogin(staff);
+        onLogin(staff, simIP);
       };
       return (
         <div className="min-h-screen bg-app flex items-center justify-center" style={{padding:"24px"}}>
@@ -1691,13 +1742,18 @@
                 <span onClick={()=>setShowPwd(!showPwd)} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",color:"#9AA4B5",cursor:"pointer",fontSize:12,userSelect:"none"}}>{showPwd ? "🙈" : "👁"}</span>
               </div>
             </div>
+            <div className="mb-3" style={{padding:"8px 10px",background:"#0F141C",border:"1px dashed #2A3648",borderRadius:6}}>
+              <label className="block text-xs text-muted mb-1">模拟登录 IP <span className="text-faint" style={{fontSize:10}}>(原型用,真实开发由后端从 request 取)</span></label>
+              <input className="input mono" style={{fontSize:13}} value={simIP} onChange={e=>setSimIP(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") submit();}} placeholder="例: 10.4.2.18"/>
+            </div>
             {err && <div className="text-xs mb-3" style={{color:"#FF6B6B"}}>{err}</div>}
             <button className="btn btn-primary w-full" style={{padding:"10px 0",marginTop:6}} onClick={submit}>登录</button>
             <div className="text-xs text-faint mt-4" style={{fontSize:10,color:"#5C6878"}}>
-              V0.2 mock: admin / risk-mei / finance-luo / ops-chen,密码统一 123456
+              V0.2 mock 员工: admin / risk-mei / finance-luo / ops-chen,密码统一 123456
             </div>
             <div className="text-xs text-faint mt-2" style={{fontSize:10,color:"#5C6878"}}>
-              ⚠ V0.2 暂未实现 IP 白名单 / 双因素认证 / 登录失败锁定
+              V0.2 mock 白名单:10.4.2.0/24(办公网段) / 118.139.32.18(运营家用)<br/>
+              试 10.4.2.18(命中)vs 8.8.8.8(拒登)
             </div>
           </div>
         </div>
@@ -1856,8 +1912,42 @@
     }
 
     // ============== IP 白名单页 (系统管理 / IP 白名单) ==============
-    function IPWhitelistPage() {
-      const [list] = useState(() => [...INITIAL_IPWHITE]);
+    // V0.2 完整功能 (Sammy 2026-04-30 拍): 增删改启停 + 操作密码二次校验 + 防自锁 + 当前 IP 提示 + 命中拒登 (LoginPage 校验)
+    function IPWhitelistPage({ list, setList, currentLoginIP }) {
+      const [showAdd, setShowAdd] = useState(false);
+      const [confirmAction, setConfirmAction] = useState(null);  // { type:"toggle"|"delete", item }
+      const [opPwd, setOpPwd] = useState("");
+      const [opErr, setOpErr] = useState("");
+
+      const enabledCount = list.filter(w => w.enabled).length;
+      const isCurrentIPAllowed = enabledCount === 0 || list.filter(w => w.enabled).some(w => ipMatches(currentLoginIP, w.ip));
+
+      const doConfirm = () => {
+        if (opPwd !== "123456") { setOpErr("操作密码错误"); return; }
+        const { type, item } = confirmAction;
+        if (type === "toggle") {
+          // 防自锁:不能停用最后一条启用项 (会导致所有 IP 都拒登,包括当前登录员工)
+          if (item.enabled && enabledCount === 1) {
+            setOpErr("不能停用最后一条启用的白名单(否则所有 IP 都将拒登)"); return;
+          }
+          setList(list.map(w => w.id === item.id ? { ...w, enabled: !w.enabled } : w));
+        } else if (type === "delete") {
+          if (item.enabled && enabledCount === 1) {
+            setOpErr("不能删除最后一条启用的白名单(否则所有 IP 都将拒登)"); return;
+          }
+          setList(list.filter(w => w.id !== item.id));
+        }
+        setConfirmAction(null); setOpPwd(""); setOpErr("");
+      };
+
+      const handleAdd = (data) => {
+        const maxId = list.reduce((m, w) => Math.max(m, w.id), 0);
+        const now = new Date(); const pad = (n) => String(n).padStart(2,"0");
+        const createdAt = now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate())+" "+pad(now.getHours())+":"+pad(now.getMinutes())+":"+pad(now.getSeconds());
+        setList([...list, { id: maxId+1, ip:data.ip, label:data.label, enabled:data.enabled, createdAt }]);
+        setShowAdd(false);
+      };
+
       return (
         <div className="p-6">
           <div className="flex items-center justify-between mb-5">
@@ -1865,11 +1955,14 @@
               <h2 className="text-xl font-semibold">IP 白名单</h2>
               <p className="text-xs text-muted mt-1">仅 operator 可见 · 限定哪些 IP 段可登录总控后台 · 命中白名单外 IP 直接拒登</p>
             </div>
-            <button className="btn btn-ghost" disabled style={{padding:"8px 18px"}}>+ 新增白名单</button>
+            <button className="btn btn-primary" onClick={()=>setShowAdd(true)} style={{padding:"8px 18px"}}>+ 新增白名单</button>
           </div>
-          <div className="bg-cool-soft border border-cool rounded-lg p-3 mb-4 text-xs flex items-center gap-2" style={{background:"rgba(240,185,58,0.08)",borderColor:"#3D2F1A"}}>
-            <span style={{color:"#F0B93A"}}>⚠</span>
-            <span><b>V0.2 暂未实现:</b>原型仅展示 IP 白名单管理界面;新增 / 删除 / 启停切换 / 命中拒登逻辑后续版本实现。当前所有 IP 均可登录。</span>
+          <div className="bg-cool-soft border border-cool rounded-lg p-3 mb-4 text-xs flex items-start gap-2">
+            <span className="text-cool" style={{marginTop:1}}>ℹ</span>
+            <span>
+              <b>当前登录 IP:</b> <span className="mono text-cool">{currentLoginIP}</span> {isCurrentIPAllowed ? <span style={{color:"#5BC97C"}}>✓ 在白名单内</span> : <span style={{color:"#FF6B6B"}}>✗ 不在白名单内 (下次登录将被拒)</span>}
+              {" "}· <b>启用项 {enabledCount} 条</b>(0 条 = 所有 IP 均可登录)· 校验范围:LoginPage 提交时;停用 / 删除最后一条启用项有防自锁拦截
+            </span>
           </div>
           <div className="bg-panel border border-line rounded-lg overflow-hidden">
             <div className="scroll-x">
@@ -1885,13 +1978,77 @@
                       <td><span className={"chip " + (item.enabled ? "chip-active" : "chip-frozen")}>{item.enabled ? "启用" : "已停用"}</span></td>
                       <td className="text-muted" style={{fontSize:12}}>{item.createdAt}</td>
                       <td>
-                        <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,marginRight:4}} disabled>{item.enabled ? "停用" : "启用"}</button>
-                        <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,color:"#FF6B6B"}} disabled>删除</button>
+                        <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,marginRight:4}} onClick={()=>{setConfirmAction({type:"toggle",item}); setOpPwd(""); setOpErr("");}}>{item.enabled ? "停用" : "启用"}</button>
+                        <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,color:"#FF6B6B"}} onClick={()=>{setConfirmAction({type:"delete",item}); setOpPwd(""); setOpErr("");}}>删除</button>
                       </td>
                     </tr>
                   ))}
+                  {list.length === 0 && <tr><td colSpan="5" style={{textAlign:"center",padding:"20px",color:"#6B7280"}}>暂无白名单(所有 IP 均可登录)</td></tr>}
                 </tbody>
               </table>
+            </div>
+          </div>
+          {showAdd && <AddIPModal onClose={()=>setShowAdd(false)} onSubmit={handleAdd} existingIPs={list.map(w=>w.ip)}/>}
+          {confirmAction && (
+            <div className="modal-backdrop" onClick={()=>{setConfirmAction(null); setOpPwd(""); setOpErr("");}}>
+              <div className="modal" onClick={e=>e.stopPropagation()} style={{width:440}}>
+                <h3 className="text-base font-semibold mb-3">{confirmAction.type === "toggle" ? (confirmAction.item.enabled ? "确认停用?" : "确认启用?") : "确认删除?"}</h3>
+                <p className="text-sm text-muted mb-4">
+                  {confirmAction.type === "toggle"
+                    ? <>{confirmAction.item.enabled ? "停用" : "启用"} <span className="mono text-cool">{confirmAction.item.ip}</span> ({confirmAction.item.label})</>
+                    : <>删除 <span className="mono text-cool">{confirmAction.item.ip}</span> ({confirmAction.item.label}),无法恢复</>
+                  }
+                </p>
+                <div className="mb-3">
+                  <label className="block text-xs text-muted mb-1">操作密码 *</label>
+                  <input type="password" className="input" value={opPwd} onChange={e=>setOpPwd(e.target.value)} placeholder="当前登录员工的登录密码 (Mock: 123456)" autoFocus/>
+                </div>
+                {opErr && <div className="text-xs mb-3" style={{color:"#FF6B6B"}}>{opErr}</div>}
+                <div className="flex justify-end gap-2 mt-4">
+                  <button className="btn btn-ghost" onClick={()=>{setConfirmAction(null); setOpPwd(""); setOpErr("");}}>取消</button>
+                  <button className="btn btn-primary" style={confirmAction.type === "delete" ? {background:"#FF6B6B",borderColor:"#FF6B6B"} : {}} onClick={doConfirm}>确认</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function AddIPModal({ onClose, onSubmit, existingIPs }) {
+      const [ip, setIP] = useState("");
+      const [label, setLabel] = useState("");
+      const [enabled, setEnabled] = useState(true);
+      const [opPwd, setOpPwd] = useState("");
+      const [err, setErr] = useState("");
+      const submit = () => {
+        const ipTrim = ip.trim();
+        if (!ipTrim) { setErr("请输入 IP 或 IP 段"); return; }
+        if (!isValidIPOrCIDR(ipTrim)) { setErr("格式不合法,例:192.168.1.1 或 10.4.2.0/24"); return; }
+        if (existingIPs.includes(ipTrim)) { setErr("已存在该 IP / IP 段"); return; }
+        if (!label.trim()) { setErr("请输入备注(便于后期管理)"); return; }
+        if (opPwd !== "123456") { setErr("操作密码错误"); return; }
+        onSubmit({ ip: ipTrim, label: label.trim(), enabled });
+      };
+      return (
+        <div className="modal-backdrop" onClick={onClose}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{width:480}}>
+            <h3 className="text-base font-semibold mb-1">新增 IP 白名单</h3>
+            <p className="text-xs text-faint mb-4">支持单 IP(192.168.1.1)或 CIDR 段(10.4.2.0/24)</p>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">IP / IP 段 *</label><input className="input mono" value={ip} onChange={e=>setIP(e.target.value)} placeholder="例: 192.168.1.1 或 10.4.2.0/24" autoFocus/></div>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">备注 *</label><input className="input" value={label} onChange={e=>setLabel(e.target.value)} placeholder="例: 办公网段 / 运营 admin 家用"/></div>
+            <div className="mb-3">
+              <label className="block text-xs text-muted mb-1">初始状态</label>
+              <div className="flex gap-4 text-sm" style={{paddingTop:6}}>
+                <label><input type="radio" checked={enabled} onChange={()=>setEnabled(true)}/> <span className="ml-1">启用</span></label>
+                <label><input type="radio" checked={!enabled} onChange={()=>setEnabled(false)}/> <span className="ml-1">已停用</span></label>
+              </div>
+            </div>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">操作密码 *</label><input type="password" className="input" value={opPwd} onChange={e=>setOpPwd(e.target.value)} placeholder="当前登录员工的登录密码 (Mock: 123456)"/></div>
+            {err && <div className="text-xs mb-3" style={{color:"#FF6B6B"}}>{err}</div>}
+            <div className="flex justify-end gap-2 mt-4">
+              <button className="btn btn-ghost" onClick={onClose}>取消</button>
+              <button className="btn btn-primary" onClick={submit}>确认新增</button>
             </div>
           </div>
         </div>
@@ -1902,9 +2059,11 @@
     function App() {
       // ⚠ React Hooks 规则: 所有 hooks 必须在 early return 之前,且每次 render 调用顺序一致
       const [currentUser, setCurrentUser] = useState(null);  // null = 未登录
+      const [loginIP, setLoginIP] = useState(null);          // 登录时记录的 IP, 给右上块 / 操作日志展示
       const [active, setActive] = useState("agents");
       const [showChangePwd, setShowChangePwd] = useState(false);
       const [showUserMenu, setShowUserMenu] = useState(false);
+      const [ipWhitelist, setIpWhitelist] = useState(() => [...INITIAL_IPWHITE]);
 
       const role = currentUser ? currentUser.role : null;
       const r = role ? ROLES[role] : null;
@@ -1916,7 +2075,7 @@
       }, [role]);
 
       // 所有 hooks 调用完毕后再 early return (避免登录前后 hook 数量不一致引发 React 报错)
-      if (!currentUser) return <LoginPage onLogin={(staff)=>setCurrentUser(staff)}/>;
+      if (!currentUser) return <LoginPage onLogin={(staff, ip)=>{setCurrentUser(staff); setLoginIP(ip);}} ipWhitelist={ipWhitelist}/>;
 
       const Menu = ({ id, label, icon }) => visibleMenus.includes(id) && (
         <div className={"menu-item " + (active===id?"active":"")} onClick={()=>setActive(id)}>
@@ -1996,7 +2155,7 @@
               {active === "reports.ledger" && <LedgerPage role={role}/>}
               {active === "perm.staff" && <StaffPage currentUser={currentUser}/>}
               {active === "sys.audit" && <AuditPage role={role}/>}
-              {active === "sys.ipwhite" && <IPWhitelistPage/>}
+              {active === "sys.ipwhite" && <IPWhitelistPage list={ipWhitelist} setList={setIpWhitelist} currentLoginIP={loginIP || "10.4.2.18"}/>}
             </div>
           </main>
           {showChangePwd && <ChangePwdModal user={currentUser} onClose={()=>setShowChangePwd(false)} onConfirm={()=>{setShowChangePwd(false); alert("密码修改成功,请用新密码重新登录"); setCurrentUser(null);}}/>}
