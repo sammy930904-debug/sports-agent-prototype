@@ -9,7 +9,7 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <!-- 局部破例: 仅开户时间用 antd 4 RangePicker (native datetime-local 体验不够) -->
   <link rel="stylesheet" href="https://unpkg.com/antd@4.24.16/dist/antd.dark.min.css">
-  <script src="https://unpkg.com/moment@2.30.1/min/moment.min.js"></script>
+  <script src="https://unpkg.com/moment@2.30.1/min/moment-with-locales.min.js"></script>
   <script src="https://unpkg.com/antd@4.24.16/dist/antd-with-locales.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
@@ -69,6 +69,7 @@
   <script type="text/babel">
     const { useState, useMemo } = React;
     // antd 4 RangePicker (仅开户时间用, 其他筛选/UI 仍用 Tailwind)
+    moment.locale("zh-cn"); // 月份 / 星期 / 今天 等内部文案中文化
     const { DatePicker, ConfigProvider } = antd;
     const { RangePicker } = DatePicker;
     const zhCN = antd.locales && antd.locales.zh_CN;
