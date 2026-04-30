@@ -390,56 +390,37 @@
             <span className="text-cool">ℹ</span>
             <span><b>账号来源:</b>顶代账号由<b>账房侧</b>创建并下发户口(系统户口号 + 初始币种 + 初始占成),本页仅查看与管理(冻结 / 调占成 / 调币种),<b>不负责创建</b>。下线数 / 下线余额 / 总线余额 主信源在 B 端代理后台。Q-S7 / Q-S14 议题待。</span>
           </div>
-          <div className="bg-panel border border-line rounded-lg p-4 mb-4">
-            <div className="grid gap-3 mb-3" style={{gridTemplateColumns:"repeat(3, minmax(0, 1fr))"}}>
-              <div>
-                <label className="block text-xs text-muted mb-1">搜索</label>
-                <input className="input" placeholder="系统户口号 / 用户账号(支持下线穿透)" value={inSearch} onChange={e=>setInSearch(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+          <div className="bg-panel border border-line rounded-lg p-3 mb-4">
+            <div className="flex flex-wrap gap-2 items-center">
+              <input className="input" style={{width:240}} placeholder="搜索 系统户口号 / 用户账号" value={inSearch} onChange={e=>setInSearch(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <select className="input" style={{width:130}} value={inStatus} onChange={e=>setInStatus(e.target.value)}>
+                <option value="all">全部状态</option>
+                <option value="active">启用</option>
+                <option value="frozen">已冻结</option>
+              </select>
+              <select className="input" style={{width:120}} value={inCurrency} onChange={e=>setInCurrency(e.target.value)}>
+                <option value="all">全部币种</option>
+                <option value="KRW">KRW</option><option value="USD">USD</option><option value="PHP">PHP</option><option value="CNY">CNY</option><option value="THB">THB</option>
+              </select>
+              <select className="input" style={{width:150}} value={inShareRatio} onChange={e=>setInShareRatio(e.target.value)}>
+                <option value="all">占成 全部</option>
+                <option value="lt10">占成 &lt; 10%</option>
+                <option value="10to20">占成 10% — 20%</option>
+                <option value="20to30">占成 20% — 30%</option>
+                <option value="gte30">占成 ≥ 30%</option>
+              </select>
+              <div className="flex items-center gap-1 bg-app border border-line rounded-md px-2" style={{height:36}}>
+                <span className="text-xs text-faint" style={{padding:"0 4px"}}>开户</span>
+                <input type="datetime-local" step="1" className="text-sm outline-none" style={{background:"transparent",color:"#E6EAF0",border:"none",padding:"4px",colorScheme:"dark",width:175}} value={inDateFrom} onChange={e=>setInDateFrom(e.target.value)}/>
+                <span className="text-muted text-sm">→</span>
+                <input type="datetime-local" step="1" className="text-sm outline-none" style={{background:"transparent",color:"#E6EAF0",border:"none",padding:"4px",colorScheme:"dark",width:175}} value={inDateTo} onChange={e=>setInDateTo(e.target.value)}/>
               </div>
-              <div>
-                <label className="block text-xs text-muted mb-1">账号状态</label>
-                <select className="input" value={inStatus} onChange={e=>setInStatus(e.target.value)}>
-                  <option value="all">全部</option>
-                  <option value="active">启用</option>
-                  <option value="frozen">已冻结</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-muted mb-1">币种</label>
-                <select className="input" value={inCurrency} onChange={e=>setInCurrency(e.target.value)}>
-                  <option value="all">全部</option>
-                  <option value="KRW">KRW</option>
-                  <option value="USD">USD</option>
-                  <option value="PHP">PHP</option>
-                  <option value="CNY">CNY</option>
-                  <option value="THB">THB</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-muted mb-1">占成范围</label>
-                <select className="input" value={inShareRatio} onChange={e=>setInShareRatio(e.target.value)}>
-                  <option value="all">全部</option>
-                  <option value="lt10">&lt; 10%</option>
-                  <option value="10to20">10% — 20%</option>
-                  <option value="20to30">20% — 30%</option>
-                  <option value="gte30">≥ 30%</option>
-                </select>
-              </div>
-              <div style={{gridColumn:"span 2"}}>
-                <label className="block text-xs text-muted mb-1">开户时间</label>
-                <div className="flex items-center gap-1 bg-app border border-line rounded-md px-2" style={{height:36}}>
-                  <input type="datetime-local" step="1" className="flex-1 text-sm outline-none" style={{background:"transparent",color:"#E6EAF0",border:"none",padding:"4px",colorScheme:"dark"}} value={inDateFrom} onChange={e=>setInDateFrom(e.target.value)}/>
-                  <span className="text-muted text-sm" style={{padding:"0 4px"}}>→</span>
-                  <input type="datetime-local" step="1" className="flex-1 text-sm outline-none" style={{background:"transparent",color:"#E6EAF0",border:"none",padding:"4px",colorScheme:"dark"}} value={inDateTo} onChange={e=>setInDateTo(e.target.value)}/>
-                  <span className="text-muted" style={{fontSize:14,padding:"0 4px"}}>📅</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
               <button className="btn btn-primary" style={{padding:"8px 18px"}} onClick={doSearch}>搜索</button>
               <button className="btn btn-ghost" style={{padding:"8px 14px"}} onClick={resetSearch}>重置</button>
-              <span className="text-xs text-faint" style={{marginLeft:"auto"}}>共 {rows.filter(r=>r.depth===0).length} 顶代行  ·  当前渲染 {rows.length} 行(含展开)</span>
-              <button className="btn btn-ghost" style={{padding:"6px 12px",fontSize:12}} onClick={()=>setExpanded(new Set())} disabled={expanded.size===0}>全部收起</button>
+            </div>
+            <div className="flex items-center mt-2 text-xs text-faint">
+              <span>共 {rows.filter(r=>r.depth===0).length} 顶代行  ·  当前渲染 {rows.length} 行(含展开)</span>
+              <button className="btn btn-ghost ml-auto" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setExpanded(new Set())} disabled={expanded.size===0}>全部收起</button>
             </div>
           </div>
           <div className="bg-panel border border-line rounded-lg overflow-hidden">
