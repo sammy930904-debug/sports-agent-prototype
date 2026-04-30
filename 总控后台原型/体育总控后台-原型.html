@@ -294,24 +294,29 @@
         setAccounts(next);
         setModal(null);
       };
-      // 上下分: 节点 balance + 沿祖先链 subBalance / totalBalance 同步; amount 单位为"万"
+      // 上下分: 资金在树内部转移 (该账号 ↔ 直属上级), 整棵树总余额不变; amount 单位"万"
+      // 上分 +X: 该账号 balance +X, 上级 balance -X (上级出钱), 上级 subBalance +X (子树涨), 上级 totalBalance 不变
+      // 下分 -X: 该账号 balance -X, 上级 balance +X (上级收钱), 上级 subBalance -X, 上级 totalBalance 不变
       const handleCreditDebit = (account, dir, amountWan) => {
         const realAmount = amountWan * 10000;
         const next = {...accounts};
         const k = account.key;
         if (!next[k]) return;
-        if (dir === "debit" && (next[k].balance || 0) < realAmount) { alert("账户余额不足"); return; }
-        const delta = dir === "credit" ? realAmount : -realAmount;
-        next[k] = { ...next[k], balance: (next[k].balance || 0) + delta, totalBalance: (next[k].totalBalance || 0) + delta };
-        let cursor = k;
-        while (true) {
-          let parentKey = null;
-          for (const [pk, pn] of Object.entries(next)) {
-            if (pk !== cursor && pn.children && pn.children.includes(cursor)) { parentKey = pk; break; }
-          }
-          if (!parentKey) break;
-          next[parentKey] = { ...next[parentKey], subBalance: (next[parentKey].subBalance || 0) + delta, totalBalance: (next[parentKey].totalBalance || 0) + delta };
-          cursor = parentKey;
+        // 找直属上级
+        let parentKey = null;
+        for (const [pk, pn] of Object.entries(next)) {
+          if (pk !== k && pn.children && pn.children.includes(k)) { parentKey = pk; break; }
+        }
+        if (!parentKey) { alert("找不到直属上级,无法执行上下分"); return; }
+        if (dir === "credit") {
+          if ((next[parentKey].balance || 0) < realAmount) { alert("直属上级余额不足"); return; }
+          next[k] = { ...next[k], balance: next[k].balance + realAmount, totalBalance: next[k].totalBalance + realAmount };
+          next[parentKey] = { ...next[parentKey], balance: next[parentKey].balance - realAmount, subBalance: next[parentKey].subBalance + realAmount };
+          // totalBalance 不变 (balance -X, subBalance +X 抵消)
+        } else { // debit
+          if ((next[k].balance || 0) < realAmount) { alert("账户余额不足"); return; }
+          next[k] = { ...next[k], balance: next[k].balance - realAmount, totalBalance: next[k].totalBalance - realAmount };
+          next[parentKey] = { ...next[parentKey], balance: next[parentKey].balance + realAmount, subBalance: next[parentKey].subBalance - realAmount };
         }
         setAccounts(next);
         setModal(null);
@@ -543,7 +548,7 @@
           </div>
           {modal && modal.type === "newSub" && <NewSubModal parent={modal.agent} accounts={accounts} onClose={()=>setModal(null)} onSubmit={(data)=>handleNewSub(modal.agent, data)}/>}
           {modal && modal.type === "editProfile" && <EditProfileModal account={modal.agent} accounts={accounts} onClose={()=>setModal(null)} onSubmit={(data)=>handleEditProfile(modal.agent, data)}/>}
-          {modal && (modal.type === "credit" || modal.type === "debit") && <CreditDebitModal dir={modal.type} account={modal.agent} onClose={()=>setModal(null)} onSubmit={(amountWan)=>handleCreditDebit(modal.agent, modal.type, amountWan)}/>}
+          {modal && (modal.type === "credit" || modal.type === "debit") && <CreditDebitModal dir={modal.type} account={modal.agent} accounts={accounts} onClose={()=>setModal(null)} onSubmit={(amountWan)=>handleCreditDebit(modal.agent, modal.type, amountWan)}/>}
         </div>
       );
     }
@@ -774,16 +779,21 @@
     }
 
     // 上下分弹窗 (独立组件 / 内部 state / 金额单位"万" / 提交回传 amountWan)
-    function CreditDebitModal({ dir, account, onClose, onSubmit }) {
+    function CreditDebitModal({ dir, account, accounts, onClose, onSubmit }) {
       const isCredit = dir === "credit";
+      // 找直属上级 (从 accounts 反查)
+      const parentNode = Object.values(accounts).find(n => n.children && n.children.includes(account.key));
       const [amount, setAmount] = useState("");
       const [opPwd, setOpPwd] = useState("");
       const [err, setErr] = useState("");
       const balanceWan = (account.balance || 0) / 10000;
+      const parentBalanceWan = parentNode ? (parentNode.balance || 0) / 10000 : 0;
       const submit = () => {
+        if (!parentNode) { setErr("找不到直属上级,无法上下分"); return; }
         const a = parseFloat(amount);
         if (!a || a <= 0 || isNaN(a)) { setErr("请输入正确金额(单位 万)"); return; }
-        if (!isCredit && a > balanceWan) { setErr("下分金额不能超过当前余额 " + fmtAmount(account.balance)); return; }
+        if (isCredit && a > parentBalanceWan) { setErr("上分金额不能超过直属上级当前余额 " + fmtAmount(parentNode.balance) + " " + account.currency); return; }
+        if (!isCredit && a > balanceWan) { setErr("下分金额不能超过当前余额 " + fmtAmount(account.balance) + " " + account.currency); return; }
         if (opPwd !== "123456") { setErr("操作密码错误"); return; }
         onSubmit(a);
       };
@@ -791,20 +801,33 @@
         <div className="modal-backdrop">
           <div className="modal" onClick={e=>e.stopPropagation()}>
             <h3 className="text-base font-semibold mb-1">{isCredit ? "上分" : "下分"}:{account.user} · {account.currency}</h3>
-            <p className="text-xs text-faint mb-4">操作密码二次确认</p>
+            <p className="text-xs text-faint mb-4">{isCredit ? "上级 → 当前账号" : "当前账号 → 上级"} · 操作密码二次确认</p>
             <div className="space-y-3">
-              <div className="bg-card border border-line rounded p-3 text-xs">
-                <div>{account.accountType}:<span className="mono text-cool">{account.user}</span>  ·  系统户口号 <span className="mono">{account.sysId}</span></div>
-                <div className="mt-1 text-muted">币种:{account.currency}  ·  当前余额:<span className="num">{fmtAmount(account.balance) + " " + account.currency}</span></div>
+              {/* 资金流方向: 直属上级 ↔ 当前账号 */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-card border border-line rounded p-3" style={isCredit ? {borderColor:"#5BC97C"} : {}}>
+                  <div className="text-faint" style={{fontSize:10,marginBottom:4}}>{isCredit ? "▶ 资金来源(直属上级)" : "◀ 资金去向(直属上级)"}</div>
+                  {parentNode ? <>
+                    <div>{parentNode.accountType}:<span className="mono text-cool">{parentNode.user}</span></div>
+                    <div className="mt-1 text-muted">系统户口号:<span className="mono">{parentNode.sysId}</span></div>
+                    <div className="mt-1 text-muted">当前余额:<span className="num">{fmtAmount(parentNode.balance) + " " + parentNode.currency}</span></div>
+                  </> : <div className="text-faint">(无直属上级,无法上下分)</div>}
+                </div>
+                <div className="bg-card border border-line rounded p-3" style={!isCredit ? {borderColor:"#FF8B6B"} : {}}>
+                  <div className="text-faint" style={{fontSize:10,marginBottom:4}}>{isCredit ? "◀ 资金去向(当前账号)" : "▶ 资金来源(当前账号)"}</div>
+                  <div>{account.accountType}:<span className="mono text-cool">{account.user}</span></div>
+                  <div className="mt-1 text-muted">系统户口号:<span className="mono">{account.sysId}</span></div>
+                  <div className="mt-1 text-muted">当前余额:<span className="num">{fmtAmount(account.balance) + " " + account.currency}</span></div>
+                </div>
               </div>
               <div>
                 <label className="block text-xs text-muted mb-1">{isCredit ? "上分金额" : "下分金额"} <span className="text-cool">*</span></label>
                 <div className="flex items-center gap-2">
-                  <input type="number" step="0.0001" className="input flex-1" value={amount} onChange={e=>setAmount(e.target.value)} placeholder={isCredit ? "例:100" : "上限 " + balanceWan.toLocaleString("zh-CN", {maximumFractionDigits: 4})}/>
+                  <input type="number" step="0.0001" className="input flex-1" value={amount} onChange={e=>setAmount(e.target.value)} placeholder={isCredit ? "上限 " + parentBalanceWan.toLocaleString("zh-CN",{maximumFractionDigits:4}) + " (上级余额)" : "上限 " + balanceWan.toLocaleString("zh-CN",{maximumFractionDigits:4}) + " (当前余额)"}/>
                   <span className="text-muted">万 {account.currency}</span>
                 </div>
                 <div className="text-faint mt-1" style={{fontSize:11}}>
-                  {isCredit ? "上分后余额增加,资金来源 = 上级账户;沿 B 端 FN-ACC-08 流程,流水写入「交易流水记录」" : "下分后余额减少,资金回流上级;不能超过当前余额"}
+                  {isCredit ? "上分: 直属上级余额 -X, 当前账号余额 +X (整树总线余额不变)" : "下分: 当前账号余额 -X, 直属上级余额 +X (整树总线余额不变)"}
                 </div>
               </div>
               <div>
@@ -815,7 +838,7 @@
             </div>
             <div className="flex justify-end gap-2 mt-5">
               <button className="btn btn-ghost" onClick={onClose}>取消</button>
-              <button className="btn btn-primary" onClick={submit}>确认提交</button>
+              <button className="btn btn-primary" onClick={submit} disabled={!parentNode}>确认提交</button>
             </div>
           </div>
         </div>
