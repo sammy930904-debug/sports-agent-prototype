@@ -271,14 +271,24 @@
 
     // ============== 顶代户口页 ==============
     function AgentsPage({ role, canWrite }) {
-      const [searchInput, setSearchInput] = useState(""); // 输入框值 (只用户操作改)
-      const [search, setSearch] = useState("");           // 实际生效搜索 (点搜索按钮 / 回车 才同步)
-      const [statusFilter, setStatusFilter] = useState("all");
       const [modal, setModal] = useState(null);
       const [expanded, setExpanded] = useState(new Set());
       const cols = ROLES[role].agentCols;
-      const doSearch = () => setSearch(searchInput.trim());
-      const resetSearch = () => { setSearchInput(""); setSearch(""); setStatusFilter("all"); };
+      // 所有筛选走"输入态 + 提交后生效"双状态 (跟搜索按钮一起触发, ProComponents QueryFilter 模式)
+      const [inSearch, setInSearch] = useState(""), [search, setSearch] = useState("");
+      const [inStatus, setInStatus] = useState("all"), [statusFilter, setStatusFilter] = useState("all");
+      const [inCurrency, setInCurrency] = useState("all"), [currencyFilter, setCurrencyFilter] = useState("all");
+      const [inShareRatio, setInShareRatio] = useState("all"), [shareRatioFilter, setShareRatioFilter] = useState("all");
+      const [inDateFrom, setInDateFrom] = useState(""), [dateFrom, setDateFrom] = useState("");
+      const [inDateTo, setInDateTo] = useState(""), [dateTo, setDateTo] = useState("");
+      const doSearch = () => {
+        setSearch(inSearch.trim()); setStatusFilter(inStatus); setCurrencyFilter(inCurrency);
+        setShareRatioFilter(inShareRatio); setDateFrom(inDateFrom); setDateTo(inDateTo);
+      };
+      const resetSearch = () => {
+        setInSearch(""); setInStatus("all"); setInCurrency("all"); setInShareRatio("all"); setInDateFrom(""); setInDateTo("");
+        setSearch(""); setStatusFilter("all"); setCurrencyFilter("all"); setShareRatioFilter("all"); setDateFrom(""); setDateTo("");
+      };
 
       // Tree 扁平化: 顶代行先过筛选; 下线行只在父级展开时才出现 (V0.1 同款懒加载)
       // 搜索逻辑: 树状穿透 - 任何后代匹配, 整条祖先链都显示并自动展开 (大小写不敏感)
@@ -298,10 +308,20 @@
           if (!node) return;
           if (depth === 0) {
             if (statusFilter !== "all" && node.status !== statusFilter) return;
+            if (currencyFilter !== "all" && node.currency !== currencyFilter) return;
+            if (shareRatioFilter !== "all") {
+              const r = node.shareRatio;
+              if (r == null) return;
+              if (shareRatioFilter === "lt10" && r >= 0.10) return;
+              if (shareRatioFilter === "10to20" && (r < 0.10 || r >= 0.20)) return;
+              if (shareRatioFilter === "20to30" && (r < 0.20 || r >= 0.30)) return;
+              if (shareRatioFilter === "gte30" && r < 0.30) return;
+            }
+            if (dateFrom && node.createdAt < dateFrom) return;
+            if (dateTo && node.createdAt > dateTo + " 23:59:59") return;
             if (ls && !hasMatchInSubtree(key)) return;
           }
           out.push({ ...node, key, depth });
-          // 搜索时: 子树有匹配则自动展开;否则按用户 expanded
           const autoExpand = ls && (node.children || []).some(c => hasMatchInSubtree(c));
           const shouldExpand = expanded.has(key) || autoExpand;
           if (shouldExpand) {
@@ -310,7 +330,7 @@
         }
         TOP_AGENT_KEYS.forEach(k => walk(k, 0));
         return out;
-      }, [search, statusFilter, expanded]);
+      }, [search, statusFilter, currencyFilter, shareRatioFilter, dateFrom, dateTo, expanded]);
 
       const toggle = (key) => {
         const next = new Set(expanded);
@@ -360,18 +380,57 @@
             <span className="text-cool">ℹ</span>
             <span><b>账号来源:</b>顶代账号由<b>账房侧</b>创建并下发户口(系统户口号 + 初始币种 + 初始占成),本页仅查看与管理(冻结 / 调占成 / 调币种),<b>不负责创建</b>。下线数 / 下线余额 / 总线余额 主信源在 B 端代理后台。Q-S7 / Q-S14 议题待。</span>
           </div>
-          <div className="bg-panel border border-line rounded-lg p-4 mb-4 flex gap-3 items-center flex-wrap">
-            <input className="input flex-1 max-w-xs" placeholder="搜索 系统户口号 / 用户账号(支持下线穿透)" value={searchInput} onChange={e=>setSearchInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
-            <select className="input w-32" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
-              <option value="all">全部状态</option>
-              <option value="active">启用</option>
-              <option value="frozen">已冻结</option>
-              <option value="pending">待处理</option>
-            </select>
-            <button className="btn btn-primary" style={{padding:"8px 18px"}} onClick={doSearch}>搜索</button>
-            <button className="btn btn-ghost" style={{padding:"8px 14px"}} onClick={resetSearch}>重置</button>
-            <span className="text-xs text-faint">共 {rows.filter(r=>r.depth===0).length} 顶代行  ·  当前渲染 {rows.length} 行(含展开)</span>
-            <button className="btn btn-ghost" style={{padding:"6px 12px",fontSize:12}} onClick={()=>setExpanded(new Set())} disabled={expanded.size===0}>全部收起</button>
+          <div className="bg-panel border border-line rounded-lg p-4 mb-4">
+            <div className="grid gap-3 mb-3" style={{gridTemplateColumns:"repeat(3, minmax(0, 1fr))"}}>
+              <div>
+                <label className="block text-xs text-muted mb-1">搜索</label>
+                <input className="input" placeholder="系统户口号 / 用户账号(支持下线穿透)" value={inSearch} onChange={e=>setInSearch(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              </div>
+              <div>
+                <label className="block text-xs text-muted mb-1">账号状态</label>
+                <select className="input" value={inStatus} onChange={e=>setInStatus(e.target.value)}>
+                  <option value="all">全部</option>
+                  <option value="active">启用</option>
+                  <option value="frozen">已冻结</option>
+                  <option value="pending">待处理</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-muted mb-1">币种</label>
+                <select className="input" value={inCurrency} onChange={e=>setInCurrency(e.target.value)}>
+                  <option value="all">全部</option>
+                  <option value="KRW">KRW</option>
+                  <option value="USD">USD</option>
+                  <option value="PHP">PHP</option>
+                  <option value="CNY">CNY</option>
+                  <option value="THB">THB</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-muted mb-1">占成范围</label>
+                <select className="input" value={inShareRatio} onChange={e=>setInShareRatio(e.target.value)}>
+                  <option value="all">全部</option>
+                  <option value="lt10">&lt; 10%</option>
+                  <option value="10to20">10% — 20%</option>
+                  <option value="20to30">20% — 30%</option>
+                  <option value="gte30">≥ 30%</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-muted mb-1">开户开始</label>
+                <input type="date" className="input" value={inDateFrom} onChange={e=>setInDateFrom(e.target.value)}/>
+              </div>
+              <div>
+                <label className="block text-xs text-muted mb-1">开户结束</label>
+                <input type="date" className="input" value={inDateTo} onChange={e=>setInDateTo(e.target.value)}/>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button className="btn btn-primary" style={{padding:"8px 18px"}} onClick={doSearch}>搜索</button>
+              <button className="btn btn-ghost" style={{padding:"8px 14px"}} onClick={resetSearch}>重置</button>
+              <span className="text-xs text-faint" style={{marginLeft:"auto"}}>共 {rows.filter(r=>r.depth===0).length} 顶代行  ·  当前渲染 {rows.length} 行(含展开)</span>
+              <button className="btn btn-ghost" style={{padding:"6px 12px",fontSize:12}} onClick={()=>setExpanded(new Set())} disabled={expanded.size===0}>全部收起</button>
+            </div>
           </div>
           <div className="bg-panel border border-line rounded-lg overflow-hidden">
             <div className="scroll-x">
