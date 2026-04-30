@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>体育游戏总控后台 · 原型 V0.2</title>
+  <title>三方游戏总控后台 · 原型 V0.2</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -174,6 +174,41 @@
       { id:"519346028101500980", playerSysId:"lucky88-1", playerUser:"luk-002", topAgent:"lucky88", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 菲律宾联赛", teamHome:"马尼拉雄狮", teamAway:"宿务 FC", score:"2-0", playMethod:"全场.独赢盘", selection:"马尼拉雄狮", odds:1.85, bundleType:"1 单注", betTime:"2026-04-29 13:20:11", settleTime:"2026-04-29 15:08:42", stake:1000, payout:1850, winLoss:850, currency:"PHP", status:"已结算" },
       { id:"519346028101500981", playerSysId:"qweqwe-1-3", playerUser:"zoe_ph", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 德甲", teamHome:"拜仁慕尼黑", teamAway:"多特蒙德", score:"1-3", playMethod:"全场.让球", selection:"拜仁 -1.5", odds:1.70, bundleType:"1 单注", betTime:"2026-04-29 12:55:00", settleTime:"2026-04-29 14:48:33", stake:150_000, payout:0, winLoss:-150_000, currency:"KRW", status:"已结算" },
       { id:"519346028101500982", playerSysId:"diamond-1", playerUser:"dia-014", topAgent:"diamond", provider:"PG SOFT", providerCode:"PG", gameType:"电子 🎰", league:"PG 麻将胡了", teamHome:"", teamAway:"", score:"", playMethod:"赏金 ×5", selection:"局次 #99012", odds:0, bundleType:"单局", betTime:"2026-04-29 12:30:42", settleTime:"2026-04-29 12:30:45", stake:200, payout:0, winLoss:-200, currency:"USD", status:"已结算" },
+      // === 加压 mock: qweqwe 树下 15 条体育已结算 (覆盖 4 玩家, 让弹窗分页 2 页) ===
+      { id:"519346028101500983", playerSysId:"qweqwe-1-1-1", playerUser:"bob_hi", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 法甲", teamHome:"巴黎圣日尔曼", teamAway:"马赛", score:"3-0", playMethod:"全场.独赢盘", selection:"巴黎圣日尔曼", odds:1.45, bundleType:"1 单注", betTime:"2026-04-28 19:30:00", settleTime:"2026-04-28 21:25:14", stake:50_000, payout:72_500, winLoss:22_500, currency:"KRW", status:"已结算" },
+      { id:"519346028101500984", playerSysId:"qweqwe-1-2", playerUser:"dave_y", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 法甲", teamHome:"里昂", teamAway:"摩纳哥", score:"1-2", playMethod:"全场.让球", selection:"摩纳哥 -0.5", odds:2.05, bundleType:"1 单注", betTime:"2026-04-28 19:45:00", settleTime:"2026-04-28 21:42:08", stake:80_000, payout:164_000, winLoss:84_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500985", playerSysId:"qweqwe-2", playerUser:"eva_ph", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 西甲", teamHome:"马德里竞技", teamAway:"塞维利亚", score:"2-2", playMethod:"全场.大小盘", selection:"小 2.5", odds:1.95, bundleType:"1 单注", betTime:"2026-04-28 03:00:00", settleTime:"2026-04-28 04:55:33", stake:120_000, payout:0, winLoss:-120_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500986", playerSysId:"qweqwe-1-3", playerUser:"zoe_ph", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"篮球 / KBL", teamHome:"首尔 SK", teamAway:"釜山 KT", score:"95-88", playMethod:"全场.让分", selection:"首尔 SK -3.5", odds:1.85, bundleType:"1 单注", betTime:"2026-04-28 11:30:00", settleTime:"2026-04-28 13:42:18", stake:200_000, payout:370_000, winLoss:170_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500987", playerSysId:"qweqwe-1-1-1", playerUser:"bob_hi", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 韩国 K 联赛", teamHome:"蔚山现代", teamAway:"济州联", score:"0-1", playMethod:"全场.独赢盘", selection:"济州联", odds:3.20, bundleType:"1 单注", betTime:"2026-04-28 14:00:00", settleTime:"2026-04-28 15:55:11", stake:30_000, payout:96_000, winLoss:66_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500988", playerSysId:"qweqwe-1-2", playerUser:"dave_y", topAgent:"qweqwe", provider:"UUS 体育", providerCode:"UUS", gameType:"体育 ⚽", league:"足球 / 印度锡金甲组联赛", teamHome:"东孟加拉", teamAway:"莫亨巴根", score:"1-3", playMethod:"滚球 全场.让球", selection:"莫亨巴根 -1", odds:1.75, bundleType:"1 单注", betTime:"2026-04-28 16:30:00", settleTime:"2026-04-28 18:25:42", stake:60_000, payout:105_000, winLoss:45_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500989", playerSysId:"qweqwe-2", playerUser:"eva_ph", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"网球 / ATP 1000", teamHome:"德约科维奇", teamAway:"阿尔卡拉斯", score:"2-1", playMethod:"全场.独赢盘", selection:"德约科维奇", odds:2.40, bundleType:"1 单注", betTime:"2026-04-28 21:00:00", settleTime:"2026-04-29 00:18:55", stake:90_000, payout:216_000, winLoss:126_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500990", playerSysId:"qweqwe-1-1-1", playerUser:"bob_hi", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 英冠", teamHome:"利兹联", teamAway:"南安普顿", score:"2-0", playMethod:"全场.波胆", selection:"2-1", odds:8.50, bundleType:"1 单注", betTime:"2026-04-28 22:00:00", settleTime:"2026-04-29 00:08:33", stake:40_000, payout:0, winLoss:-40_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500991", playerSysId:"qweqwe-1-3", playerUser:"zoe_ph", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 英超", teamHome:"切尔西", teamAway:"热刺", score:"3-1", playMethod:"半场.独赢盘", selection:"切尔西", odds:2.20, bundleType:"1 单注", betTime:"2026-04-27 23:30:00", settleTime:"2026-04-28 00:25:18", stake:75_000, payout:165_000, winLoss:90_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500992", playerSysId:"qweqwe-1-2", playerUser:"dave_y", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 法甲", teamHome:"尼斯", teamAway:"雷恩", score:"1-1", playMethod:"全场.大小盘", selection:"大 2.5", odds:2.00, bundleType:"1 单注", betTime:"2026-04-27 19:30:00", settleTime:"2026-04-27 21:30:00", stake:100_000, payout:0, winLoss:-100_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500993", playerSysId:"qweqwe-1-1-1", playerUser:"bob_hi", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"棒球 / KBO", teamHome:"LG 双子", teamAway:"斗山熊", score:"7-4", playMethod:"全场.让分", selection:"LG 双子 -1.5", odds:1.90, bundleType:"1 单注", betTime:"2026-04-27 11:30:00", settleTime:"2026-04-27 14:48:44", stake:150_000, payout:285_000, winLoss:135_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500994", playerSysId:"qweqwe-2", playerUser:"eva_ph", topAgent:"qweqwe", provider:"UUS 体育", providerCode:"UUS", gameType:"体育 ⚽", league:"足球 / 印度锡金甲组联赛", teamHome:"阿瓦迪 FC", teamAway:"DSK 邦加罗尔", score:"0-0", playMethod:"全场.大小盘", selection:"小 1.5", odds:2.40, bundleType:"1 单注", betTime:"2026-04-27 17:00:00", settleTime:"2026-04-27 18:55:00", stake:50_000, payout:120_000, winLoss:70_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500995", playerSysId:"qweqwe-1-3", playerUser:"zoe_ph", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / J 联赛", teamHome:"川崎前锋", teamAway:"横滨水手", score:"2-1", playMethod:"全场.独赢盘", selection:"川崎前锋", odds:1.80, bundleType:"1 单注", betTime:"2026-04-27 13:00:00", settleTime:"2026-04-27 14:55:18", stake:65_000, payout:117_000, winLoss:52_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500996", playerSysId:"qweqwe-1-2", playerUser:"dave_y", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 葡超", teamHome:"本菲卡", teamAway:"波尔图", score:"3-3", playMethod:"全场.独赢盘 串 2", selection:"本菲卡 / 里斯本竞技", odds:3.40, bundleType:"2 串 1", betTime:"2026-04-27 03:30:00", settleTime:"2026-04-27 06:08:12", stake:200_000, payout:0, winLoss:-200_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500997", playerSysId:"qweqwe-1-1-1", playerUser:"bob_hi", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / MLS", teamHome:"洛杉矶 FC", teamAway:"迈阿密国际", score:"1-2", playMethod:"全场.独赢盘", selection:"迈阿密国际", odds:2.80, bundleType:"1 单注", betTime:"2026-04-27 08:30:00", settleTime:"2026-04-27 10:25:33", stake:55_000, payout:154_000, winLoss:99_000, currency:"KRW", status:"已结算" },
+      // === sapphire 树下 8 条 ===
+      { id:"519346028101500998", playerSysId:"sapphire-1", playerUser:"sap-014", topAgent:"sapphire", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 沙特联赛", teamHome:"利雅得新月", teamAway:"利雅得胜利", score:"2-1", playMethod:"全场.独赢盘", selection:"利雅得新月", odds:2.00, bundleType:"1 单注", betTime:"2026-04-28 22:00:00", settleTime:"2026-04-28 23:55:08", stake:300_000, payout:600_000, winLoss:300_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500999", playerSysId:"sapphire-2", playerUser:"sap-002", topAgent:"sapphire", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 阿联酋联赛", teamHome:"半岛酋长", teamAway:"阿尔艾因", score:"0-3", playMethod:"全场.让球", selection:"阿尔艾因 -1.5", odds:1.95, bundleType:"1 单注", betTime:"2026-04-28 23:00:00", settleTime:"2026-04-29 01:08:42", stake:200_000, payout:390_000, winLoss:190_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101501000", playerSysId:"sapphire-1", playerUser:"sap-014", topAgent:"sapphire", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 卡塔尔联赛", teamHome:"杜海勒", teamAway:"萨德", score:"1-1", playMethod:"全场.大小盘", selection:"小 2.5", odds:1.80, bundleType:"1 单注", betTime:"2026-04-27 22:00:00", settleTime:"2026-04-28 00:00:00", stake:180_000, payout:324_000, winLoss:144_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101501001", playerSysId:"sapphire-2", playerUser:"sap-002", topAgent:"sapphire", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"篮球 / NBA", teamHome:"凯尔特人", teamAway:"勇士", score:"118-110", playMethod:"全场.让分", selection:"凯尔特人 -5.5", odds:1.85, bundleType:"1 单注", betTime:"2026-04-27 11:00:00", settleTime:"2026-04-27 13:55:00", stake:250_000, payout:0, winLoss:-250_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101501002", playerSysId:"sapphire-1", playerUser:"sap-014", topAgent:"sapphire", provider:"UUS 体育", providerCode:"UUS", gameType:"体育 ⚽", league:"足球 / 印度锡金甲组联赛", teamHome:"古瓦哈蒂", teamAway:"加尔各答", score:"2-2", playMethod:"滚球 全场.独赢盘", selection:"古瓦哈蒂", odds:2.50, bundleType:"1 单注", betTime:"2026-04-27 18:00:00", settleTime:"2026-04-27 20:00:00", stake:400_000, payout:1_000_000, winLoss:600_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101501003", playerSysId:"sapphire-2", playerUser:"sap-002", topAgent:"sapphire", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"网球 / WTA 1000", teamHome:"斯瓦泰克", teamAway:"萨巴伦卡", score:"2-0", playMethod:"全场.独赢盘", selection:"斯瓦泰克", odds:1.65, bundleType:"1 单注", betTime:"2026-04-28 18:00:00", settleTime:"2026-04-28 20:25:18", stake:120_000, payout:198_000, winLoss:78_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101501004", playerSysId:"sapphire-1", playerUser:"sap-014", topAgent:"sapphire", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 澳超", teamHome:"墨尔本城", teamAway:"悉尼 FC", score:"1-0", playMethod:"全场.独赢盘", selection:"墨尔本城", odds:2.10, bundleType:"1 单注", betTime:"2026-04-27 14:30:00", settleTime:"2026-04-27 16:25:42", stake:160_000, payout:336_000, winLoss:176_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101501005", playerSysId:"sapphire-2", playerUser:"sap-002", topAgent:"sapphire", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 中超", teamHome:"上海海港", teamAway:"山东泰山", score:"2-2", playMethod:"全场.波胆", selection:"2-2", odds:11.00, bundleType:"1 单注", betTime:"2026-04-28 17:00:00", settleTime:"2026-04-28 19:00:00", stake:50_000, payout:550_000, winLoss:500_000, currency:"KRW", status:"已结算" },
+      // === diamond 树下 4 条 ===
+      { id:"519346028101501006", playerSysId:"diamond-1", playerUser:"dia-014", topAgent:"diamond", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 巴西甲", teamHome:"弗拉门戈", teamAway:"科林蒂安", score:"2-0", playMethod:"全场.让球", selection:"弗拉门戈 -0.5", odds:1.65, bundleType:"1 单注", betTime:"2026-04-28 08:00:00", settleTime:"2026-04-28 10:00:00", stake:5000, payout:8250, winLoss:3250, currency:"USD", status:"已结算" },
+      { id:"519346028101501007", playerSysId:"diamond-2", playerUser:"dia-021", topAgent:"diamond", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"棒球 / MLB", teamHome:"道奇", teamAway:"巨人", score:"6-4", playMethod:"全场.独赢盘", selection:"道奇", odds:1.55, bundleType:"1 单注", betTime:"2026-04-28 11:00:00", settleTime:"2026-04-28 13:42:18", stake:3000, payout:4650, winLoss:1650, currency:"USD", status:"已结算" },
+      { id:"519346028101501008", playerSysId:"diamond-1", playerUser:"dia-014", topAgent:"diamond", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"网球 / ATP 500", teamHome:"梅德韦杰夫", teamAway:"鲁内", score:"2-1", playMethod:"全场.独赢盘", selection:"梅德韦杰夫", odds:1.40, bundleType:"1 单注", betTime:"2026-04-27 19:00:00", settleTime:"2026-04-27 22:18:55", stake:8000, payout:11200, winLoss:3200, currency:"USD", status:"已结算" },
+      { id:"519346028101501009", playerSysId:"diamond-2", playerUser:"dia-021", topAgent:"diamond", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"篮球 / EuroLeague", teamHome:"皇马篮球", teamAway:"巴塞罗那篮球", score:"82-79", playMethod:"全场.让分", selection:"皇马篮球 -3.5", odds:1.88, bundleType:"1 单注", betTime:"2026-04-27 22:00:00", settleTime:"2026-04-28 00:08:42", stake:2500, payout:0, winLoss:-2500, currency:"USD", status:"已结算" },
+      // === lucky88 树下 4 条 ===
+      { id:"519346028101501010", playerSysId:"lucky88-1", playerUser:"luk-002", topAgent:"lucky88", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 菲律宾联赛", teamHome:"卡韦特 FC", teamAway:"贝瑟斯达", score:"3-1", playMethod:"全场.独赢盘", selection:"卡韦特 FC", odds:1.75, bundleType:"1 单注", betTime:"2026-04-28 17:00:00", settleTime:"2026-04-28 19:00:00", stake:500, payout:875, winLoss:375, currency:"PHP", status:"已结算" },
+      { id:"519346028101501011", playerSysId:"lucky88-2", playerUser:"luk-005", topAgent:"lucky88", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"篮球 / PBA", teamHome:"圣米格尔", teamAway:"芭兰咏麦芽", score:"105-99", playMethod:"全场.让分", selection:"圣米格尔 -4.5", odds:1.90, bundleType:"1 单注", betTime:"2026-04-28 13:00:00", settleTime:"2026-04-28 15:55:18", stake:1500, payout:2850, winLoss:1350, currency:"PHP", status:"已结算" },
+      { id:"519346028101501012", playerSysId:"lucky88-1", playerUser:"luk-002", topAgent:"lucky88", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 菲律宾联赛", teamHome:"马尼拉雄狮", teamAway:"达瓦奥东方", score:"1-2", playMethod:"全场.大小盘", selection:"小 2.5", odds:2.00, bundleType:"1 单注", betTime:"2026-04-27 17:00:00", settleTime:"2026-04-27 19:00:00", stake:800, payout:0, winLoss:-800, currency:"PHP", status:"已结算" },
+      { id:"519346028101501013", playerSysId:"lucky88-2", playerUser:"luk-005", topAgent:"lucky88", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 越南联赛", teamHome:"河内 FC", teamAway:"胡志明市", score:"2-1", playMethod:"全场.独赢盘", selection:"河内 FC", odds:1.65, bundleType:"1 单注", betTime:"2026-04-27 13:30:00", settleTime:"2026-04-27 15:25:00", stake:2500, payout:4125, winLoss:1625, currency:"PHP", status:"已结算" },
     ];
 
     // 场次明细弹窗 (Sammy 2026-04-30): 显示某场次下的注单, 含分页 + 小计 + 总计
@@ -190,8 +225,10 @@
       const total = { stake: sumOf(matched,"stake"), payout: sumOf(matched,"payout"), winLoss: sumOf(matched,"winLoss"), validStake: sumValid(matched) };
       return (
         <div className="modal-backdrop">
-          <div className="modal modal-wide" onClick={e=>e.stopPropagation()} style={{width:920,maxWidth:"96vw"}}>
-            <h3 className="text-base font-semibold mb-1">游戏明细 · <span className="mono text-cool">{session.id}</span></h3>
+          <div className="modal modal-wide" onClick={e=>e.stopPropagation()} style={{width:1100,maxWidth:"96vw",position:"relative"}}>
+            {/* 右上角关闭 */}
+            <button onClick={onClose} aria-label="关闭" style={{position:"absolute",top:12,right:12,width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",background:"transparent",border:"1px solid #2A3648",borderRadius:6,color:"#9AA4B5",cursor:"pointer",fontSize:14,lineHeight:1}}>✕</button>
+            <h3 className="text-base font-semibold mb-1" style={{paddingRight:36}}>游戏明细 · <span className="mono text-cool">{session.id}</span></h3>
             <p className="text-xs text-faint mb-3">{session.date} · 顶代 <span className="mono">{session.user}</span> · 币种 {session.currency} · 共 {matched.length} 条注单 · <span className="text-faint">PM 简化:按 topAgent 过滤,真实按场次 batchId 关联</span></p>
             <div className="bg-panel border border-line rounded-lg overflow-hidden mb-3">
               <div className="scroll-x">
@@ -238,12 +275,12 @@
                 </table>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            {/* 右下角翻页 */}
+            <div className="flex items-center gap-2" style={{justifyContent:"flex-end"}}>
+              <span className="text-xs text-faint" style={{marginRight:4}}>每页 {pageSize} 条 · 共 {matched.length} 条</span>
               <button className="btn btn-ghost" onClick={()=>setPageNum(p=>Math.max(0,p-1))} disabled={pageNum===0} style={{padding:"4px 12px",fontSize:12}}>← 上一页</button>
               <span className="text-xs text-muted">第 {pageNum+1} / {totalPages} 页</span>
               <button className="btn btn-ghost" onClick={()=>setPageNum(p=>Math.min(totalPages-1,p+1))} disabled={pageNum>=totalPages-1} style={{padding:"4px 12px",fontSize:12}}>下一页 →</button>
-              <span className="text-xs text-faint ml-auto">每页 {pageSize} 条</span>
-              <button className="btn btn-primary" onClick={onClose} style={{padding:"6px 18px"}}>关闭</button>
             </div>
           </div>
         </div>
@@ -255,13 +292,14 @@
     //   sysId 是真实顶代的系统户口号 (从 ACCOUNTS 里取),代表上级顶代
     //   每条 2-3 个上级,样式: 系统户口号:比例%
     const MOCK_SPORTS_SESSIONS = [
-      { id:"SP-20260428-qweqwe-001",  date:"2026-04-28", topAgent:"qweqwe",  sysId:"qweqwe",  user:"qweqwe",  currency:"KRW", shareRatio:0.1875, validStake:118_000_000, shareAmount:22_125_000, totalWinLoss:8_320_000, rate:0.0750, commission:8_850_000,  submitRate:[{sysId:"lucky88",rate:0.02},{sysId:"sapphire",rate:0.015},{sysId:"bigwhale",rate:0.005}], workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
-      { id:"SP-20260428-diamond-001", date:"2026-04-28", topAgent:"diamond", sysId:"diamond", user:"diamond", currency:"USD", shareRatio:0.225,  validStake:210_500,     shareAmount:47_362.50,  totalWinLoss:18_300,    rate:0.0800, commission:16_840,     submitRate:[{sysId:"qweqwe",rate:0.018},{sysId:"lucky88",rate:0.012}],                                 workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
-      { id:"SP-20260428-lucky88-001", date:"2026-04-28", topAgent:"lucky88", sysId:"lucky88", user:"lucky88", currency:"PHP", shareRatio:0.125,  validStake:2_980_000,   shareAmount:372_500,    totalWinLoss:-184_000,  rate:0.0600, commission:178_800,    submitRate:[{sysId:"qweqwe",rate:0.02},{sysId:"sapphire",rate:0.015}],                                  workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
-      { id:"SP-20260428-sapphire-001",date:"2026-04-28", topAgent:"sapphire",sysId:"sapphire",user:"sapphire",currency:"KRW", shareRatio:0.165,  validStake:52_300_000,  shareAmount:8_629_500,  totalWinLoss:3_140_000, rate:0.0750, commission:3_922_500,  submitRate:[{sysId:"qweqwe",rate:0.02},{sysId:"lucky88",rate:0.015},{sysId:"diamond",rate:0.005}],     workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
-      { id:"SP-20260428-emerald-001", date:"2026-04-28", topAgent:"emerald", sysId:"emerald", user:"emerald", currency:"USD", shareRatio:0.05,   validStake:0,           shareAmount:0,          totalWinLoss:0,         rate:0.0700, commission:0,          submitRate:[{sysId:"qweqwe",rate:0.02},{sysId:"lucky88",rate:0.015}],                                   workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"未结算" },
-      { id:"SP-20260427-qweqwe-001",  date:"2026-04-27", topAgent:"qweqwe",  sysId:"qweqwe",  user:"qweqwe",  currency:"KRW", shareRatio:0.1875, validStake:135_800_000, shareAmount:25_462_500, totalWinLoss:-4_180_000,rate:0.0750, commission:10_185_000, submitRate:[{sysId:"lucky88",rate:0.02},{sysId:"sapphire",rate:0.015},{sysId:"bigwhale",rate:0.005}], workStartAt:"2026-04-27 00:00:00", workEndAt:"2026-04-27 23:59:59", status:"已结算" },
-      { id:"SP-20260427-diamond-001", date:"2026-04-27", topAgent:"diamond", sysId:"diamond", user:"diamond", currency:"USD", shareRatio:0.225,  validStake:241_200,     shareAmount:54_270,     totalWinLoss:-12_400,   rate:0.0800, commission:19_296,     submitRate:[{sysId:"qweqwe",rate:0.018},{sysId:"lucky88",rate:0.012}],                                 workStartAt:"2026-04-27 00:00:00", workEndAt:"2026-04-27 23:59:59", status:"已结算" },
+      // 编号规则: SP-年月日时分-自然数 (年月日时分 = 跑批生成时间, 04-28 数据于 04-29 02:30 跑批)
+      { id:"SP-202604290230-001", date:"2026-04-28", topAgent:"qweqwe",  sysId:"qweqwe",  user:"qweqwe",  currency:"KRW", shareRatio:0.1875, validStake:118_000_000, shareAmount:22_125_000, totalWinLoss:8_320_000, rate:0.0750, commission:8_850_000,  submitRate:[{sysId:"lucky88",rate:0.02},{sysId:"sapphire",rate:0.015},{sysId:"bigwhale",rate:0.005}], workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
+      { id:"SP-202604290230-002", date:"2026-04-28", topAgent:"diamond", sysId:"diamond", user:"diamond", currency:"USD", shareRatio:0.225,  validStake:210_500,     shareAmount:47_362.50,  totalWinLoss:18_300,    rate:0.0800, commission:16_840,     submitRate:[{sysId:"qweqwe",rate:0.018},{sysId:"lucky88",rate:0.012}],                                 workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
+      { id:"SP-202604290230-003", date:"2026-04-28", topAgent:"lucky88", sysId:"lucky88", user:"lucky88", currency:"PHP", shareRatio:0.125,  validStake:2_980_000,   shareAmount:372_500,    totalWinLoss:-184_000,  rate:0.0600, commission:178_800,    submitRate:[{sysId:"qweqwe",rate:0.02},{sysId:"sapphire",rate:0.015}],                                  workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
+      { id:"SP-202604290230-004", date:"2026-04-28", topAgent:"sapphire",sysId:"sapphire",user:"sapphire",currency:"KRW", shareRatio:0.165,  validStake:52_300_000,  shareAmount:8_629_500,  totalWinLoss:3_140_000, rate:0.0750, commission:3_922_500,  submitRate:[{sysId:"qweqwe",rate:0.02},{sysId:"lucky88",rate:0.015},{sysId:"diamond",rate:0.005}],     workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
+      { id:"SP-202604290230-005", date:"2026-04-28", topAgent:"emerald", sysId:"emerald", user:"emerald", currency:"USD", shareRatio:0.05,   validStake:0,           shareAmount:0,          totalWinLoss:0,         rate:0.0700, commission:0,          submitRate:[{sysId:"qweqwe",rate:0.02},{sysId:"lucky88",rate:0.015}],                                   workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"未结算" },
+      { id:"SP-202604280230-001", date:"2026-04-27", topAgent:"qweqwe",  sysId:"qweqwe",  user:"qweqwe",  currency:"KRW", shareRatio:0.1875, validStake:135_800_000, shareAmount:25_462_500, totalWinLoss:-4_180_000,rate:0.0750, commission:10_185_000, submitRate:[{sysId:"lucky88",rate:0.02},{sysId:"sapphire",rate:0.015},{sysId:"bigwhale",rate:0.005}], workStartAt:"2026-04-27 00:00:00", workEndAt:"2026-04-27 23:59:59", status:"已结算" },
+      { id:"SP-202604280230-002", date:"2026-04-27", topAgent:"diamond", sysId:"diamond", user:"diamond", currency:"USD", shareRatio:0.225,  validStake:241_200,     shareAmount:54_270,     totalWinLoss:-12_400,   rate:0.0800, commission:19_296,     submitRate:[{sysId:"qweqwe",rate:0.018},{sysId:"lucky88",rate:0.012}],                                 workStartAt:"2026-04-27 00:00:00", workEndAt:"2026-04-27 23:59:59", status:"已结算" },
     ];
 
     const MOCK_LEDGER = [
@@ -1110,14 +1148,44 @@
 
     // ============== 体育场次记录页 ==============
     function SportsSessionsPage({ role }) {
-      const [date, setDate] = useState("all");
-      const [topAgent, setTopAgent] = useState("all");
+      // 提交触发模式 (跟体育注单 / 顶代户口筛选区一致)
+      const [inSessionId, setInSessionId] = useState(""), [sessionId, setSessionId] = useState("");
+      const [inUser, setInUser] = useState(""), [userQ, setUserQ] = useState("");
+      const [inCurrency, setInCurrency] = useState("all"), [currency, setCurrency] = useState("all");
+      const [inShareRatio, setInShareRatio] = useState("all"), [shareRatioQ, setShareRatioQ] = useState("all");
+      const [inDateFrom, setInDateFrom] = useState(""), [dateFrom, setDateFrom] = useState("");
+      const [inDateTo, setInDateTo] = useState(""), [dateTo, setDateTo] = useState("");
+      const [inStatus, setInStatus] = useState("all"), [statusQ, setStatusQ] = useState("all");
       const [detailModal, setDetailModal] = useState(null);
+
+      const doSearch = () => {
+        setSessionId(inSessionId.trim()); setUserQ(inUser.trim()); setCurrency(inCurrency);
+        setShareRatioQ(inShareRatio); setDateFrom(inDateFrom); setDateTo(inDateTo); setStatusQ(inStatus);
+      };
+      const resetSearch = () => {
+        setInSessionId(""); setInUser(""); setInCurrency("all"); setInShareRatio("all"); setInDateFrom(""); setInDateTo(""); setInStatus("all");
+        setSessionId(""); setUserQ(""); setCurrency("all"); setShareRatioQ("all"); setDateFrom(""); setDateTo(""); setStatusQ("all");
+      };
+
+      // 占成下拉的所有可选值 (从 mock 数据 distinct)
+      const shareRatioOptions = Array.from(new Set(MOCK_SPORTS_SESSIONS.map(s => s.shareRatio))).sort((a,b)=>a-b);
 
       const list = MOCK_SPORTS_SESSIONS.filter(s => {
         if ((s.validStake || 0) === 0) return false; // 过滤无有效投注的场次 (空跑批不展示)
-        if (date !== "all" && s.date !== date) return false;
-        if (topAgent !== "all" && s.topAgent !== topAgent) return false;
+        if (sessionId && !s.id.includes(sessionId)) return false;
+        if (userQ && !((s.sysId || "").includes(userQ) || (s.user || "").includes(userQ))) return false;
+        if (currency !== "all" && s.currency !== currency) return false;
+        if (shareRatioQ !== "all" && String(s.shareRatio) !== shareRatioQ) return false;
+        if (statusQ !== "all" && s.status !== statusQ) return false;
+        // 时间过滤: 按业务日期 s.date (YYYY-MM-DD) 与所选日期范围比较
+        if (dateFrom) {
+          const fromDate = dateFrom.length >= 10 ? dateFrom.slice(0,10) : dateFrom;
+          if (s.date < fromDate) return false;
+        }
+        if (dateTo) {
+          const toDate = dateTo.length >= 10 ? dateTo.slice(0,10) : dateTo;
+          if (s.date > toDate) return false;
+        }
         return true;
       });
 
@@ -1134,14 +1202,43 @@
             <span className="text-cool">ℹ</span>
             <span>电子 / 六合彩 的代理佣金结算暂未实现 (Q-S1 待议),本页仅体育数据</span>
           </div>
-          <div className="bg-panel border border-line rounded-lg p-4 mb-4 flex gap-3 items-center">
-            <select className="input w-40" value={date} onChange={e=>setDate(e.target.value)}>
-              <option value="all">全部日期</option><option value="2026-04-28">2026-04-28</option><option value="2026-04-27">2026-04-27</option>
-            </select>
-            <select className="input w-40" value={topAgent} onChange={e=>setTopAgent(e.target.value)}>
-              <option value="all">全部顶代</option>{Array.from(new Set(MOCK_SPORTS_SESSIONS.map(s => s.topAgent))).map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-            <span className="text-xs text-faint">共 {list.length} 条  ·  各币种佣金独立合计</span>
+          <div className="bg-panel border border-line rounded-lg p-3 mb-4">
+            <div className="flex flex-wrap gap-2 items-center">
+              <input className="input" style={{width:220}} placeholder="搜索场次编号" value={inSessionId} onChange={e=>setInSessionId(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:240}} placeholder="搜索 系统户口号 / 用户账号" value={inUser} onChange={e=>setInUser(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <select className="input" style={{width:120}} value={inCurrency} onChange={e=>setInCurrency(e.target.value)}>
+                <option value="all">全部币种</option>
+                <option value="KRW">KRW</option><option value="USD">USD</option><option value="PHP">PHP</option><option value="CNY">CNY</option><option value="THB">THB</option>
+              </select>
+              <select className="input" style={{width:140}} value={inShareRatio} onChange={e=>setInShareRatio(e.target.value)}>
+                <option value="all">全部占成</option>
+                {shareRatioOptions.map(v => <option key={v} value={v}>{(+(v*100).toFixed(2))+"%"}</option>)}
+              </select>
+              <ConfigProvider locale={zhCN}>
+                <RangePicker
+                  format="YYYY-MM-DD"
+                  placeholder={["业务日期 起","业务日期 止"]}
+                  allowEmpty={[true, true]}
+                  value={[inDateFrom ? moment(inDateFrom) : null, inDateTo ? moment(inDateTo) : null]}
+                  onChange={(vals) => {
+                    if (!vals) { setInDateFrom(""); setInDateTo(""); return; }
+                    setInDateFrom(vals[0] ? vals[0].format("YYYY-MM-DD") : "");
+                    setInDateTo(vals[1] ? vals[1].format("YYYY-MM-DD") : "");
+                  }}
+                  style={{ height: 36, width: 280 }}
+                />
+              </ConfigProvider>
+              <select className="input" style={{width:120}} value={inStatus} onChange={e=>setInStatus(e.target.value)}>
+                <option value="all">全部状态</option>
+                <option value="已结算">已结算</option>
+                <option value="未结算">未结算</option>
+              </select>
+              <button className="btn btn-primary" style={{padding:"8px 18px"}} onClick={doSearch}>搜索</button>
+              <button className="btn btn-ghost" style={{padding:"8px 14px"}} onClick={resetSearch}>重置</button>
+            </div>
+            <div className="flex items-center mt-2 text-xs text-faint">
+              <span>共 {list.length} 条  ·  各币种佣金独立合计</span>
+            </div>
           </div>
           <div className="bg-panel border border-line rounded-lg overflow-hidden">
             <div className="scroll-x">
@@ -1323,7 +1420,7 @@
             <div className="px-5 py-5 border-b border-line">
               <div className="flex items-center gap-2">
                 <span className="text-cool text-lg">◆</span>
-                <span className="font-semibold tracking-wider" style={{letterSpacing:2}}>体育游戏</span>
+                <span className="font-semibold tracking-wider" style={{letterSpacing:2}}>三方游戏</span>
               </div>
               <div className="text-xs text-faint mt-1 ml-5">总控后台 V0.2</div>
             </div>
