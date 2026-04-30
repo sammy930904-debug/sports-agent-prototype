@@ -1295,13 +1295,55 @@
 
     // ============== 交易流水记录页 ==============
     function LedgerPage({ role }) {
-      const [type, setType] = useState("all");
+      // 提交触发模式 (跟体育注单 / 体育场次 / 顶代户口 一致)
+      const [inTxId, setInTxId] = useState(""), [txId, setTxId] = useState("");
+      const [inUser, setInUser] = useState(""), [userQ, setUserQ] = useState("");
+      const [inTxType, setInTxType] = useState("all"), [txType, setTxType] = useState("all");
+      const [inFlow, setInFlow] = useState("all"), [flow, setFlow] = useState("all"); // 转入/转出
+      const [inCurrency, setInCurrency] = useState("all"), [currency, setCurrency] = useState("all");
+      const [inDateFrom, setInDateFrom] = useState(""), [dateFrom, setDateFrom] = useState("");
+      const [inDateTo, setInDateTo] = useState(""), [dateTo, setDateTo] = useState("");
+      const [inStatus, setInStatus] = useState("all"), [statusQ, setStatusQ] = useState("all");
+
+      const doSearch = () => {
+        setTxId(inTxId.trim()); setUserQ(inUser.trim()); setTxType(inTxType);
+        setFlow(inFlow); setCurrency(inCurrency); setDateFrom(inDateFrom); setDateTo(inDateTo); setStatusQ(inStatus);
+      };
+      const resetSearch = () => {
+        setInTxId(""); setInUser(""); setInTxType("all"); setInFlow("all"); setInCurrency("all"); setInDateFrom(""); setInDateTo(""); setInStatus("all");
+        setTxId(""); setUserQ(""); setTxType("all"); setFlow("all"); setCurrency("all"); setDateFrom(""); setDateTo(""); setStatusQ("all");
+      };
+
+      const isCredit = (t) => t === "house_credit" || t === "agent_credit";
+      const isDebit  = (t) => t === "house_debit"  || t === "agent_debit";
 
       const list = MOCK_LEDGER.filter(l => {
-        if (type === "all") return true;
-        if (type === "credit") return l.type === "house_credit" || l.type === "agent_credit";
-        if (type === "debit") return l.type === "house_debit" || l.type === "agent_debit";
-        return l.type === type; // transfer_in / transfer_out
+        if (txId && !l.id.includes(txId)) return false;
+        if (userQ && !((l.mainSysId || "").includes(userQ) || (l.mainUser || "").includes(userQ))) return false;
+        if (txType !== "all") {
+          if (txType === "credit" && !isCredit(l.type)) return false;
+          if (txType === "debit"  && !isDebit(l.type))  return false;
+          if (txType === "transfer_in"  && l.type !== "transfer_in")  return false;
+          if (txType === "transfer_out" && l.type !== "transfer_out") return false;
+        }
+        if (flow !== "all") {
+          const isIn = isCredit(l.type) || l.type === "transfer_in";
+          if (flow === "in"  && !isIn) return false;
+          if (flow === "out" &&  isIn) return false;
+        }
+        if (currency !== "all" && l.currency !== currency) return false;
+        if (statusQ !== "all" && l.status !== statusQ) return false;
+        if (dateFrom) {
+          let fromCmp = dateFrom.replace("T", " ");
+          if (fromCmp.length === 16) fromCmp += ":00";
+          if (l.time < fromCmp) return false;
+        }
+        if (dateTo) {
+          let toCmp = dateTo.replace("T", " ");
+          if (toCmp.length === 16) toCmp += ":59";
+          if (l.time > toCmp) return false;
+        }
+        return true;
       });
 
       return (
@@ -1313,25 +1355,63 @@
             </div>
             <button className="btn btn-ghost">导出 CSV</button>
           </div>
-          <div className="bg-panel border border-line rounded-lg p-4 mb-4 flex gap-3 items-center">
-            <select className="input w-56" value={type} onChange={e=>setType(e.target.value)}>
-              <option value="all">全部类型</option>
-              <option value="credit">上分</option>
-              <option value="debit">下分</option>
-              <option value="transfer_in">三方体育上分</option>
-              <option value="transfer_out">三方体育下分</option>
-            </select>
-            <span className="text-xs text-faint">共 {list.length} 条</span>
+          <div className="bg-panel border border-line rounded-lg p-3 mb-4">
+            <div className="flex flex-wrap gap-2 items-center">
+              <input className="input" style={{width:200}} placeholder="搜索流水号" value={inTxId} onChange={e=>setInTxId(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:240}} placeholder="搜索 系统户口号 / 用户账号" value={inUser} onChange={e=>setInUser(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <select className="input" style={{width:160}} value={inTxType} onChange={e=>setInTxType(e.target.value)}>
+                <option value="all">全部交易类型</option>
+                <option value="credit">上分</option>
+                <option value="debit">下分</option>
+                <option value="transfer_in">三方体育上分</option>
+                <option value="transfer_out">三方体育下分</option>
+              </select>
+              <select className="input" style={{width:120}} value={inFlow} onChange={e=>setInFlow(e.target.value)}>
+                <option value="all">全部方向</option>
+                <option value="in">转入</option>
+                <option value="out">转出</option>
+              </select>
+              <select className="input" style={{width:120}} value={inCurrency} onChange={e=>setInCurrency(e.target.value)}>
+                <option value="all">全部币种</option>
+                <option value="KRW">KRW</option><option value="USD">USD</option><option value="PHP">PHP</option><option value="CNY">CNY</option><option value="THB">THB</option>
+              </select>
+              <ConfigProvider locale={zhCN}>
+                <RangePicker
+                  showTime={{ format: "HH:mm:ss" }}
+                  format="YYYY-MM-DD HH:mm:ss"
+                  placeholder={["交易开始时间","结束时间"]}
+                  allowEmpty={[true, true]}
+                  value={[inDateFrom ? moment(inDateFrom.replace("T"," ")) : null, inDateTo ? moment(inDateTo.replace("T"," ")) : null]}
+                  onChange={(vals) => {
+                    if (!vals) { setInDateFrom(""); setInDateTo(""); return; }
+                    setInDateFrom(vals[0] ? vals[0].format("YYYY-MM-DDTHH:mm:ss") : "");
+                    setInDateTo(vals[1] ? vals[1].format("YYYY-MM-DDTHH:mm:ss") : "");
+                  }}
+                  style={{ height: 36, width: 380 }}
+                />
+              </ConfigProvider>
+              <select className="input" style={{width:120}} value={inStatus} onChange={e=>setInStatus(e.target.value)}>
+                <option value="all">全部状态</option>
+                <option value="成功">成功</option>
+                <option value="超时重试">超时重试</option>
+                <option value="失败">失败</option>
+              </select>
+              <button className="btn btn-primary" style={{padding:"8px 18px"}} onClick={doSearch}>搜索</button>
+              <button className="btn btn-ghost" style={{padding:"8px 14px"}} onClick={resetSearch}>重置</button>
+            </div>
+            <div className="flex items-center mt-2 text-xs text-faint">
+              <span>共 {list.length} 条</span>
+            </div>
           </div>
           <div className="bg-panel border border-line rounded-lg overflow-hidden">
             <div className="scroll-x">
               <table>
                 <thead><tr>
-                  <th>流水号</th><th>系统户口号</th><th>用户账号</th><th>类型</th><th>转入/转出</th><th>来源</th><th>去向</th><th>币种</th><th className="text-right">金额</th><th>时间</th><th>状态</th>
+                  <th>流水号</th><th>系统户口号</th><th>用户账号</th><th>交易类型</th><th>转入/转出</th><th>币种</th><th className="text-right">金额</th><th>时间</th><th>状态</th>
                 </tr></thead>
                 <tbody>
                   {list.map(l => {
-                    const isIn = l.type.includes("credit") || l.type === "transfer_in";
+                    const isIn = isCredit(l.type) || l.type === "transfer_in";
                     return (
                     <tr key={l.id}>
                       <td className="mono text-cool" style={{fontSize:11}}>{l.id}</td>
@@ -1339,8 +1419,6 @@
                       <td className="mono">{l.mainUser || "—"}</td>
                       <td>{l.typeLabel}</td>
                       <td><span className={"chip " + (isIn ? "chip-active" : "chip-warn")} style={{fontSize:11}}>{isIn ? "转入" : "转出"}</span></td>
-                      <td className="text-muted" style={{fontSize:12}}>{l.from}</td>
-                      <td className="text-muted" style={{fontSize:12}}>{l.to}</td>
                       <td><span className="chip chip-cool">{l.currency}</span></td>
                       <td className="num text-right">{fmtAmount(l.amount)}</td>
                       <td className="text-muted" style={{fontSize:12}}>{l.time}</td>
