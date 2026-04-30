@@ -2242,8 +2242,13 @@
 
       // 所有 hooks 调用完毕后再 early return (避免登录前后 hook 数量不一致引发 React 报错)
       if (!currentUser) return <LoginPage onLogin={(s, ip)=>{
-        setCurrentUser(s); setLoginIP(ip);
-        appendSystemLog("登录", "S 端 / 角色: "+s.role, { user: s, ip });
+        // 更新 staff 表里该员工的 lastLogin 为本次登录时间, 同步刷新 currentUser 副本 (右上块下拉 / StaffPage 列 都用得到)
+        const now = new Date(); const pad = (n) => String(n).padStart(2,"0");
+        const nowStr = now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate())+" "+pad(now.getHours())+":"+pad(now.getMinutes())+":"+pad(now.getSeconds());
+        const fresh = { ...s, lastLogin: nowStr };
+        setStaff(staff.map(x => x.user === s.user ? fresh : x));
+        setCurrentUser(fresh); setLoginIP(ip);
+        appendSystemLog("登录", "S 端 / 角色: "+s.role, { user: fresh, ip });
       }} ipWhitelist={ipWhitelist} staffList={staff}/>;
 
       const Menu = ({ id, label, icon }) => visibleMenus.includes(id) && (
