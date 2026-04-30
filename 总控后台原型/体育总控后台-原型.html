@@ -85,13 +85,13 @@
     // 7=账户余额 8=下线余额 9=总线余额 10=账号类型 11=开户时间
     const ROLES = {
       operator: { name: "平台运营", desc: "operator", color: "#4A9EFF",
-        menus: ["agents","reports.bets","reports.sports","reports.ledger","perm.staff","sys.audit","sys.ipwhite"],
+        menus: ["dashboard","agents","reports.bets","reports.sports","reports.ledger","perm.staff","sys.audit","sys.ipwhite"],
         agentCols: [1,2,3,4,5,6,7,8,9,10,11], canWrite: true },
       risk: { name: "风控审计", desc: "risk", color: "#F0B93A",
-        menus: ["agents","reports.bets","reports.sports","sys.audit"],
+        menus: ["dashboard","agents","reports.bets","reports.sports","sys.audit"],
         agentCols: [1,2,3,4,5,10,11], canWrite: false },
       finance: { name: "财务对账", desc: "finance", color: "#5BC97C",
-        menus: ["agents","reports.bets","reports.sports","reports.ledger","sys.audit"],
+        menus: ["dashboard","agents","reports.bets","reports.sports","reports.ledger","sys.audit"],
         agentCols: [1,2,3,4,5,6,7,8,9,10,11], canWrite: false },
     };
 
@@ -227,7 +227,7 @@
     ];
 
     // 场次明细弹窗 (Sammy 2026-04-30): 显示某场次下的注单, 含分页 + 小计 + 总计
-    function SessionDetailModal({ session, onClose }) {
+    function SessionDetailModal({ session, onClose, appendSystemLog }) {
       // 匹配条件: 体育 + 已结算 + 同一顶代 (PM 简化: 不严格按 date 匹配, 真实按场次 batchId)
       const matched = MOCK_BETS.filter(b => b.gameType.includes("体育") && b.status === "已结算" && b.topAgent === session.topAgent);
       const [pageNum, setPageNum] = useState(0);
@@ -292,7 +292,7 @@
             </div>
             {/* 左下: 导出 Excel  右下: 翻页 */}
             <div className="flex items-center gap-2" style={{justifyContent:"space-between"}}>
-              <button className="btn btn-ghost" disabled={matched.length===0} style={{padding:"4px 14px",fontSize:12}} onClick={()=>doExport("游戏明细_"+session.id, matched.length)}>导出 Excel</button>
+              <button className="btn btn-ghost" disabled={matched.length===0} style={{padding:"4px 14px",fontSize:12}} onClick={()=>doExport("游戏明细_"+session.id, matched.length, appendSystemLog)}>导出 Excel</button>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-faint" style={{marginRight:4}}>每页 {pageSize} 条 · 共 {matched.length} 条</span>
                 <button className="btn btn-ghost" onClick={()=>setPageNum(p=>Math.max(0,p-1))} disabled={pageNum===0} style={{padding:"4px 12px",fontSize:12}}>← 上一页</button>
@@ -340,7 +340,7 @@
 
     // 系统操作日志 = 平台员工 (operator/risk/finance) 在 S 端的写动作
     // V0.2 合法动作面: 登录/登出 + 顶代户口写动作 4 类 (修改资料 / 新增下级 / 上分 / 下分) + 三大报表「导出 Excel」
-    const MOCK_AUDIT_SYSTEM = [
+    const INITIAL_AUDIT_SYSTEM = [
       // 报表导出 (operator/risk/finance 都能做)
       { time:"2026-04-29 16:30:11", actorType:"员工", actor:"admin (operator)",      action:"导出 Excel", target:"体育注单记录  2026-04-28 ~ 2026-04-29", ip:"10.4.2.18", reason:"月底核对" },
       { time:"2026-04-29 15:45:02", actorType:"员工", actor:"finance-luo (finance)", action:"导出 Excel", target:"交易流水记录  2026-04-27 ~ 2026-04-28", ip:"10.4.2.42", reason:"月底对账" },
@@ -364,7 +364,7 @@
     //   - "投注 BET-XXX": 投注是三方回调流水, 不是用户主动审计动作
     //   - "AH-001 (账房) 账房上分": 账房不是被管对象, 走流水即可
     //   - "隐藏佣金率列": UI 本地偏好, 不进审计
-    const MOCK_AUDIT_PLAYER = [
+    const INITIAL_AUDIT_PLAYER = [
       // C 端玩家动作
       { time:"2026-04-29 16:30:11", actorType:"玩家", actor:"P-qw-008",        action:"返回大厅",     target:"BBIN 体育 → 大厅 (回收余额)",                                       ip:"175.213.x.x", reason:"-" },
       { time:"2026-04-29 16:08:22", actorType:"玩家", actor:"P-qw-008",        action:"进入游戏",     target:"BBIN 体育",                                                         ip:"175.213.x.x", reason:"-" },
@@ -450,12 +450,13 @@
 
     // 导出 Excel 工具 (V0.2 仅原型 alert, 真实开发用 xlsx 库)
     // 命名规则 (Sammy 2026-04-30 拍): YYYY-MM-DD_菜单名.xlsx, 全量导出 (不按筛选)
-    const doExport = (menuName, totalCount) => {
+    const doExport = (menuName, totalCount, appendSystemLog) => {
       const now = new Date();
       const pad = (n) => String(n).padStart(2,"0");
       const dateStr = now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate());
       const filename = dateStr+"_"+menuName+".xlsx";
       alert("导出 Excel\n\n文件名: "+filename+"\n范围: 全量数据 (不按当前筛选)\n总条数: "+totalCount+" 条\n\n[V0.2 原型 placeholder, 真实开发对接后端导出接口]");
+      appendSystemLog && appendSystemLog("导出 Excel", menuName+" / 全量 "+totalCount+" 条 → "+filename);
     };
 
     // ============== 通用分页组件 (列表页统一 20 条/页) ==============
@@ -519,7 +520,7 @@
     }
 
     // ============== 顶代户口页 ==============
-    function AgentsPage({ role, canWrite }) {
+    function AgentsPage({ role, canWrite, appendSystemLog }) {
       const [modal, setModal] = useState(null);
       const [expanded, setExpanded] = useState(new Set());
       // mock 数据放 state 里, 让"新增下线"等动作能真更新列表
@@ -537,7 +538,15 @@
         // 重置密码: V0.2 mock 仅 alert 演示, 真实开发对接后端写库 + 强制 next-login-must-change
         if (data.resetPwd) {
           alert("已重置 " + account.user + " 的登录密码 (mock 不真改);该下线下次登录将强制修改密码");
+          appendSystemLog && appendSystemLog("重置下线密码", account.user+" ("+account.sysId+") 强制下次登录改密");
         }
+        // 操作日志: 记录关键 diff (status / nick / shareRatio / refRate)
+        const diffs = [];
+        if (data.status !== next[k].status) diffs.push("状态: "+next[k].status+" → "+data.status);
+        if (data.nick !== next[k].nick) diffs.push("昵称: "+(next[k].nick||"-")+" → "+data.nick);
+        if (data.shareRatio != null && data.shareRatio !== next[k].shareRatio) diffs.push("占成: "+(next[k].shareRatio==null?"-":(next[k].shareRatio*100).toFixed(2)+"%")+" → "+(data.shareRatio*100).toFixed(2)+"%");
+        if (data.refRate != null && data.refRate !== next[k].refRate) diffs.push("佣金率: "+(next[k].refRate==null?"-":(next[k].refRate*100).toFixed(2)+"%")+" → "+(data.refRate*100).toFixed(2)+"%");
+        if (diffs.length) appendSystemLog && appendSystemLog("修改资料", account.user+" ("+account.sysId+") "+diffs.join(" / "));
         next[k] = { ...next[k], nick: data.nick, phone: data.phone, phone2: data.phone2, accountType: data.accountType || next[k].accountType, shareRatio: data.shareRatio == null ? next[k].shareRatio : data.shareRatio, refRate: data.refRate == null ? next[k].refRate : data.refRate, status: data.status };
         // 级联冻结子树
         if (data.status === "frozen" && !wasFrozen) {
@@ -568,16 +577,18 @@
         for (const [pk, pn] of Object.entries(next)) {
           if (pk !== k && pn.children && pn.children.includes(k)) { parentKey = pk; break; }
         }
-        if (!parentKey) { alert("找不到直属上级,无法执行上下分"); return; }
+        if (!parentKey) { alert("⚠ 找不到直属上级\n无法执行上下分,请联系技术支持"); return; }
         if (dir === "credit") {
-          if ((next[parentKey].balance || 0) < realAmount) { alert("直属上级余额不足"); return; }
+          if ((next[parentKey].balance || 0) < realAmount) { alert("⚠ 上级账户余额不足\n上级 "+next[parentKey].user+" 当前余额 "+fmtAmount(next[parentKey].balance)+" "+next[parentKey].currency+",无法上分 "+fmtAmount(realAmount)+"。\n建议先让账房给上级补充余额"); return; }
           next[k] = { ...next[k], balance: next[k].balance + realAmount, totalBalance: next[k].totalBalance + realAmount };
           next[parentKey] = { ...next[parentKey], balance: next[parentKey].balance - realAmount, subBalance: next[parentKey].subBalance + realAmount };
           // totalBalance 不变 (balance -X, subBalance +X 抵消)
+          appendSystemLog && appendSystemLog("上分", "下线 "+account.user+" ("+account.sysId+") +"+fmtAmount(realAmount)+" "+account.currency);
         } else { // debit
-          if ((next[k].balance || 0) < realAmount) { alert("账户余额不足"); return; }
+          if ((next[k].balance || 0) < realAmount) { alert("⚠ 账户余额不足\n下线 "+account.user+" 当前余额 "+fmtAmount(next[k].balance)+" "+account.currency+",无法下分 "+fmtAmount(realAmount)); return; }
           next[k] = { ...next[k], balance: next[k].balance - realAmount, totalBalance: next[k].totalBalance - realAmount };
           next[parentKey] = { ...next[parentKey], balance: next[parentKey].balance + realAmount, subBalance: next[parentKey].subBalance - realAmount };
+          appendSystemLog && appendSystemLog("下分", "下线 "+account.user+" ("+account.sysId+") -"+fmtAmount(realAmount)+" "+account.currency);
         }
         setAccounts(next);
         setModal(null);
@@ -591,7 +602,7 @@
         const childSeq = (parentNode.children || []).length + 1;
         const newSysId = parentNode.sysId + "-" + childSeq;
         const newKey = data.user + "::" + data.currency;
-        if (next[newKey]) { alert("用户账号 + 币种已存在: " + newKey); return; }
+        if (next[newKey]) { alert("⚠ 用户账号已存在\n该用户名在 "+data.currency+" 币种线下已被占用,请换一个用户账号"); return; }
         const now = new Date();
         const pad = (n) => String(n).padStart(2, "0");
         const createdAt = now.getFullYear() + "-" + pad(now.getMonth()+1) + "-" + pad(now.getDate()) + " " + pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds());
@@ -616,6 +627,7 @@
         // 自动展开父级让用户看到新行
         const ne = new Set(expanded); ne.add(parentKey); setExpanded(ne);
         setModal(null);
+        appendSystemLog && appendSystemLog("新增下级", "顶代 "+parentNode.user+" ("+parentNode.currency+") 下新增"+data.type+" "+data.user+" ("+newSysId+")");
       };
       // 所有筛选走"输入态 + 提交后生效"双状态 (跟搜索按钮一起触发, ProComponents QueryFilter 模式)
       const [inSearch, setInSearch] = useState(""), [search, setSearch] = useState("");
@@ -1191,7 +1203,7 @@
     }
 
     // ============== 注单记录页 ==============
-    function BetsPage({ role }) {
+    function BetsPage({ role, appendSystemLog }) {
       // 提交触发模式 (跟顶代户口筛选区一致)
       const [inBetId, setInBetId] = useState(""), [betId, setBetId] = useState("");
       const [inUser, setInUser] = useState(""), [userQ, setUserQ] = useState("");
@@ -1238,7 +1250,7 @@
               <h2 className="text-xl font-semibold">体育注单记录</h2>
               <p className="text-xs text-muted mt-1">只保存已结算的体育注单(跟体育场次记录数据源一致)  ·  电子 / 六合彩 暂不在 S 端展示</p>
             </div>
-            <button className="btn btn-ghost" onClick={()=>doExport("体育注单记录", MOCK_BETS.filter(b=>b.gameType.includes("体育")&&b.status==="已结算").length)}>导出 Excel</button>
+            <button className="btn btn-ghost" onClick={()=>doExport("体育注单记录", MOCK_BETS.filter(b=>b.gameType.includes("体育")&&b.status==="已结算").length, appendSystemLog)}>导出 Excel</button>
           </div>
           <div className="bg-panel border border-line rounded-lg p-3 mb-4">
             <div className="flex flex-wrap gap-2 items-center">
@@ -1304,7 +1316,7 @@
     }
 
     // ============== 体育场次记录页 ==============
-    function SportsSessionsPage({ role }) {
+    function SportsSessionsPage({ role, appendSystemLog }) {
       // 提交触发模式 (跟体育注单 / 顶代户口筛选区一致)
       const [inSessionId, setInSessionId] = useState(""), [sessionId, setSessionId] = useState("");
       const [inUser, setInUser] = useState(""), [userQ, setUserQ] = useState("");
@@ -1354,7 +1366,7 @@
               <h2 className="text-xl font-semibold">体育场次记录</h2>
               <p className="text-xs text-muted mt-1">每日 00:10 跑批 1 次,生成前一天的体育已结算场次  ·  用于代理佣金结算  ·  <span style={{color:"#F0B93A"}}>上缴佣金率 V0.2 暂不可用,字段仅 mock 演示</span></p>
             </div>
-            <button className="btn btn-ghost" onClick={()=>doExport("体育场次记录", MOCK_SPORTS_SESSIONS.filter(s=>(s.validStake||0)>0).length)}>导出 Excel</button>
+            <button className="btn btn-ghost" onClick={()=>doExport("体育场次记录", MOCK_SPORTS_SESSIONS.filter(s=>(s.validStake||0)>0).length, appendSystemLog)}>导出 Excel</button>
           </div>
           <div className="bg-cool-soft border border-cool rounded-lg p-3 mb-4 text-xs flex items-center gap-2">
             <span className="text-cool">ℹ</span>
@@ -1446,13 +1458,13 @@
             </div>
             <Pagination total={list.length} pageNum={pageNum} setPageNum={setPageNum}/>
           </div>
-          {detailModal && <SessionDetailModal session={detailModal} onClose={()=>setDetailModal(null)}/>}
+          {detailModal && <SessionDetailModal session={detailModal} onClose={()=>setDetailModal(null)} appendSystemLog={appendSystemLog}/>}
         </div>
       );
     }
 
     // ============== 交易流水记录页 ==============
-    function LedgerPage({ role }) {
+    function LedgerPage({ role, appendSystemLog }) {
       // 提交触发模式 (跟体育注单 / 体育场次 / 顶代户口 一致)
       const [inTxId, setInTxId] = useState(""), [txId, setTxId] = useState("");
       const [inUser, setInUser] = useState(""), [userQ, setUserQ] = useState("");
@@ -1512,7 +1524,7 @@
               <h2 className="text-xl font-semibold">交易流水记录</h2>
               <p className="text-xs text-muted mt-1">三层资金动作合一  ·  账房 ↔ 顶代 / 顶代 ↔ 下线 / 玩家 ↔ 三方体育平台</p>
             </div>
-            <button className="btn btn-ghost" onClick={()=>doExport("交易流水记录", MOCK_LEDGER.length)}>导出 Excel</button>
+            <button className="btn btn-ghost" onClick={()=>doExport("交易流水记录", MOCK_LEDGER.length, appendSystemLog)}>导出 Excel</button>
           </div>
           <div className="bg-panel border border-line rounded-lg p-3 mb-4">
             <div className="flex flex-wrap gap-2 items-center">
@@ -1595,7 +1607,7 @@
     }
 
     // ============== 操作日志页 ==============
-    function AuditPage({ role }) {
+    function AuditPage({ role, system, player }) {
       const [tab, setTab] = useState("system");
 
       // 提交触发模式 (跟其他报表页一致)
@@ -1615,7 +1627,7 @@
       // 切 tab 时重置筛选 + pageNum (避免上个 tab 的过滤值/页码串入下个 tab)
       const switchTab = (t) => { setTab(t); resetSearch(); };
 
-      const raw = tab === "system" ? MOCK_AUDIT_SYSTEM : MOCK_AUDIT_PLAYER;
+      const raw = tab === "system" ? system : player;
       const data = raw.filter(r => {
         if (actorQ && !(r.actor || "").includes(actorQ)) return false;
         if (actorTypeQ !== "all" && r.actorType !== actorTypeQ) return false;
@@ -1804,23 +1816,32 @@
     }
 
     // ============== 员工账号页 (权限管理 / 员工账号) ==============
-    function StaffPage({ currentUser }) {
+    function StaffPage({ currentUser, appendSystemLog }) {
       const [staff, setStaff] = useState(() => [...INITIAL_STAFF]);
       const [showAdd, setShowAdd] = useState(false);
       const [delConfirm, setDelConfirm] = useState(null);
+      const [editRoleModal, setEditRoleModal] = useState(null);
 
+      const handleEditRole = (s, newRole) => {
+        const oldRole = s.role;
+        setStaff(staff.map(x => x.user === s.user ? { ...x, role: newRole } : x));
+        setEditRoleModal(null);
+        appendSystemLog && appendSystemLog("修改员工角色", s.user+"  "+ROLES[oldRole].name+" → "+ROLES[newRole].name+" (该员工已登录会话需重登才生效)");
+      };
       const handleAdd = (data) => {
-        if (staff.find(s => s.user === data.user)) { alert("员工账号已存在"); return; }
+        if (staff.find(s => s.user === data.user)) { alert("⚠ 员工账号已存在\n请换一个员工账号(若该账号已离职,请先在权限管理删除)"); return; }
         const now = new Date();
         const pad = (n) => String(n).padStart(2,"0");
         const createdAt = now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate())+" "+pad(now.getHours())+":"+pad(now.getMinutes())+":"+pad(now.getSeconds());
         setStaff([...staff, { ...data, createdAt, lastLogin:"-" }]);
         setShowAdd(false);
+        appendSystemLog && appendSystemLog("新增员工", data.user+" / 角色 "+ROLES[data.role].name);
       };
       const handleDel = (s) => {
-        if (s.user === currentUser.user) { alert("不能删除当前登录账号"); return; }
+        if (s.user === currentUser.user) { alert("⚠ 不能删除当前登录账号\n请先用其他 operator 账号登录,再删除当前账号"); return; }
         setStaff(staff.filter(x => x.user !== s.user));
         setDelConfirm(null);
+        appendSystemLog && appendSystemLog("删除员工", s.user+" / 角色 "+ROLES[s.role].name);
       };
 
       return (
@@ -1847,6 +1868,7 @@
                       <td className="text-muted" style={{fontSize:12}}>{s.createdAt}</td>
                       <td className="text-muted" style={{fontSize:12}}>{s.lastLogin}</td>
                       <td>
+                        <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,marginRight:4}} onClick={()=>setEditRoleModal(s)} disabled={s.user === currentUser.user}>修改角色</button>
                         <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,color:"#FF6B6B"}} onClick={()=>setDelConfirm(s)} disabled={s.user === currentUser.user}>删除</button>
                       </td>
                     </tr>
@@ -1856,6 +1878,7 @@
             </div>
           </div>
           {showAdd && <AddStaffModal onClose={()=>setShowAdd(false)} onSubmit={handleAdd}/>}
+          {editRoleModal && <EditStaffRoleModal staff={editRoleModal} onClose={()=>setEditRoleModal(null)} onSubmit={(newRole)=>handleEditRole(editRoleModal, newRole)}/>}
           {delConfirm && (
             <div className="modal-backdrop" onClick={()=>setDelConfirm(null)}>
               <div className="modal" onClick={e=>e.stopPropagation()} style={{width:420}}>
@@ -1868,6 +1891,45 @@
               </div>
             </div>
           )}
+        </div>
+      );
+    }
+
+    function EditStaffRoleModal({ staff, onClose, onSubmit }) {
+      const [newRole, setNewRole] = useState(staff.role);
+      const [opPwd, setOpPwd] = useState("");
+      const [err, setErr] = useState("");
+      const submit = () => {
+        if (newRole === staff.role) { setErr("⚠ 角色未修改"); return; }
+        if (opPwd !== "123456") { setErr("⚠ 操作密码错误"); return; }
+        onSubmit(newRole);
+      };
+      return (
+        <div className="modal-backdrop" onClick={onClose}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{width:440}}>
+            <h3 className="text-base font-semibold mb-1">修改员工角色</h3>
+            <p className="text-xs text-faint mb-4">员工 <span className="mono text-cool">{staff.user}</span> · 当前角色 <span className="chip" style={{background:ROLES[staff.role].color+"22",color:ROLES[staff.role].color,fontSize:10}}>{ROLES[staff.role].name}</span></p>
+            <div className="mb-3">
+              <label className="block text-xs text-muted mb-1">新角色 *</label>
+              <select className="input" value={newRole} onChange={e=>setNewRole(e.target.value)}>
+                <option value="operator">平台运营 (operator) - 全菜单 + 可写</option>
+                <option value="risk">风控审计 (risk) - 注单/场次/操作日志,只读</option>
+                <option value="finance">财务对账 (finance) - 注单/场次/流水/操作日志,只读</option>
+              </select>
+            </div>
+            <div className="mb-3">
+              <label className="block text-xs text-muted mb-1">操作密码 *</label>
+              <input type="password" className="input" value={opPwd} onChange={e=>setOpPwd(e.target.value)} placeholder="当前登录员工的登录密码 (Mock: 123456)" autoFocus/>
+            </div>
+            <div className="text-xs mb-3" style={{color:"#F0B93A",fontSize:11}}>
+              ⚠ 该员工如已登录,需重新登录后新角色才生效
+            </div>
+            {err && <div className="text-xs mb-3" style={{color:"#FF6B6B"}}>{err}</div>}
+            <div className="flex justify-end gap-2 mt-4">
+              <button className="btn btn-ghost" onClick={onClose}>取消</button>
+              <button className="btn btn-primary" onClick={submit}>确认修改</button>
+            </div>
+          </div>
         </div>
       );
     }
@@ -1913,7 +1975,7 @@
 
     // ============== IP 白名单页 (系统管理 / IP 白名单) ==============
     // V0.2 完整功能 (Sammy 2026-04-30 拍): 增删改启停 + 操作密码二次校验 + 防自锁 + 当前 IP 提示 + 命中拒登 (LoginPage 校验)
-    function IPWhitelistPage({ list, setList, currentLoginIP }) {
+    function IPWhitelistPage({ list, setList, currentLoginIP, appendSystemLog }) {
       const [showAdd, setShowAdd] = useState(false);
       const [confirmAction, setConfirmAction] = useState(null);  // { type:"toggle"|"delete", item }
       const [opPwd, setOpPwd] = useState("");
@@ -1945,11 +2007,13 @@
             setOpErr("不能停用最后一条启用的白名单(否则所有 IP 都将拒登)"); return;
           }
           setList(list.map(w => w.id === item.id ? { ...w, enabled: !w.enabled } : w));
+          appendSystemLog && appendSystemLog((item.enabled ? "停用" : "启用")+"IP 白名单", item.ip+" ("+item.label+")");
         } else if (type === "delete") {
           if (item.enabled && enabledCount === 1) {
             setOpErr("不能删除最后一条启用的白名单(否则所有 IP 都将拒登)"); return;
           }
           setList(list.filter(w => w.id !== item.id));
+          appendSystemLog && appendSystemLog("删除 IP 白名单", item.ip+" ("+item.label+")");
         }
         setConfirmAction(null); setOpPwd(""); setOpErr("");
       };
@@ -1960,6 +2024,7 @@
         const createdAt = now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate())+" "+pad(now.getHours())+":"+pad(now.getMinutes())+":"+pad(now.getSeconds());
         setList([...list, { id: maxId+1, ip:data.ip, label:data.label, enabled:data.enabled, createdAt }]);
         setShowAdd(false);
+        appendSystemLog && appendSystemLog("新增 IP 白名单", data.ip+" ("+data.label+", "+(data.enabled?"启用":"已停用")+")");
       };
 
       return (
@@ -2085,15 +2150,85 @@
       );
     }
 
+    // ============== 数据看板 (V0.2 简洁版门户页) ==============
+    function DashboardPage({ role, auditSystem, setActive }) {
+      const r = ROLES[role];
+      const topAgentRows = Object.values(ACCOUNTS).filter(a => a.accountType === "普通(顶代)");
+      const topActiveCount = topAgentRows.filter(a => a.status === "active").length;
+      const totalSessions = MOCK_SPORTS_SESSIONS.filter(s => (s.validStake||0) > 0).length;
+      const todayBets = MOCK_BETS.filter(b => b.gameType.includes("体育") && b.status === "已结算").length;
+      const recent = auditSystem.slice(0, 10);
+      const Card = ({ label, value, sub, color }) => (
+        <div className="bg-panel border border-line rounded-lg p-4">
+          <div className="text-xs text-muted mb-2">{label}</div>
+          <div className="num text-2xl font-semibold" style={{color: color || "#E4ECF7"}}>{value}</div>
+          {sub && <div className="text-xs text-faint mt-1">{sub}</div>}
+        </div>
+      );
+      return (
+        <div className="p-6">
+          <div className="mb-5">
+            <h2 className="text-xl font-semibold">数据看板</h2>
+            <p className="text-xs text-muted mt-1">V0.2 简洁版概览  ·  欢迎 <span className="text-cool">{r.name}</span>  ·  完整指标版本待 Q-S2 议</p>
+          </div>
+          <div className="grid grid-cols-4 gap-4 mb-5">
+            <Card label="顶代户口数" value={topAgentRows.length+" 行"} sub={"启用 "+topActiveCount+" / 冻结 "+(topAgentRows.length-topActiveCount)} color="#4A9EFF"/>
+            <Card label="累计体育场次" value={totalSessions+" 条"} sub="跨日已结算" color="#5BC97C"/>
+            <Card label="累计已结算注单" value={todayBets+" 条"} sub="体育游戏" color="#F0B93A"/>
+            <Card label="最近系统动作" value={auditSystem.length+" 条"} sub="点下方查看明细" color="#9B7FE8"/>
+          </div>
+          <div className="bg-panel border border-line rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-line">
+              <div className="font-semibold text-sm">最近系统动作 · 最新 {recent.length} 条</div>
+              <button className="btn btn-ghost" style={{padding:"4px 12px",fontSize:11}} onClick={()=>setActive("sys.audit")}>查看完整日志 →</button>
+            </div>
+            <div className="scroll-x">
+              <table>
+                <thead><tr><th>时间</th><th>员工</th><th>动作</th><th>目标</th></tr></thead>
+                <tbody>
+                  {recent.map((r, i) => (
+                    <tr key={i}>
+                      <td className="text-muted" style={{fontSize:12}}>{r.time}</td>
+                      <td className="mono text-cool">{r.actor}</td>
+                      <td><span className="chip chip-cool" style={{fontSize:10}}>{r.action}</span></td>
+                      <td className="text-muted" style={{fontSize:12}}>{r.target}</td>
+                    </tr>
+                  ))}
+                  {recent.length === 0 && <tr><td colSpan="4" style={{textAlign:"center",padding:"30px",color:"#6B7280"}}>暂无动作记录</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // ============== 主框架 ==============
     function App() {
       // ⚠ React Hooks 规则: 所有 hooks 必须在 early return 之前,且每次 render 调用顺序一致
       const [currentUser, setCurrentUser] = useState(null);  // null = 未登录
       const [loginIP, setLoginIP] = useState(null);          // 登录时记录的 IP, 给右上块 / 操作日志展示
-      const [active, setActive] = useState("agents");
+      const [active, setActive] = useState("dashboard");
       const [showChangePwd, setShowChangePwd] = useState(false);
       const [showUserMenu, setShowUserMenu] = useState(false);
       const [ipWhitelist, setIpWhitelist] = useState(() => [...INITIAL_IPWHITE]);
+      const [auditSystem, setAuditSystem] = useState(() => [...INITIAL_AUDIT_SYSTEM]);
+      const [auditPlayer, setAuditPlayer] = useState(() => [...INITIAL_AUDIT_PLAYER]);
+
+      // 写动作回写系统操作日志 (Sammy 2026-04-30 拍 A 方案):
+      // 所有 S 端写动作都 unshift 一条到 auditSystem,真实演示动作 ↔ 日志的实时关联
+      // user/ip 参数可选 (登录时 currentUser 还没 setState, 显式传)
+      const appendSystemLog = (action, target, extra = {}) => {
+        const user = extra.user || currentUser;
+        const ip = extra.ip || loginIP || "10.4.2.18";
+        if (!user) return;
+        const now = new Date(); const pad = (n) => String(n).padStart(2,"0");
+        const time = now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate())+" "+pad(now.getHours())+":"+pad(now.getMinutes())+":"+pad(now.getSeconds());
+        setAuditSystem(prev => [{
+          time, actorType:"员工", actor: user.user+" ("+user.role+")",
+          action, target, ip, reason: extra.reason || "-",
+        }, ...prev]);
+      };
 
       const role = currentUser ? currentUser.role : null;
       const r = role ? ROLES[role] : null;
@@ -2105,7 +2240,10 @@
       }, [role]);
 
       // 所有 hooks 调用完毕后再 early return (避免登录前后 hook 数量不一致引发 React 报错)
-      if (!currentUser) return <LoginPage onLogin={(staff, ip)=>{setCurrentUser(staff); setLoginIP(ip);}} ipWhitelist={ipWhitelist}/>;
+      if (!currentUser) return <LoginPage onLogin={(staff, ip)=>{
+        setCurrentUser(staff); setLoginIP(ip);
+        appendSystemLog("登录", "S 端 / 角色: "+staff.role, { user: staff, ip });
+      }} ipWhitelist={ipWhitelist}/>;
 
       const Menu = ({ id, label, icon }) => visibleMenus.includes(id) && (
         <div className={"menu-item " + (active===id?"active":"")} onClick={()=>setActive(id)}>
@@ -2114,6 +2252,7 @@
       );
 
       const breadcrumb = {
+        "dashboard":"数据看板",
         "agents":"账号管理 / 顶代户口",
         "reports.bets":"报表管理 / 体育注单记录",
         "reports.sports":"报表管理 / 体育场次记录",
@@ -2135,6 +2274,8 @@
               <div className="text-xs text-faint mt-1 ml-5">总控后台 V0.2</div>
             </div>
             <nav className="flex-1 px-3 py-3 overflow-y-auto">
+              <Menu id="dashboard" label="数据看板" icon="◈"/>
+
               <div className="menu-group">账号管理</div>
               <Menu id="agents" label="顶代户口" icon="◉"/>
 
@@ -2173,22 +2314,26 @@
                     <div className="px-4 py-2 text-xs text-faint border-b border-line">{currentUser.phone || "-"}</div>
                     <div className="px-4 py-2 text-xs text-faint border-b border-line">最近登录: <span className="mono">{currentUser.lastLogin || "-"}</span></div>
                     <div className="px-4 py-2 cursor-pointer hover:bg-app text-sm" style={{cursor:"pointer"}} onClick={()=>{setShowChangePwd(true); setShowUserMenu(false);}}>修改密码</div>
-                    <div className="px-4 py-2 cursor-pointer hover:bg-app text-sm" style={{cursor:"pointer",color:"#FF8B6B"}} onClick={()=>{if(confirm("确认退出登录?")){setCurrentUser(null); setShowUserMenu(false);}}}>退出登录</div>
+                    <div className="px-4 py-2 cursor-pointer hover:bg-app text-sm" style={{cursor:"pointer",color:"#FF8B6B"}} onClick={()=>{if(confirm("确认退出登录?")){appendSystemLog("登出","S 端 / 角色: "+role); setCurrentUser(null); setShowUserMenu(false);}}}>退出登录</div>
                   </div>
                 )}
               </div>
             </header>
             <div className="flex-1 overflow-auto">
-              {active === "agents" && <AgentsPage role={role} canWrite={r.canWrite}/>}
-              {active === "reports.bets" && <BetsPage role={role}/>}
-              {active === "reports.sports" && <SportsSessionsPage role={role}/>}
-              {active === "reports.ledger" && <LedgerPage role={role}/>}
-              {active === "perm.staff" && <StaffPage currentUser={currentUser}/>}
-              {active === "sys.audit" && <AuditPage role={role}/>}
-              {active === "sys.ipwhite" && <IPWhitelistPage list={ipWhitelist} setList={setIpWhitelist} currentLoginIP={loginIP || "10.4.2.18"}/>}
+              {active === "dashboard" && <DashboardPage role={role} auditSystem={auditSystem} setActive={setActive}/>}
+              {active === "agents" && <AgentsPage role={role} canWrite={r.canWrite} appendSystemLog={appendSystemLog}/>}
+              {active === "reports.bets" && <BetsPage role={role} appendSystemLog={appendSystemLog}/>}
+              {active === "reports.sports" && <SportsSessionsPage role={role} appendSystemLog={appendSystemLog}/>}
+              {active === "reports.ledger" && <LedgerPage role={role} appendSystemLog={appendSystemLog}/>}
+              {active === "perm.staff" && <StaffPage currentUser={currentUser} appendSystemLog={appendSystemLog}/>}
+              {active === "sys.audit" && <AuditPage role={role} system={auditSystem} player={auditPlayer}/>}
+              {active === "sys.ipwhite" && <IPWhitelistPage list={ipWhitelist} setList={setIpWhitelist} currentLoginIP={loginIP || "10.4.2.18"} appendSystemLog={appendSystemLog}/>}
             </div>
           </main>
-          {showChangePwd && <ChangePwdModal user={currentUser} onClose={()=>setShowChangePwd(false)} onConfirm={()=>{setShowChangePwd(false); alert("密码修改成功,请用新密码重新登录"); setCurrentUser(null);}}/>}
+          {showChangePwd && <ChangePwdModal user={currentUser} onClose={()=>setShowChangePwd(false)} onConfirm={()=>{
+            appendSystemLog("修改密码", "自身账号 "+currentUser.user+" (强制重登)");
+            setShowChangePwd(false); alert("密码修改成功,请用新密码重新登录"); setCurrentUser(null);
+          }}/>}
         </div>
       );
     }
