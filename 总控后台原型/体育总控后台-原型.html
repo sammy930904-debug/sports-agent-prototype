@@ -85,7 +85,7 @@
     // 7=账户余额 8=下线余额 9=总线余额 10=账号类型 11=开户时间
     const ROLES = {
       operator: { name: "平台运营", desc: "operator", color: "#4A9EFF",
-        menus: ["agents","reports.bets","reports.sports","reports.ledger","sys.audit"],
+        menus: ["agents","reports.bets","reports.sports","reports.ledger","perm.staff","sys.audit","sys.ipwhite"],
         agentCols: [1,2,3,4,5,6,7,8,9,10,11], canWrite: true },
       risk: { name: "风控审计", desc: "risk", color: "#F0B93A",
         menus: ["agents","reports.bets","reports.sports","sys.audit"],
@@ -94,6 +94,21 @@
         menus: ["agents","reports.bets","reports.sports","reports.ledger","sys.audit"],
         agentCols: [1,2,3,4,5,6,7,8,9,10,11], canWrite: false },
     };
+
+    // 员工账号 mock (新增删除走 state) - V0.2 操作密码 = 登录密码 (Sammy 2026-04-30 拍)
+    const INITIAL_STAFF = [
+      { user:"admin",       role:"operator", phone:"+86 138-0000-0001", createdAt:"2026-01-15 10:00:00", lastLogin:"2026-04-29 09:08:22" },
+      { user:"risk-mei",    role:"risk",     phone:"+86 138-0000-0002", createdAt:"2026-02-01 14:00:00", lastLogin:"2026-04-29 09:02:18" },
+      { user:"finance-luo", role:"finance",  phone:"+86 138-0000-0003", createdAt:"2026-02-08 09:30:00", lastLogin:"2026-04-29 09:05:47" },
+      { user:"ops-chen",    role:"operator", phone:"+86 138-0000-0004", createdAt:"2026-03-20 11:15:00", lastLogin:"2026-04-28 17:30:00" },
+    ];
+
+    // IP 白名单 mock (V0.2 仅原型展示, 功能实现推迟)
+    const INITIAL_IPWHITE = [
+      { id:1, ip:"10.4.2.0/24",   label:"办公网段",       enabled:true,  createdAt:"2026-01-15 10:00:00" },
+      { id:2, ip:"118.139.32.18", label:"运营 admin 家用", enabled:true,  createdAt:"2026-02-20 16:30:00" },
+      { id:3, ip:"61.74.110.55",  label:"风控外勤备用",   enabled:false, createdAt:"2026-03-10 14:20:00" },
+    ];
 
     // ============== Mock 数据 ==============
     // 顶代户口 + 下线树 mock (Sammy 2026-04-29 拍)
@@ -277,7 +292,7 @@
             </div>
             {/* 左下: 导出 Excel  右下: 翻页 */}
             <div className="flex items-center gap-2" style={{justifyContent:"space-between"}}>
-              <button className="btn btn-ghost" disabled={matched.length===0} style={{padding:"4px 14px",fontSize:12}}>导出 Excel</button>
+              <button className="btn btn-ghost" disabled={matched.length===0} style={{padding:"4px 14px",fontSize:12}} onClick={()=>doExport("游戏明细_"+session.id, matched.length)}>导出 Excel</button>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-faint" style={{marginRight:4}}>每页 {pageSize} 条 · 共 {matched.length} 条</span>
                 <button className="btn btn-ghost" onClick={()=>setPageNum(p=>Math.max(0,p-1))} disabled={pageNum===0} style={{padding:"4px 12px",fontSize:12}}>← 上一页</button>
@@ -391,6 +406,16 @@
     };
     const fmtPct = (n) => (n * 100).toFixed(2) + "%";
 
+    // 导出 Excel 工具 (V0.2 仅原型 alert, 真实开发用 xlsx 库)
+    // 命名规则 (Sammy 2026-04-30 拍): YYYY-MM-DD_菜单名.xlsx, 全量导出 (不按筛选)
+    const doExport = (menuName, totalCount) => {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2,"0");
+      const dateStr = now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate());
+      const filename = dateStr+"_"+menuName+".xlsx";
+      alert("导出 Excel\n\n文件名: "+filename+"\n范围: 全量数据 (不按当前筛选)\n总条数: "+totalCount+" 条\n\n[V0.2 原型 placeholder, 真实开发对接后端导出接口]");
+    };
+
     // ============== 通用分页组件 (列表页统一 20 条/页) ==============
     const PAGE_SIZE = 20;
     function Pagination({ total, pageNum, setPageNum, pageSize = PAGE_SIZE }) {
@@ -460,11 +485,27 @@
       const [topKeys, setTopKeys] = useState(() => [...TOP_AGENT_KEYS]);
       const cols = ROLES[role].agentCols;
       // 修改资料: 把 form 字段 merge 到节点上 (mock 内存中改, 不持久化)
+      // 级联冻结 (Sammy 2026-04-30 拍): status 改成 frozen 时递归把所有 children 也置 frozen, 跟 B 端 V1.12 setStatus 'off' 级联对齐
+      // 解冻不级联: status 从 frozen → active 时只改自己, 子代保持原状 (避免误操作让独立冻结的下线被误激活)
       const handleEditProfile = (account, data) => {
         const next = {...accounts};
         const k = account.key;
         if (!next[k]) return;
+        const wasFrozen = next[k].status === "frozen";
         next[k] = { ...next[k], nick: data.nick, phone: data.phone, phone2: data.phone2, accountType: data.accountType || next[k].accountType, shareRatio: data.shareRatio == null ? next[k].shareRatio : data.shareRatio, refRate: data.refRate == null ? next[k].refRate : data.refRate, status: data.status };
+        // 级联冻结子树
+        if (data.status === "frozen" && !wasFrozen) {
+          const cascade = (key) => {
+            const node = next[key]; if (!node) return;
+            (node.children || []).forEach(c => {
+              if (next[c]) {
+                next[c] = { ...next[c], status: "frozen" };
+                cascade(c);
+              }
+            });
+          };
+          cascade(k);
+        }
         setAccounts(next);
         setModal(null);
       };
@@ -1150,7 +1191,7 @@
               <h2 className="text-xl font-semibold">体育注单记录</h2>
               <p className="text-xs text-muted mt-1">只保存已结算的体育注单(跟体育场次记录数据源一致)  ·  电子 / 六合彩 暂不在 S 端展示</p>
             </div>
-            <button className="btn btn-ghost">导出 Excel</button>
+            <button className="btn btn-ghost" onClick={()=>doExport("体育注单记录", MOCK_BETS.filter(b=>b.gameType.includes("体育")&&b.status==="已结算").length)}>导出 Excel</button>
           </div>
           <div className="bg-panel border border-line rounded-lg p-3 mb-4">
             <div className="flex flex-wrap gap-2 items-center">
@@ -1264,9 +1305,9 @@
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-xl font-semibold">体育场次记录</h2>
-              <p className="text-xs text-muted mt-1">每日 00:10 跑批 1 次,生成前一天的体育已结算场次  ·  用于代理佣金结算</p>
+              <p className="text-xs text-muted mt-1">每日 00:10 跑批 1 次,生成前一天的体育已结算场次  ·  用于代理佣金结算  ·  <span style={{color:"#F0B93A"}}>上缴佣金率 V0.2 暂不可用,字段仅 mock 演示</span></p>
             </div>
-            <button className="btn btn-ghost">导出 Excel</button>
+            <button className="btn btn-ghost" onClick={()=>doExport("体育场次记录", MOCK_SPORTS_SESSIONS.filter(s=>(s.validStake||0)>0).length)}>导出 Excel</button>
           </div>
           <div className="bg-cool-soft border border-cool rounded-lg p-3 mb-4 text-xs flex items-center gap-2">
             <span className="text-cool">ℹ</span>
@@ -1424,7 +1465,7 @@
               <h2 className="text-xl font-semibold">交易流水记录</h2>
               <p className="text-xs text-muted mt-1">三层资金动作合一  ·  账房 ↔ 顶代 / 顶代 ↔ 下线 / 玩家 ↔ 三方体育平台</p>
             </div>
-            <button className="btn btn-ghost">导出 Excel</button>
+            <button className="btn btn-ghost" onClick={()=>doExport("交易流水记录", MOCK_LEDGER.length)}>导出 Excel</button>
           </div>
           <div className="bg-panel border border-line rounded-lg p-3 mb-4">
             <div className="flex flex-wrap gap-2 items-center">
@@ -1614,14 +1655,258 @@
       );
     }
 
+    // ============== 登录页 ==============
+    function LoginPage({ onLogin }) {
+      const [user, setUser] = useState("");
+      const [pwd, setPwd] = useState("");
+      const [showPwd, setShowPwd] = useState(false);
+      const [err, setErr] = useState("");
+      const submit = () => {
+        const staff = INITIAL_STAFF.find(s => s.user === user.trim());
+        if (!staff) { setErr("员工账号不存在"); return; }
+        if (pwd !== "123456") { setErr("登录密码错误"); return; }  // V0.2 mock: 所有员工密码统一 123456
+        onLogin(staff);
+      };
+      return (
+        <div className="min-h-screen bg-app flex items-center justify-center" style={{padding:"24px"}}>
+          <div className="bg-panel border border-line rounded-lg" style={{padding:"40px 36px",width:380}}>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-cool text-2xl">◆</span>
+              <span className="font-semibold tracking-wider text-lg" style={{letterSpacing:2}}>三方游戏</span>
+            </div>
+            <div className="text-xs text-faint mb-6 ml-7">总控后台 V0.2 · 内部员工登录</div>
+            <div className="mb-3">
+              <label className="block text-xs text-muted mb-1">员工账号</label>
+              <input className="input" placeholder="请输入员工账号" value={user} onChange={e=>setUser(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") submit();}} autoFocus/>
+            </div>
+            <div className="mb-3">
+              <label className="block text-xs text-muted mb-1">登录密码</label>
+              <div style={{position:"relative"}}>
+                <input className="input" type={showPwd ? "text" : "password"} placeholder="请输入密码" value={pwd} onChange={e=>setPwd(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") submit();}} style={{paddingRight:36}}/>
+                <span onClick={()=>setShowPwd(!showPwd)} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",color:"#9AA4B5",cursor:"pointer",fontSize:12,userSelect:"none"}}>{showPwd ? "🙈" : "👁"}</span>
+              </div>
+            </div>
+            {err && <div className="text-xs mb-3" style={{color:"#FF6B6B"}}>{err}</div>}
+            <button className="btn btn-primary w-full" style={{padding:"10px 0",marginTop:6}} onClick={submit}>登录</button>
+            <div className="text-xs text-faint mt-4" style={{fontSize:10,color:"#5C6878"}}>
+              V0.2 mock: admin / risk-mei / finance-luo / ops-chen,密码统一 123456
+            </div>
+            <div className="text-xs text-faint mt-2" style={{fontSize:10,color:"#5C6878"}}>
+              ⚠ V0.2 暂未实现 IP 白名单 / 双因素认证 / 登录失败锁定
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============== 修改密码弹窗 ==============
+    function ChangePwdModal({ user, onClose, onConfirm }) {
+      const [oldPwd, setOldPwd] = useState("");
+      const [newPwd, setNewPwd] = useState("");
+      const [newPwdC, setNewPwdC] = useState("");
+      const [err, setErr] = useState("");
+      const submit = () => {
+        if (oldPwd !== "123456") { setErr("原密码错误"); return; }
+        if (!newPwd || newPwd.length < 6) { setErr("新密码至少 6 位"); return; }
+        if (newPwd === oldPwd) { setErr("新密码不能跟原密码相同"); return; }
+        if (newPwd !== newPwdC) { setErr("两次新密码不一致"); return; }
+        onConfirm();
+      };
+      return (
+        <div className="modal-backdrop" onClick={onClose}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{width:420}}>
+            <h3 className="text-base font-semibold mb-1">修改登录密码</h3>
+            <p className="text-xs text-faint mb-4">当前账号 <span className="mono text-cool">{user.user}</span> · 修改后需重新登录</p>
+            <div className="mb-3">
+              <label className="block text-xs text-muted mb-1">原密码</label>
+              <input className="input" type="password" value={oldPwd} onChange={e=>setOldPwd(e.target.value)} placeholder="请输入原密码" autoFocus/>
+            </div>
+            <div className="mb-3">
+              <label className="block text-xs text-muted mb-1">新密码</label>
+              <input className="input" type="password" value={newPwd} onChange={e=>setNewPwd(e.target.value)} placeholder="至少 6 位"/>
+            </div>
+            <div className="mb-3">
+              <label className="block text-xs text-muted mb-1">确认新密码</label>
+              <input className="input" type="password" value={newPwdC} onChange={e=>setNewPwdC(e.target.value)} placeholder="再次输入新密码"/>
+            </div>
+            {err && <div className="text-xs mb-3" style={{color:"#FF6B6B"}}>{err}</div>}
+            <div className="text-xs text-faint mb-3" style={{fontSize:10,color:"#F0B93A"}}>
+              ℹ V0.2: 操作密码 = 登录密码,改后所有写动作的二次校验也用新密码
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button className="btn btn-ghost" onClick={onClose}>取消</button>
+              <button className="btn btn-primary" onClick={submit}>确认修改</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============== 员工账号页 (权限管理 / 员工账号) ==============
+    function StaffPage({ currentUser }) {
+      const [staff, setStaff] = useState(() => [...INITIAL_STAFF]);
+      const [showAdd, setShowAdd] = useState(false);
+      const [delConfirm, setDelConfirm] = useState(null);
+
+      const handleAdd = (data) => {
+        if (staff.find(s => s.user === data.user)) { alert("员工账号已存在"); return; }
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2,"0");
+        const createdAt = now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate())+" "+pad(now.getHours())+":"+pad(now.getMinutes())+":"+pad(now.getSeconds());
+        setStaff([...staff, { ...data, createdAt, lastLogin:"-" }]);
+        setShowAdd(false);
+      };
+      const handleDel = (s) => {
+        if (s.user === currentUser.user) { alert("不能删除当前登录账号"); return; }
+        setStaff(staff.filter(x => x.user !== s.user));
+        setDelConfirm(null);
+      };
+
+      return (
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-xl font-semibold">员工账号</h2>
+              <p className="text-xs text-muted mt-1">仅 operator 可见 · 新增 / 删除登录总控后台的员工 · 角色决定可见菜单与可写动作</p>
+            </div>
+            <button className="btn btn-primary" onClick={()=>setShowAdd(true)} style={{padding:"8px 18px"}}>+ 新增员工</button>
+          </div>
+          <div className="bg-panel border border-line rounded-lg overflow-hidden">
+            <div className="scroll-x">
+              <table>
+                <thead><tr>
+                  <th>员工账号</th><th>角色</th><th>电话</th><th>创建时间</th><th>最近登录</th><th>操作</th>
+                </tr></thead>
+                <tbody>
+                  {staff.map(s => (
+                    <tr key={s.user}>
+                      <td className="mono text-cool">{s.user}{s.user === currentUser.user && <span className="text-faint ml-2" style={{fontSize:10}}>(当前登录)</span>}</td>
+                      <td><span className="chip" style={{background:ROLES[s.role].color+"22",color:ROLES[s.role].color}}>{ROLES[s.role].name}</span></td>
+                      <td className="mono text-muted" style={{fontSize:12}}>{s.phone}</td>
+                      <td className="text-muted" style={{fontSize:12}}>{s.createdAt}</td>
+                      <td className="text-muted" style={{fontSize:12}}>{s.lastLogin}</td>
+                      <td>
+                        <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,color:"#FF6B6B"}} onClick={()=>setDelConfirm(s)} disabled={s.user === currentUser.user}>删除</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {showAdd && <AddStaffModal onClose={()=>setShowAdd(false)} onSubmit={handleAdd}/>}
+          {delConfirm && (
+            <div className="modal-backdrop" onClick={()=>setDelConfirm(null)}>
+              <div className="modal" onClick={e=>e.stopPropagation()} style={{width:420}}>
+                <h3 className="text-base font-semibold mb-3">确认删除员工?</h3>
+                <p className="text-sm text-muted mb-4">确认删除 <span className="mono text-cool">{delConfirm.user}</span> ({ROLES[delConfirm.role].name}) ?该员工将无法登录系统,历史操作日志保留。</p>
+                <div className="flex justify-end gap-2">
+                  <button className="btn btn-ghost" onClick={()=>setDelConfirm(null)}>取消</button>
+                  <button className="btn btn-primary" style={{background:"#FF6B6B",borderColor:"#FF6B6B"}} onClick={()=>handleDel(delConfirm)}>确认删除</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function AddStaffModal({ onClose, onSubmit }) {
+      const [user, setUser] = useState("");
+      const [pwd, setPwd] = useState("");
+      const [pwdC, setPwdC] = useState("");
+      const [role, setRole] = useState("operator");
+      const [phone, setPhone] = useState("");
+      const [err, setErr] = useState("");
+      const submit = () => {
+        if (!/^[A-Za-z0-9-]{4,20}$/.test(user)) { setErr("员工账号需 4-20 位英文+数字+中划线"); return; }
+        if (!pwd || pwd.length < 6) { setErr("初始密码至少 6 位"); return; }
+        if (pwd !== pwdC) { setErr("两次密码不一致"); return; }
+        onSubmit({ user, role, phone });
+      };
+      return (
+        <div className="modal-backdrop" onClick={onClose}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{width:480}}>
+            <h3 className="text-base font-semibold mb-1">新增员工账号</h3>
+            <p className="text-xs text-faint mb-4">创建后员工用此账号 + 初始密码登录,首次登录建议改密</p>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">员工账号 *</label><input className="input" value={user} onChange={e=>setUser(e.target.value)} placeholder="4-20 位英文+数字+中划线" autoFocus/></div>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">初始密码 *</label><input className="input" type="password" value={pwd} onChange={e=>setPwd(e.target.value)} placeholder="至少 6 位"/></div>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">确认密码 *</label><input className="input" type="password" value={pwdC} onChange={e=>setPwdC(e.target.value)}/></div>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">角色 *</label>
+              <select className="input" value={role} onChange={e=>setRole(e.target.value)}>
+                <option value="operator">平台运营 (operator) - 全菜单 + 可写</option>
+                <option value="risk">风控审计 (risk) - 注单/场次/操作日志,只读</option>
+                <option value="finance">财务对账 (finance) - 注单/场次/流水/操作日志,只读</option>
+              </select>
+            </div>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">联系电话</label><input className="input" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="选填,异常登录通知"/></div>
+            {err && <div className="text-xs mb-3" style={{color:"#FF6B6B"}}>{err}</div>}
+            <div className="flex justify-end gap-2 mt-4">
+              <button className="btn btn-ghost" onClick={onClose}>取消</button>
+              <button className="btn btn-primary" onClick={submit}>确认新增</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============== IP 白名单页 (系统管理 / IP 白名单) ==============
+    function IPWhitelistPage() {
+      const [list] = useState(() => [...INITIAL_IPWHITE]);
+      return (
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-xl font-semibold">IP 白名单</h2>
+              <p className="text-xs text-muted mt-1">仅 operator 可见 · 限定哪些 IP 段可登录总控后台 · 命中白名单外 IP 直接拒登</p>
+            </div>
+            <button className="btn btn-ghost" disabled style={{padding:"8px 18px"}}>+ 新增白名单</button>
+          </div>
+          <div className="bg-cool-soft border border-cool rounded-lg p-3 mb-4 text-xs flex items-center gap-2" style={{background:"rgba(240,185,58,0.08)",borderColor:"#3D2F1A"}}>
+            <span style={{color:"#F0B93A"}}>⚠</span>
+            <span><b>V0.2 暂未实现:</b>原型仅展示 IP 白名单管理界面;新增 / 删除 / 启停切换 / 命中拒登逻辑后续版本实现。当前所有 IP 均可登录。</span>
+          </div>
+          <div className="bg-panel border border-line rounded-lg overflow-hidden">
+            <div className="scroll-x">
+              <table>
+                <thead><tr>
+                  <th>IP / IP 段</th><th>备注</th><th>状态</th><th>创建时间</th><th>操作</th>
+                </tr></thead>
+                <tbody>
+                  {list.map(item => (
+                    <tr key={item.id}>
+                      <td className="mono text-cool">{item.ip}</td>
+                      <td className="text-muted" style={{fontSize:12}}>{item.label}</td>
+                      <td><span className={"chip " + (item.enabled ? "chip-active" : "chip-frozen")}>{item.enabled ? "启用" : "已停用"}</span></td>
+                      <td className="text-muted" style={{fontSize:12}}>{item.createdAt}</td>
+                      <td>
+                        <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,marginRight:4}} disabled>{item.enabled ? "停用" : "启用"}</button>
+                        <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,color:"#FF6B6B"}} disabled>删除</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // ============== 主框架 ==============
     function App() {
-      const [role, setRole] = useState("operator");
+      const [currentUser, setCurrentUser] = useState(null);  // null = 未登录
       const [active, setActive] = useState("agents");
+      const [showChangePwd, setShowChangePwd] = useState(false);
+      const [showUserMenu, setShowUserMenu] = useState(false);
+
+      if (!currentUser) return <LoginPage onLogin={(staff)=>setCurrentUser(staff)}/>;
+
+      const role = currentUser.role;
       const r = ROLES[role];
       const visibleMenus = r.menus;
 
-      // 角色切换后兜底:若当前菜单不可见,回退到第一个可见菜单
+      // 角色变化兜底:若当前菜单不可见,回退到第一个可见菜单
       React.useEffect(() => {
         if (!visibleMenus.includes(active)) setActive(visibleMenus[0]);
       }, [role]);
@@ -1631,6 +1916,16 @@
           <span style={{width:14}}>{icon}</span>{label}
         </div>
       );
+
+      const breadcrumb = {
+        "agents":"账号管理 / 顶代户口",
+        "reports.bets":"报表管理 / 体育注单记录",
+        "reports.sports":"报表管理 / 体育场次记录",
+        "reports.ledger":"报表管理 / 交易流水记录",
+        "perm.staff":"权限管理 / 员工账号",
+        "sys.audit":"系统管理 / 操作日志",
+        "sys.ipwhite":"系统管理 / IP 白名单",
+      }[active];
 
       return (
         <div className="flex min-h-screen">
@@ -1652,8 +1947,12 @@
               <Menu id="reports.sports" label="体育场次记录" icon="◑"/>
               <Menu id="reports.ledger" label="交易流水记录" icon="◒"/>
 
+              {visibleMenus.includes("perm.staff") && <div className="menu-group">权限管理</div>}
+              <Menu id="perm.staff" label="员工账号" icon="◆"/>
+
               <div className="menu-group">系统管理</div>
               <Menu id="sys.audit" label="操作日志" icon="◓"/>
+              <Menu id="sys.ipwhite" label="IP 白名单" icon="◔"/>
             </nav>
             <div className="px-4 py-3 border-t border-line text-xs text-faint">
               <div>内部工具 · 仅限授权员工</div>
@@ -1663,13 +1962,24 @@
 
           {/* Main */}
           <main className="flex-1 flex flex-col bg-app">
-            <header className="border-b border-line px-6 py-3 flex items-center bg-panel">
-              <div className="text-xs text-faint">
-                {active === "agents" && "账号管理 / 顶代户口"}
-                {active === "reports.bets" && "报表管理 / 体育注单记录"}
-                {active === "reports.sports" && "报表管理 / 体育场次记录"}
-                {active === "reports.ledger" && "报表管理 / 交易流水记录"}
-                {active === "sys.audit" && "系统管理 / 操作日志"}
+            <header className="border-b border-line px-6 py-3 flex items-center bg-panel" style={{justifyContent:"space-between"}}>
+              <div className="text-xs text-faint">{breadcrumb}</div>
+              {/* 右上员工信息块 */}
+              <div style={{position:"relative"}}>
+                <div className="flex items-center gap-2 cursor-pointer" onClick={()=>setShowUserMenu(!showUserMenu)} style={{padding:"4px 10px",borderRadius:6,background:showUserMenu?"#1A2434":"transparent"}}>
+                  <span style={{width:24,height:24,borderRadius:"50%",background:r.color,color:"#0B0F15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600}}>{currentUser.user[0].toUpperCase()}</span>
+                  <span className="text-xs">{currentUser.user}</span>
+                  <span className="chip" style={{background:r.color+"22",color:r.color,fontSize:10}}>{r.name}</span>
+                  <span className="text-faint" style={{fontSize:10}}>▾</span>
+                </div>
+                {showUserMenu && (
+                  <div className="bg-panel border border-line rounded-lg" style={{position:"absolute",top:"100%",right:0,marginTop:4,minWidth:180,padding:"6px 0",zIndex:30,boxShadow:"0 4px 12px rgba(0,0,0,0.4)"}}>
+                    <div className="px-4 py-2 text-xs text-faint border-b border-line">{currentUser.phone || "-"}</div>
+                    <div className="px-4 py-2 text-xs text-faint border-b border-line">最近登录: <span className="mono">{currentUser.lastLogin || "-"}</span></div>
+                    <div className="px-4 py-2 cursor-pointer hover:bg-app text-sm" style={{cursor:"pointer"}} onClick={()=>{setShowChangePwd(true); setShowUserMenu(false);}}>修改密码</div>
+                    <div className="px-4 py-2 cursor-pointer hover:bg-app text-sm" style={{cursor:"pointer",color:"#FF8B6B"}} onClick={()=>{if(confirm("确认退出登录?")){setCurrentUser(null); setShowUserMenu(false);}}}>退出登录</div>
+                  </div>
+                )}
               </div>
             </header>
             <div className="flex-1 overflow-auto">
@@ -1677,9 +1987,12 @@
               {active === "reports.bets" && <BetsPage role={role}/>}
               {active === "reports.sports" && <SportsSessionsPage role={role}/>}
               {active === "reports.ledger" && <LedgerPage role={role}/>}
+              {active === "perm.staff" && <StaffPage currentUser={currentUser}/>}
               {active === "sys.audit" && <AuditPage role={role}/>}
+              {active === "sys.ipwhite" && <IPWhitelistPage/>}
             </div>
           </main>
+          {showChangePwd && <ChangePwdModal user={currentUser} onClose={()=>setShowChangePwd(false)} onConfirm={()=>{setShowChangePwd(false); alert("密码修改成功,请用新密码重新登录"); setCurrentUser(null);}}/>}
         </div>
       );
     }
