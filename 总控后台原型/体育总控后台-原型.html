@@ -177,17 +177,17 @@
     ];
 
     // 体育场次记录 mock - 每顶代每天一行 (Sammy 2026-04-30 拍 15 列)
-    // shareRatio = ACCOUNTS 顶代占成 ; shareAmount = shareRatio × validStake
-    // submitRate = 顶代上缴给平台的佣金率 ; workStartAt/EndAt = 场次时段精确到秒
-    // status: 已结算 / 未结算
+    // submitRate 是数组: 上缴给多个上级的佣金率列表 [{ sysId, rate }, ...]
+    //   每条样式: 系统户口号: 比例% ; 可 2-3 条
+    //   占位 sysId: PLAT (平台) / MASTER (总账) / BBIN (赛事方) - 真实业务对接账房后替换
     const MOCK_SPORTS_SESSIONS = [
-      { id:"SP-20260428-qweqwe-001",  date:"2026-04-28", topAgent:"qweqwe",  sysId:"qweqwe",  user:"qweqwe",  currency:"KRW", shareRatio:0.1875, validStake:118_000_000, shareAmount:22_125_000, totalWinLoss:8_320_000, rate:0.0750, commission:8_850_000,  submitRate:0.20, workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
-      { id:"SP-20260428-diamond-001", date:"2026-04-28", topAgent:"diamond", sysId:"diamond", user:"diamond", currency:"USD", shareRatio:0.225,  validStake:210_500,     shareAmount:47_362.50,  totalWinLoss:18_300,    rate:0.0800, commission:16_840,     submitRate:0.18, workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
-      { id:"SP-20260428-lucky88-001", date:"2026-04-28", topAgent:"lucky88", sysId:"lucky88", user:"lucky88", currency:"PHP", shareRatio:0.125,  validStake:2_980_000,   shareAmount:372_500,    totalWinLoss:-184_000,  rate:0.0600, commission:178_800,    submitRate:0.20, workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
-      { id:"SP-20260428-sapphire-001",date:"2026-04-28", topAgent:"sapphire",sysId:"sapphire",user:"sapphire",currency:"KRW", shareRatio:0.165,  validStake:52_300_000,  shareAmount:8_629_500,  totalWinLoss:3_140_000, rate:0.0750, commission:3_922_500,  submitRate:0.20, workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
-      { id:"SP-20260428-emerald-001", date:"2026-04-28", topAgent:"emerald", sysId:"emerald", user:"emerald", currency:"USD", shareRatio:0.05,   validStake:0,           shareAmount:0,          totalWinLoss:0,         rate:0.0700, commission:0,          submitRate:0.20, workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"未结算" },
-      { id:"SP-20260427-qweqwe-001",  date:"2026-04-27", topAgent:"qweqwe",  sysId:"qweqwe",  user:"qweqwe",  currency:"KRW", shareRatio:0.1875, validStake:135_800_000, shareAmount:25_462_500, totalWinLoss:-4_180_000,rate:0.0750, commission:10_185_000, submitRate:0.20, workStartAt:"2026-04-27 00:00:00", workEndAt:"2026-04-27 23:59:59", status:"已结算" },
-      { id:"SP-20260427-diamond-001", date:"2026-04-27", topAgent:"diamond", sysId:"diamond", user:"diamond", currency:"USD", shareRatio:0.225,  validStake:241_200,     shareAmount:54_270,     totalWinLoss:-12_400,   rate:0.0800, commission:19_296,     submitRate:0.18, workStartAt:"2026-04-27 00:00:00", workEndAt:"2026-04-27 23:59:59", status:"已结算" },
+      { id:"SP-20260428-qweqwe-001",  date:"2026-04-28", topAgent:"qweqwe",  sysId:"qweqwe",  user:"qweqwe",  currency:"KRW", shareRatio:0.1875, validStake:118_000_000, shareAmount:22_125_000, totalWinLoss:8_320_000, rate:0.0750, commission:8_850_000,  submitRate:[{sysId:"PLAT",rate:0.02},{sysId:"MASTER",rate:0.015},{sysId:"BBIN",rate:0.005}], workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
+      { id:"SP-20260428-diamond-001", date:"2026-04-28", topAgent:"diamond", sysId:"diamond", user:"diamond", currency:"USD", shareRatio:0.225,  validStake:210_500,     shareAmount:47_362.50,  totalWinLoss:18_300,    rate:0.0800, commission:16_840,     submitRate:[{sysId:"PLAT",rate:0.018},{sysId:"MASTER",rate:0.012}],                          workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
+      { id:"SP-20260428-lucky88-001", date:"2026-04-28", topAgent:"lucky88", sysId:"lucky88", user:"lucky88", currency:"PHP", shareRatio:0.125,  validStake:2_980_000,   shareAmount:372_500,    totalWinLoss:-184_000,  rate:0.0600, commission:178_800,    submitRate:[{sysId:"PLAT",rate:0.02},{sysId:"MASTER",rate:0.015}],                            workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
+      { id:"SP-20260428-sapphire-001",date:"2026-04-28", topAgent:"sapphire",sysId:"sapphire",user:"sapphire",currency:"KRW", shareRatio:0.165,  validStake:52_300_000,  shareAmount:8_629_500,  totalWinLoss:3_140_000, rate:0.0750, commission:3_922_500,  submitRate:[{sysId:"PLAT",rate:0.02},{sysId:"MASTER",rate:0.015},{sysId:"BBIN",rate:0.005}], workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
+      { id:"SP-20260428-emerald-001", date:"2026-04-28", topAgent:"emerald", sysId:"emerald", user:"emerald", currency:"USD", shareRatio:0.05,   validStake:0,           shareAmount:0,          totalWinLoss:0,         rate:0.0700, commission:0,          submitRate:[{sysId:"PLAT",rate:0.02},{sysId:"MASTER",rate:0.015}],                            workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"未结算" },
+      { id:"SP-20260427-qweqwe-001",  date:"2026-04-27", topAgent:"qweqwe",  sysId:"qweqwe",  user:"qweqwe",  currency:"KRW", shareRatio:0.1875, validStake:135_800_000, shareAmount:25_462_500, totalWinLoss:-4_180_000,rate:0.0750, commission:10_185_000, submitRate:[{sysId:"PLAT",rate:0.02},{sysId:"MASTER",rate:0.015},{sysId:"BBIN",rate:0.005}], workStartAt:"2026-04-27 00:00:00", workEndAt:"2026-04-27 23:59:59", status:"已结算" },
+      { id:"SP-20260427-diamond-001", date:"2026-04-27", topAgent:"diamond", sysId:"diamond", user:"diamond", currency:"USD", shareRatio:0.225,  validStake:241_200,     shareAmount:54_270,     totalWinLoss:-12_400,   rate:0.0800, commission:19_296,     submitRate:[{sysId:"PLAT",rate:0.018},{sysId:"MASTER",rate:0.012}],                          workStartAt:"2026-04-27 00:00:00", workEndAt:"2026-04-27 23:59:59", status:"已结算" },
     ];
 
     const MOCK_LEDGER = [
@@ -1096,7 +1096,15 @@
                       <td className="num text-right">{fmtAmount(s.shareAmount)}</td>
                       <td className="num text-right">{fmtPct(s.rate)}</td>
                       <td className="num text-right text-cool">{fmtAmount(s.commission)}</td>
-                      <td className="num text-right">{fmtPct(s.submitRate)}</td>
+                      <td className="text-right">
+                        {Array.isArray(s.submitRate) ? s.submitRate.map((r,i) => (
+                          <div key={i} style={{whiteSpace:"nowrap",fontSize:11}}>
+                            <span className="text-faint">{r.sysId}</span>
+                            <span className="text-muted">:</span>
+                            <span className="num ml-1">{fmtPct(r.rate)}</span>
+                          </div>
+                        )) : <span className="text-faint">—</span>}
+                      </td>
                       <td className="text-muted" style={{fontSize:12}}>{s.workStartAt}</td>
                       <td className="text-muted" style={{fontSize:12}}>{s.workEndAt}</td>
                       <td><StatusChip status={s.status}/></td>
