@@ -570,7 +570,8 @@ operator 多 1 列 **操作**(canWrite=true);risk / finance 不显示操作列�
 
 | # | 筛选项 | 形式 | 字段 |
 |---|---|---|---|
-| 1 | 系统户口号 / 用户账号 | text 240px | `sysId.includes` 或 `user.includes` |
+| 1a | 系统户口号 | text 200px | `sysId.includes`(独立条件)|
+| 1b | 用户账号 | text 200px | `user.includes`(独立条件,跟 1a 是 AND)|
 | 2 | 状态 | select 130px | `all / active / frozen` |
 | 3 | 币种 | select 120px | `all / KRW / USD / PHP / CNY / THB` |
 | 4 | 占成 | select 150px | `all / lt10 / 10to20 / 20to30 / gte30` |
@@ -731,7 +732,8 @@ operator 多 1 列 **操作**(canWrite=true);risk / finance 不显示操作列�
 | # | 筛选项 |
 |---|---|
 | 1 | 注单号 |
-| 2 | 系统户口号 / 用户账号 |
+| 2a | 系统户口号(`playerSysId.includes`)|
+| 2b | 用户账号(`playerUser.includes`)|
 | 3 | 币种 |
 | 4 | 投注时间 RangePicker |
 
@@ -757,14 +759,15 @@ operator 多 1 列 **操作**(canWrite=true);risk / finance 不显示操作列�
 
 **默认过滤**:`validStake > 0`(空跑批不展示)
 
-**筛选区**(V0.2 5 项,提交触发):
+**筛选区**(V0.2 6 项,提交触发):
 | # | 筛选项 |
 |---|---|
 | 1 | 场次编号 |
-| 2 | 系统户口号 / 用户账号 |
+| 2a | 系统户口号(`sysId.includes`)|
+| 2b | 用户账号(`user.includes`)|
 | 3 | 币种 |
-| 4 | 业务日期 RangePicker(`format=YYYY-MM-DD`) |
-| 5 | 状态(已结算 / 未结算) |
+| 4 | 业务日期 RangePicker(`format=YYYY-MM-DD`)|
+| 5 | 状态(已结算 / 未结算)|
 | ~~⏸~~ | ~~占成(distinct from mock)~~ V0.2 隐藏 |
 
 **场次编号规则**:`SP-年月日时分-自然数`(年月日时分 = 跑批生成时间,例 04-28 数据于 04-29 00:10 跑 → `SP-202604290010-001`,自然数按 batch 内重置)
@@ -810,11 +813,12 @@ operator 多 1 列 **操作**(canWrite=true);risk / finance 不显示操作列�
 
 **说明文案**:`三层资金动作合一 · 账房 ↔ 顶代 / 顶代 ↔ 下线 / 玩家 ↔ 三方体育平台`
 
-**筛选区**(V0.2 6 项,提交触发):
+**筛选区**(V0.2 7 项,提交触发):
 | # | 筛选项 | 选项 |
 |---|---|---|
 | 1 | 流水号 | text |
-| 2 | 系统户口号 / 用户账号 | text(双字段联合搜索 mainSysId / mainUser) |
+| 2a | 系统户口号 | text(`mainSysId.includes`)|
+| 2b | 用户账号 | text(`mainUser.includes`)|
 | 3 | 交易类型 | `all / credit(上分) / debit(下分) / transfer_in(三方体育上分) / transfer_out(三方体育下分)` |
 | 4 | 转入 / 转出 | `all / in / out` |
 | 5 | 币种 | select |
@@ -1288,7 +1292,36 @@ def run_session_batch():
 
 `YYYY-MM-DD HH:mm:ss`(秒级精度)
 
-### 9.4 状态文案
+### 9.4 必填字段标识
+
+**所有 form 内必填项 `*`** 用红色 `#FF6B6B` 显示(V0.2 Sammy 拍):
+
+```jsx
+<label>员工账号 <span style={{color:"#FF6B6B"}}>*</span></label>
+```
+
+适用范围:全 28 个必填字段(LoginPage / ChangePwdModal / EditProfileModal / NewSubModal / CreditDebitModal / AddStaffModal / EditStaffRoleModal / AddIPModal 等所有弹窗)
+
+### 9.5 列表内字段颜色
+
+**列表 `<td>` 内的标识字段不再用 `text-cool`**(蓝色看着像可点链接,V0.2 Sammy 拍)。统一用 `mono` 默认主文字色 `#E4ECF7`。
+
+适用字段(7 处列表 td):
+- 体育注单:注单号
+- 体育场次:场次编号
+- 交易流水:流水号
+- 顶代户口:用户账号(顶代行也跟下线行同色)
+- 员工账号:员工账号
+- IP 白名单:IP / IP 段(暂隐藏)
+- 操作日志:主体 actor
+
+**保留 `text-cool` 的位置**(弹窗 / 标题 / 信息条等"非列表"位置仍用蓝色强调):
+- SessionDetailModal 标题里的 `session.id`
+- ChangePwdModal / 修改资料 / 上下分 弹窗副标题里的当前账号引用
+- IP 白名单页顶部信息条的当前 IP
+- 数据看板 KPI 数值(已隐藏)
+
+### 9.6 状态文案
 
 | 字段 | 枚举值 | 文案 |
 |---|---|---|

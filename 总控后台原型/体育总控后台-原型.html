@@ -258,7 +258,7 @@
                   <tbody>
                     {pageData.map(b => (
                       <tr key={b.id}>
-                        <td className="mono text-cool" style={{fontSize:11}}>{b.id}</td>
+                        <td className="mono" style={{fontSize:11}}>{b.id}</td>
                         <td className="mono text-muted">{b.playerSysId}</td>
                         <td className="mono">{b.playerUser}</td>
                         <td><span className="chip chip-cool">{b.currency}</span></td>
@@ -509,7 +509,7 @@
             <div className="space-y-3">
               {fields}
               <div>
-                <label className="block text-xs text-muted mb-1">操作密码 <span className="text-cool">*</span></label>
+                <label className="block text-xs text-muted mb-1">操作密码 <span style={{color:"#FF6B6B"}}>*</span></label>
                 <input type="password" className="input" placeholder="当前登录员工的登录密码 (Mock: 123456)" value={pwd} onChange={e=>setPwd(e.target.value)}/>
               </div>
               {err && <div className="text-xs" style={{color:"#FF6B6B"}}>{err}</div>}
@@ -634,7 +634,9 @@
         appendSystemLog && appendSystemLog("新增下级", "顶代 "+parentNode.user+" ("+parentNode.currency+") 下新增"+data.type+" "+data.user+" ("+newSysId+")");
       };
       // 所有筛选走"输入态 + 提交后生效"双状态 (跟搜索按钮一起触发, ProComponents QueryFilter 模式)
-      const [inSearch, setInSearch] = useState(""), [search, setSearch] = useState("");
+      // V0.2 (Sammy 2026-04-30): 系统户口号 / 用户账号 拆 2 个独立筛选框
+      const [inSysIdQ, setInSysIdQ] = useState(""), [sysIdQ, setSysIdQ] = useState("");
+      const [inUserQ, setInUserQ] = useState(""), [userQ, setUserQ] = useState("");
       const [inStatus, setInStatus] = useState("all"), [statusFilter, setStatusFilter] = useState("all");
       const [inCurrency, setInCurrency] = useState("all"), [currencyFilter, setCurrencyFilter] = useState("all");
       const [inShareRatio, setInShareRatio] = useState("all"), [shareRatioFilter, setShareRatioFilter] = useState("all");
@@ -642,20 +644,27 @@
       const [inDateTo, setInDateTo] = useState(""), [dateTo, setDateTo] = useState("");
       const [pageNum, setPageNum] = useState(0);
       const doSearch = () => {
-        setSearch(inSearch.trim()); setStatusFilter(inStatus); setCurrencyFilter(inCurrency);
+        setSysIdQ(inSysIdQ.trim()); setUserQ(inUserQ.trim()); setStatusFilter(inStatus); setCurrencyFilter(inCurrency);
         setShareRatioFilter(inShareRatio); setDateFrom(inDateFrom); setDateTo(inDateTo); setPageNum(0);
       };
       const resetSearch = () => {
-        setInSearch(""); setInStatus("all"); setInCurrency("all"); setInShareRatio("all"); setInDateFrom(""); setInDateTo("");
-        setSearch(""); setStatusFilter("all"); setCurrencyFilter("all"); setShareRatioFilter("all"); setDateFrom(""); setDateTo(""); setPageNum(0);
+        setInSysIdQ(""); setInUserQ(""); setInStatus("all"); setInCurrency("all"); setInShareRatio("all"); setInDateFrom(""); setInDateTo("");
+        setSysIdQ(""); setUserQ(""); setStatusFilter("all"); setCurrencyFilter("all"); setShareRatioFilter("all"); setDateFrom(""); setDateTo(""); setPageNum(0);
       };
 
       // Tree 扁平化: 顶代行先过筛选; 下线行只在父级展开时才出现 (V0.1 同款懒加载)
       // 搜索逻辑: 树状穿透 - 任何后代匹配, 整条祖先链都显示并自动展开 (大小写不敏感)
+      // V0.2 (Sammy 2026-04-30): sysId / user 拆 2 个独立条件 (AND 关系)
       const rows = useMemo(() => {
         const out = [];
-        const ls = (search || "").toLowerCase().trim();
-        const matches = (node) => !ls || node.user.toLowerCase().includes(ls) || node.sysId.toLowerCase().includes(ls);
+        const sysQ = (sysIdQ || "").toLowerCase().trim();
+        const userQ_ = (userQ || "").toLowerCase().trim();
+        const hasQ = sysQ || userQ_;
+        const matches = (node) => {
+          if (sysQ && !node.sysId.toLowerCase().includes(sysQ)) return false;
+          if (userQ_ && !node.user.toLowerCase().includes(userQ_)) return false;
+          return true;
+        };
         // 当前节点或任意后代匹配 (用于决定是否显示顶代行 / 是否强制展开)
         const hasMatchInSubtree = (key) => {
           const node = accounts[key];
@@ -689,10 +698,10 @@
               if (toCmp.length === 16) toCmp += ":59";
               if (node.createdAt > toCmp) return;
             }
-            if (ls && !hasMatchInSubtree(key)) return;
+            if (hasQ && !hasMatchInSubtree(key)) return;
           }
           out.push({ ...node, key, depth });
-          const autoExpand = ls && (node.children || []).some(c => hasMatchInSubtree(c));
+          const autoExpand = hasQ && (node.children || []).some(c => hasMatchInSubtree(c));
           const shouldExpand = expanded.has(key) || autoExpand;
           if (shouldExpand) {
             (node.children || []).forEach(child => walk(child, depth + 1));
@@ -700,7 +709,7 @@
         }
         topKeys.forEach(k => walk(k, 0));
         return out;
-      }, [accounts, topKeys, search, statusFilter, currencyFilter, shareRatioFilter, dateFrom, dateTo, expanded]);
+      }, [accounts, topKeys, sysIdQ, userQ, statusFilter, currencyFilter, shareRatioFilter, dateFrom, dateTo, expanded]);
 
       // 按顶代行分组 (顶代 + 该顶代展开的所有下线 = 1 组), 分页以"组"为单位 (PAGE_SIZE 个顶代/页, 展开下线随父级一起出现)
       const groups = useMemo(() => {
@@ -733,7 +742,7 @@
             <span className="mono text-muted">{a.sysId}</span>
           </span>
         ) },
-        { id:2, label:"用户账号", render:a => <span className={a.depth === 0 ? "mono text-cool" : "mono"}>{a.user}</span> },
+        { id:2, label:"用户账号", render:a => <span className="mono">{a.user}</span> },  // V0.2 (Sammy 2026-04-30): 列表蓝改色 - 顶代行 user 不用 text-cool, 跟下线行一致
         { id:3, label:"下线数", render:a => <span className="num">{a.subCount}</span> },
         { id:4, label:"账号状态", render:a => <StatusChip status={a.status}/> },
         { id:5, label:"币种", render:a => <span className="chip chip-cool">{a.currency}</span> },
@@ -764,7 +773,8 @@
           </div>
           <div className="bg-panel border border-line rounded-lg p-3 mb-4">
             <div className="flex flex-wrap gap-2 items-center">
-              <input className="input" style={{width:240}} placeholder="搜索 系统户口号 / 用户账号" value={inSearch} onChange={e=>setInSearch(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:200}} placeholder="搜索系统户口号" value={inSysIdQ} onChange={e=>setInSysIdQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:200}} placeholder="搜索用户账号" value={inUserQ} onChange={e=>setInUserQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
               <select className="input" style={{width:130}} value={inStatus} onChange={e=>setInStatus(e.target.value)}>
                 <option value="all">全部状态</option>
                 <option value="active">启用</option>
@@ -890,10 +900,10 @@
 
               <div className="section-title">② 基本信息</div>
               <div className="grid grid-cols-2 gap-3">
-                <div><label className="block text-xs text-muted mb-1">用户账号 <span className="text-cool">*</span></label><input className="input" placeholder="6-20 位英数" value={user} onChange={e=>setUser(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">用户账号 <span style={{color:"#FF6B6B"}}>*</span></label><input className="input" placeholder="6-20 位英数" value={user} onChange={e=>setUser(e.target.value)}/></div>
                 <div><label className="block text-xs text-muted mb-1">账户昵称</label><input className="input" placeholder="选填" value={nick} onChange={e=>setNick(e.target.value)}/></div>
-                <div><label className="block text-xs text-muted mb-1">密码 <span className="text-cool">*</span></label><input type="password" className="input" value={pwd} onChange={e=>setPwd(e.target.value)}/></div>
-                <div><label className="block text-xs text-muted mb-1">确认密码 <span className="text-cool">*</span></label><input type="password" className="input" value={pwdC} onChange={e=>setPwdC(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">密码 <span style={{color:"#FF6B6B"}}>*</span></label><input type="password" className="input" value={pwd} onChange={e=>setPwd(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">确认密码 <span style={{color:"#FF6B6B"}}>*</span></label><input type="password" className="input" value={pwdC} onChange={e=>setPwdC(e.target.value)}/></div>
                 <div><label className="block text-xs text-muted mb-1">电话号码</label><input className="input" placeholder="选填" value={phone} onChange={e=>setPhone(e.target.value)}/></div>
                 <div><label className="block text-xs text-muted mb-1">备用电话</label><input className="input" placeholder="选填" value={phone2} onChange={e=>setPhone2(e.target.value)}/></div>
               </div>
@@ -901,14 +911,14 @@
               <div className="section-title">③ 账号属性</div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-muted mb-1">账号类型 *</label>
+                  <label className="block text-xs text-muted mb-1">账号类型 <span style={{color:"#FF6B6B"}}>*</span></label>
                   <div className="flex gap-4 text-sm" style={{paddingTop:6}}>
                     <label><input type="radio" checked={accType==="代理"} onChange={()=>setAccType("代理")}/> <span className="ml-1">代理</span></label>
                     <label><input type="radio" checked={accType==="游戏"} onChange={()=>setAccType("游戏")}/> <span className="ml-1">游戏(玩家)</span></label>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-muted mb-1">账号状态 *</label>
+                  <label className="block text-xs text-muted mb-1">账号状态 <span style={{color:"#FF6B6B"}}>*</span></label>
                   <div className="flex gap-4 text-sm" style={{paddingTop:6}}>
                     <label><input type="radio" checked={accStatus==="active"} onChange={()=>setAccStatus("active")}/> <span className="ml-1">启用</span></label>
                     <label><input type="radio" checked={accStatus==="frozen"} onChange={()=>setAccStatus("frozen")}/> <span className="ml-1">禁用</span></label>
@@ -926,7 +936,7 @@
               <div className="section-title">⑤ 游戏条件</div>
               {/* V0.2 隐藏「参考占成」(Sammy 2026-04-30): 直接继承父级 shareRatio,后期重启把 grid-cols-1 改回 grid-cols-2 + 参考占成 input 加回 */}
               <div>
-                <label className="block text-xs text-muted mb-1">参考佣金率 <span className="text-cool">*</span></label>
+                <label className="block text-xs text-muted mb-1">参考佣金率 <span style={{color:"#FF6B6B"}}>*</span></label>
                 <div className="flex items-center gap-2" style={{maxWidth:280}}>
                   <input type="number" step="0.01" className="input flex-1" value={refRate} onChange={e=>setRefRate(e.target.value)} placeholder="例: 0.30"/>
                   <span className="text-muted">%</span>
@@ -936,7 +946,7 @@
 
               <div className="section-title">⑥ 安全校验</div>
               <div>
-                <label className="block text-xs text-muted mb-1">操作密码 <span className="text-cool">*</span></label>
+                <label className="block text-xs text-muted mb-1">操作密码 <span style={{color:"#FF6B6B"}}>*</span></label>
                 <input type="password" className="input" placeholder="当前登录员工的登录密码 (Mock: 123456)" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
               </div>
               {err && <div className="text-xs" style={{color:"#FF6B6B"}}>{err}</div>}
@@ -1062,7 +1072,7 @@
                 <>
                   <div className="section-title">安全校验(因高敏感字段被修改而出现)</div>
                   <div>
-                    <label className="block text-xs text-muted mb-1">操作密码 *</label>
+                    <label className="block text-xs text-muted mb-1">操作密码 <span style={{color:"#FF6B6B"}}>*</span></label>
                     <input type="password" className="input" value={opPwd} onChange={e=>setOpPwd(e.target.value)} placeholder="当前登录员工的登录密码 (Mock: 123456)"/>
                   </div>
                 </>
@@ -1121,7 +1131,7 @@
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-muted mb-1">{isCredit ? "上分金额" : "下分金额"} <span className="text-cool">*</span></label>
+                <label className="block text-xs text-muted mb-1">{isCredit ? "上分金额" : "下分金额"} <span style={{color:"#FF6B6B"}}>*</span></label>
                 <div className="flex items-center gap-2">
                   <input type="number" step="0.0001" className="input flex-1" value={amount} onChange={e=>setAmount(e.target.value)} placeholder={isCredit ? "上限 " + parentBalanceWan.toLocaleString("zh-CN",{maximumFractionDigits:4}) + " (上级余额)" : "上限 " + balanceWan.toLocaleString("zh-CN",{maximumFractionDigits:4}) + " (当前余额)"}/>
                   <span className="text-muted">万 {account.currency}</span>
@@ -1131,7 +1141,7 @@
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-muted mb-1">操作密码 <span className="text-cool">*</span></label>
+                <label className="block text-xs text-muted mb-1">操作密码 <span style={{color:"#FF6B6B"}}>*</span></label>
                 <input type="password" className="input" placeholder="当前登录员工的登录密码 (Mock: 123456)" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
               </div>
               {err && <div className="text-xs" style={{color:"#FF6B6B"}}>{err}</div>}
@@ -1169,19 +1179,21 @@
     // ============== 注单记录页 ==============
     function BetsPage({ role, appendSystemLog }) {
       // 提交触发模式 (跟顶代户口筛选区一致)
+      // V0.2 (Sammy 2026-04-30): 系统户口号 / 用户账号 拆 2 个独立筛选框
       const [inBetId, setInBetId] = useState(""), [betId, setBetId] = useState("");
-      const [inUser, setInUser] = useState(""), [userQ, setUserQ] = useState("");
+      const [inSysIdQ, setInSysIdQ] = useState(""), [sysIdQ, setSysIdQ] = useState("");
+      const [inUserQ, setInUserQ] = useState(""), [userQ, setUserQ] = useState("");
       const [inCurrency, setInCurrency] = useState("all"), [currency, setCurrency] = useState("all");
       const [inDateFrom, setInDateFrom] = useState(""), [dateFrom, setDateFrom] = useState("");
       const [inDateTo, setInDateTo] = useState(""), [dateTo, setDateTo] = useState("");
       const [pageNum, setPageNum] = useState(0);
       const doSearch = () => {
-        setBetId(inBetId.trim()); setUserQ(inUser.trim()); setCurrency(inCurrency);
+        setBetId(inBetId.trim()); setSysIdQ(inSysIdQ.trim()); setUserQ(inUserQ.trim()); setCurrency(inCurrency);
         setDateFrom(inDateFrom); setDateTo(inDateTo); setPageNum(0);
       };
       const resetSearch = () => {
-        setInBetId(""); setInUser(""); setInCurrency("all"); setInDateFrom(""); setInDateTo("");
-        setBetId(""); setUserQ(""); setCurrency("all"); setDateFrom(""); setDateTo(""); setPageNum(0);
+        setInBetId(""); setInSysIdQ(""); setInUserQ(""); setInCurrency("all"); setInDateFrom(""); setInDateTo("");
+        setBetId(""); setSysIdQ(""); setUserQ(""); setCurrency("all"); setDateFrom(""); setDateTo(""); setPageNum(0);
       };
 
       // 硬过滤: 只显示体育注单 + 只显示已结算 (Sammy 2026-04-30 拍, 跟体育场次记录数据源对齐)
@@ -1189,7 +1201,8 @@
         if (!b.gameType.includes("体育")) return false;
         if (b.status !== "已结算") return false;
         if (betId && !b.id.includes(betId)) return false;
-        if (userQ && !((b.playerSysId || "").includes(userQ) || (b.playerUser || "").includes(userQ))) return false;
+        if (sysIdQ && !((b.playerSysId || "").includes(sysIdQ))) return false;
+        if (userQ && !((b.playerUser || "").includes(userQ))) return false;
         if (currency !== "all" && b.currency !== currency) return false;
         // 时间过滤 betTime (投注时间)
         if (dateFrom) {
@@ -1219,7 +1232,8 @@
           <div className="bg-panel border border-line rounded-lg p-3 mb-4">
             <div className="flex flex-wrap gap-2 items-center">
               <input className="input" style={{width:200}} placeholder="搜索注单号" value={inBetId} onChange={e=>setInBetId(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
-              <input className="input" style={{width:240}} placeholder="搜索 系统户口号 / 用户账号" value={inUser} onChange={e=>setInUser(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:180}} placeholder="搜索系统户口号" value={inSysIdQ} onChange={e=>setInSysIdQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:180}} placeholder="搜索用户账号" value={inUserQ} onChange={e=>setInUserQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
               <select className="input" style={{width:120}} value={inCurrency} onChange={e=>setInCurrency(e.target.value)}>
                 <option value="all">全部币种</option>
                 <option value="KRW">KRW</option><option value="USD">USD</option><option value="PHP">PHP</option><option value="CNY">CNY</option><option value="THB">THB</option>
@@ -1256,7 +1270,7 @@
                 <tbody>
                   {list.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).map(b => (
                     <tr key={b.id}>
-                      <td className="mono text-cool" style={{fontSize:11}}>{b.id}</td>
+                      <td className="mono" style={{fontSize:11}}>{b.id}</td>
                       <td className="mono text-muted">{b.playerSysId}</td>
                       <td className="mono">{b.playerUser}</td>
                       <td><span className="chip chip-cool">{b.currency}</span></td>
@@ -1282,8 +1296,10 @@
     // ============== 体育场次记录页 ==============
     function SportsSessionsPage({ role, appendSystemLog }) {
       // 提交触发模式 (跟体育注单 / 顶代户口筛选区一致)
+      // V0.2 (Sammy 2026-04-30): 系统户口号 / 用户账号 拆 2 个独立筛选框
       const [inSessionId, setInSessionId] = useState(""), [sessionId, setSessionId] = useState("");
-      const [inUser, setInUser] = useState(""), [userQ, setUserQ] = useState("");
+      const [inSysIdQ, setInSysIdQ] = useState(""), [sysIdQ, setSysIdQ] = useState("");
+      const [inUserQ, setInUserQ] = useState(""), [userQ, setUserQ] = useState("");
       const [inCurrency, setInCurrency] = useState("all"), [currency, setCurrency] = useState("all");
       const [inShareRatio, setInShareRatio] = useState("all"), [shareRatioQ, setShareRatioQ] = useState("all");
       const [inDateFrom, setInDateFrom] = useState(""), [dateFrom, setDateFrom] = useState("");
@@ -1293,12 +1309,12 @@
       const [pageNum, setPageNum] = useState(0);
 
       const doSearch = () => {
-        setSessionId(inSessionId.trim()); setUserQ(inUser.trim()); setCurrency(inCurrency);
+        setSessionId(inSessionId.trim()); setSysIdQ(inSysIdQ.trim()); setUserQ(inUserQ.trim()); setCurrency(inCurrency);
         setShareRatioQ(inShareRatio); setDateFrom(inDateFrom); setDateTo(inDateTo); setStatusQ(inStatus); setPageNum(0);
       };
       const resetSearch = () => {
-        setInSessionId(""); setInUser(""); setInCurrency("all"); setInShareRatio("all"); setInDateFrom(""); setInDateTo(""); setInStatus("all");
-        setSessionId(""); setUserQ(""); setCurrency("all"); setShareRatioQ("all"); setDateFrom(""); setDateTo(""); setStatusQ("all"); setPageNum(0);
+        setInSessionId(""); setInSysIdQ(""); setInUserQ(""); setInCurrency("all"); setInShareRatio("all"); setInDateFrom(""); setInDateTo(""); setInStatus("all");
+        setSessionId(""); setSysIdQ(""); setUserQ(""); setCurrency("all"); setShareRatioQ("all"); setDateFrom(""); setDateTo(""); setStatusQ("all"); setPageNum(0);
       };
 
       // 占成下拉的所有可选值 (从 mock 数据 distinct)
@@ -1307,7 +1323,8 @@
       const list = MOCK_SPORTS_SESSIONS.filter(s => {
         if ((s.validStake || 0) === 0) return false; // 过滤无有效投注的场次 (空跑批不展示)
         if (sessionId && !s.id.includes(sessionId)) return false;
-        if (userQ && !((s.sysId || "").includes(userQ) || (s.user || "").includes(userQ))) return false;
+        if (sysIdQ && !((s.sysId || "").includes(sysIdQ))) return false;
+        if (userQ && !((s.user || "").includes(userQ))) return false;
         if (currency !== "all" && s.currency !== currency) return false;
         if (shareRatioQ !== "all" && String(s.shareRatio) !== shareRatioQ) return false;
         if (statusQ !== "all" && s.status !== statusQ) return false;
@@ -1338,8 +1355,9 @@
           </div>
           <div className="bg-panel border border-line rounded-lg p-3 mb-4">
             <div className="flex flex-wrap gap-2 items-center">
-              <input className="input" style={{width:220}} placeholder="搜索场次编号" value={inSessionId} onChange={e=>setInSessionId(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
-              <input className="input" style={{width:240}} placeholder="搜索 系统户口号 / 用户账号" value={inUser} onChange={e=>setInUser(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:200}} placeholder="搜索场次编号" value={inSessionId} onChange={e=>setInSessionId(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:180}} placeholder="搜索系统户口号" value={inSysIdQ} onChange={e=>setInSysIdQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:180}} placeholder="搜索用户账号" value={inUserQ} onChange={e=>setInUserQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
               <select className="input" style={{width:120}} value={inCurrency} onChange={e=>setInCurrency(e.target.value)}>
                 <option value="all">全部币种</option>
                 <option value="KRW">KRW</option><option value="USD">USD</option><option value="PHP">PHP</option><option value="CNY">CNY</option><option value="THB">THB</option>
@@ -1387,7 +1405,7 @@
                 <tbody>
                   {list.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).map(s => (
                     <tr key={s.id}>
-                      <td className="mono text-cool" style={{fontSize:11}}>{s.id}</td>
+                      <td className="mono" style={{fontSize:11}}>{s.id}</td>
                       <td className="mono text-muted">{s.sysId}</td>
                       <td className="mono">{s.user}</td>
                       <td className="num text-right" style={{color: s.totalWinLoss > 0 ? "#5BC97C" : (s.totalWinLoss < 0 ? "#FF6B6B" : "#9AA4B5")}}>
@@ -1416,8 +1434,10 @@
     // ============== 交易流水记录页 ==============
     function LedgerPage({ role, appendSystemLog }) {
       // 提交触发模式 (跟体育注单 / 体育场次 / 顶代户口 一致)
+      // V0.2 (Sammy 2026-04-30): 系统户口号 / 用户账号 拆 2 个独立筛选框
       const [inTxId, setInTxId] = useState(""), [txId, setTxId] = useState("");
-      const [inUser, setInUser] = useState(""), [userQ, setUserQ] = useState("");
+      const [inSysIdQ, setInSysIdQ] = useState(""), [sysIdQ, setSysIdQ] = useState("");
+      const [inUserQ, setInUserQ] = useState(""), [userQ, setUserQ] = useState("");
       const [inTxType, setInTxType] = useState("all"), [txType, setTxType] = useState("all");
       const [inFlow, setInFlow] = useState("all"), [flow, setFlow] = useState("all"); // 转入/转出
       const [inCurrency, setInCurrency] = useState("all"), [currency, setCurrency] = useState("all");
@@ -1427,12 +1447,12 @@
       const [pageNum, setPageNum] = useState(0);
 
       const doSearch = () => {
-        setTxId(inTxId.trim()); setUserQ(inUser.trim()); setTxType(inTxType);
+        setTxId(inTxId.trim()); setSysIdQ(inSysIdQ.trim()); setUserQ(inUserQ.trim()); setTxType(inTxType);
         setFlow(inFlow); setCurrency(inCurrency); setDateFrom(inDateFrom); setDateTo(inDateTo); setStatusQ(inStatus); setPageNum(0);
       };
       const resetSearch = () => {
-        setInTxId(""); setInUser(""); setInTxType("all"); setInFlow("all"); setInCurrency("all"); setInDateFrom(""); setInDateTo(""); setInStatus("all");
-        setTxId(""); setUserQ(""); setTxType("all"); setFlow("all"); setCurrency("all"); setDateFrom(""); setDateTo(""); setStatusQ("all"); setPageNum(0);
+        setInTxId(""); setInSysIdQ(""); setInUserQ(""); setInTxType("all"); setInFlow("all"); setInCurrency("all"); setInDateFrom(""); setInDateTo(""); setInStatus("all");
+        setTxId(""); setSysIdQ(""); setUserQ(""); setTxType("all"); setFlow("all"); setCurrency("all"); setDateFrom(""); setDateTo(""); setStatusQ("all"); setPageNum(0);
       };
 
       const isCredit = (t) => t === "house_credit" || t === "agent_credit";
@@ -1440,7 +1460,8 @@
 
       const list = MOCK_LEDGER.filter(l => {
         if (txId && !l.id.includes(txId)) return false;
-        if (userQ && !((l.mainSysId || "").includes(userQ) || (l.mainUser || "").includes(userQ))) return false;
+        if (sysIdQ && !((l.mainSysId || "").includes(sysIdQ))) return false;
+        if (userQ && !((l.mainUser || "").includes(userQ))) return false;
         if (txType !== "all") {
           if (txType === "credit" && !isCredit(l.type)) return false;
           if (txType === "debit"  && !isDebit(l.type))  return false;
@@ -1478,8 +1499,9 @@
           </div>
           <div className="bg-panel border border-line rounded-lg p-3 mb-4">
             <div className="flex flex-wrap gap-2 items-center">
-              <input className="input" style={{width:200}} placeholder="搜索流水号" value={inTxId} onChange={e=>setInTxId(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
-              <input className="input" style={{width:240}} placeholder="搜索 系统户口号 / 用户账号" value={inUser} onChange={e=>setInUser(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:180}} placeholder="搜索流水号" value={inTxId} onChange={e=>setInTxId(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:180}} placeholder="搜索系统户口号" value={inSysIdQ} onChange={e=>setInSysIdQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:180}} placeholder="搜索用户账号" value={inUserQ} onChange={e=>setInUserQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
               <select className="input" style={{width:160}} value={inTxType} onChange={e=>setInTxType(e.target.value)}>
                 <option value="all">全部交易类型</option>
                 <option value="credit">上分</option>
@@ -1531,7 +1553,7 @@
                     const isIn = isCredit(l.type) || l.type === "transfer_in";
                     return (
                     <tr key={l.id}>
-                      <td className="mono text-cool" style={{fontSize:11}}>{l.id}</td>
+                      <td className="mono" style={{fontSize:11}}>{l.id}</td>
                       <td className="mono text-muted">{l.mainSysId || "—"}</td>
                       <td className="mono">{l.mainUser || "—"}</td>
                       <td>{l.typeLabel}</td>
@@ -1794,7 +1816,7 @@
                 <tbody>
                   {staff.map(s => (
                     <tr key={s.user}>
-                      <td className="mono text-cool">{s.user}{s.user === currentUser.user && <span className="text-faint ml-2" style={{fontSize:10}}>(当前登录)</span>}{s.user === "admin" && <span className="ml-2" style={{fontSize:10,color:"#F0B93A"}}>★ 超级账号</span>}</td>
+                      <td className="mono">{s.user}{s.user === currentUser.user && <span className="text-faint ml-2" style={{fontSize:10}}>(当前登录)</span>}{s.user === "admin" && <span className="ml-2" style={{fontSize:10,color:"#F0B93A"}}>★ 超级账号</span>}</td>
                       <td><span className="chip" style={{background:ROLES[s.role].color+"22",color:ROLES[s.role].color}}>{ROLES[s.role].name}</span></td>
                       <td className="mono text-muted" style={{fontSize:12}}>{s.phone}</td>
                       <td className="text-muted" style={{fontSize:12}}>{s.createdAt}</td>
@@ -1842,7 +1864,7 @@
             <h3 className="text-base font-semibold mb-1">修改员工角色</h3>
             <p className="text-xs text-faint mb-4">员工 <span className="mono text-cool">{staff.user}</span> · 当前角色 <span className="chip" style={{background:ROLES[staff.role].color+"22",color:ROLES[staff.role].color,fontSize:10}}>{ROLES[staff.role].name}</span></p>
             <div className="mb-3">
-              <label className="block text-xs text-muted mb-1">新角色 *</label>
+              <label className="block text-xs text-muted mb-1">新角色 <span style={{color:"#FF6B6B"}}>*</span></label>
               <select className="input" value={newRole} onChange={e=>setNewRole(e.target.value)}>
                 <option value="operator">平台运营 (operator) - 全菜单 + 可写</option>
                 <option value="risk">风控审计 (risk) - 注单/场次/操作日志,只读</option>
@@ -1850,7 +1872,7 @@
               </select>
             </div>
             <div className="mb-3">
-              <label className="block text-xs text-muted mb-1">操作密码 *</label>
+              <label className="block text-xs text-muted mb-1">操作密码 <span style={{color:"#FF6B6B"}}>*</span></label>
               <input type="password" className="input" value={opPwd} onChange={e=>setOpPwd(e.target.value)} placeholder="当前登录员工的登录密码 (Mock: 123456)" autoFocus/>
             </div>
             <div className="text-xs mb-3" style={{color:"#F0B93A",fontSize:11}}>
@@ -1884,10 +1906,10 @@
           <div className="modal" onClick={e=>e.stopPropagation()} style={{width:480}}>
             <h3 className="text-base font-semibold mb-1">新增员工账号</h3>
             <p className="text-xs text-faint mb-4">创建后员工用此账号 + 初始密码登录,首次登录建议改密</p>
-            <div className="mb-3"><label className="block text-xs text-muted mb-1">员工账号 *</label><input className="input" value={user} onChange={e=>setUser(e.target.value)} placeholder="4-20 位英文+数字+中划线" autoFocus/></div>
-            <div className="mb-3"><label className="block text-xs text-muted mb-1">初始密码 *</label><input className="input" type="password" value={pwd} onChange={e=>setPwd(e.target.value)} placeholder="至少 6 位"/></div>
-            <div className="mb-3"><label className="block text-xs text-muted mb-1">确认密码 *</label><input className="input" type="password" value={pwdC} onChange={e=>setPwdC(e.target.value)}/></div>
-            <div className="mb-3"><label className="block text-xs text-muted mb-1">角色 *</label>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">员工账号 <span style={{color:"#FF6B6B"}}>*</span></label><input className="input" value={user} onChange={e=>setUser(e.target.value)} placeholder="4-20 位英文+数字+中划线" autoFocus/></div>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">初始密码 <span style={{color:"#FF6B6B"}}>*</span></label><input className="input" type="password" value={pwd} onChange={e=>setPwd(e.target.value)} placeholder="至少 6 位"/></div>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">确认密码 <span style={{color:"#FF6B6B"}}>*</span></label><input className="input" type="password" value={pwdC} onChange={e=>setPwdC(e.target.value)}/></div>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">角色 <span style={{color:"#FF6B6B"}}>*</span></label>
               <select className="input" value={role} onChange={e=>setRole(e.target.value)}>
                 <option value="operator">平台运营 (operator) - 全菜单 + 可写</option>
                 <option value="risk">风控审计 (risk) - 注单/场次/操作日志,只读</option>
@@ -1999,7 +2021,7 @@
                 <tbody>
                   {filtered.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).map(item => (
                     <tr key={item.id}>
-                      <td className="mono text-cool">{item.ip}</td>
+                      <td className="mono">{item.ip}</td>
                       <td className="text-muted" style={{fontSize:12}}>{item.label}</td>
                       <td><span className={"chip " + (item.enabled ? "chip-active" : "chip-frozen")}>{item.enabled ? "启用" : "已停用"}</span></td>
                       <td className="text-muted" style={{fontSize:12}}>{item.createdAt}</td>
@@ -2027,7 +2049,7 @@
                   }
                 </p>
                 <div className="mb-3">
-                  <label className="block text-xs text-muted mb-1">操作密码 *</label>
+                  <label className="block text-xs text-muted mb-1">操作密码 <span style={{color:"#FF6B6B"}}>*</span></label>
                   <input type="password" className="input" value={opPwd} onChange={e=>setOpPwd(e.target.value)} placeholder="当前登录员工的登录密码 (Mock: 123456)" autoFocus/>
                 </div>
                 {opErr && <div className="text-xs mb-3" style={{color:"#FF6B6B"}}>{opErr}</div>}
@@ -2062,8 +2084,8 @@
           <div className="modal" onClick={e=>e.stopPropagation()} style={{width:480}}>
             <h3 className="text-base font-semibold mb-1">新增 IP 白名单</h3>
             <p className="text-xs text-faint mb-4">支持单 IP(192.168.1.1)或 CIDR 段(10.4.2.0/24)</p>
-            <div className="mb-3"><label className="block text-xs text-muted mb-1">IP / IP 段 *</label><input className="input mono" value={ip} onChange={e=>setIP(e.target.value)} placeholder="例: 192.168.1.1 或 10.4.2.0/24" autoFocus/></div>
-            <div className="mb-3"><label className="block text-xs text-muted mb-1">备注 *</label><input className="input" value={label} onChange={e=>setLabel(e.target.value)} placeholder="例: 办公网段 / 运营 admin 家用"/></div>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">IP / IP 段 <span style={{color:"#FF6B6B"}}>*</span></label><input className="input mono" value={ip} onChange={e=>setIP(e.target.value)} placeholder="例: 192.168.1.1 或 10.4.2.0/24" autoFocus/></div>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">备注 <span style={{color:"#FF6B6B"}}>*</span></label><input className="input" value={label} onChange={e=>setLabel(e.target.value)} placeholder="例: 办公网段 / 运营 admin 家用"/></div>
             <div className="mb-3">
               <label className="block text-xs text-muted mb-1">初始状态</label>
               <div className="flex gap-4 text-sm" style={{paddingTop:6}}>
@@ -2071,7 +2093,7 @@
                 <label><input type="radio" checked={!enabled} onChange={()=>setEnabled(false)}/> <span className="ml-1">已停用</span></label>
               </div>
             </div>
-            <div className="mb-3"><label className="block text-xs text-muted mb-1">操作密码 *</label><input type="password" className="input" value={opPwd} onChange={e=>setOpPwd(e.target.value)} placeholder="当前登录员工的登录密码 (Mock: 123456)"/></div>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">操作密码 <span style={{color:"#FF6B6B"}}>*</span></label><input type="password" className="input" value={opPwd} onChange={e=>setOpPwd(e.target.value)} placeholder="当前登录员工的登录密码 (Mock: 123456)"/></div>
             {err && <div className="text-xs mb-3" style={{color:"#FF6B6B"}}>{err}</div>}
             <div className="flex justify-end gap-2 mt-4">
               <button className="btn btn-ghost" onClick={onClose}>取消</button>
@@ -2130,7 +2152,7 @@
                   {recent.map((r, i) => (
                     <tr key={i}>
                       <td className="text-muted" style={{fontSize:12}}>{r.time}</td>
-                      <td className="mono text-cool">{r.actor}</td>
+                      <td className="mono">{r.actor}</td>
                       <td><span className="chip chip-cool" style={{fontSize:10}}>{r.action}</span></td>
                       <td className="text-muted" style={{fontSize:12}}>{r.target}</td>
                     </tr>
