@@ -745,7 +745,7 @@
         { id:2, label:"用户账号", render:a => <span className="mono">{a.user}</span> },  // V0.2 (Sammy 2026-04-30): 列表蓝改色 - 顶代行 user 不用 text-cool, 跟下线行一致
         { id:3, label:"下线数", render:a => <span className="num">{a.subCount}</span> },
         { id:4, label:"账号状态", render:a => <StatusChip status={a.status}/> },
-        { id:5, label:"币种", render:a => <span className="chip chip-cool">{a.currency}</span> },
+        { id:5, label:"币种", render:a => <span className="chip chip-info">{a.currency}</span> },  // V0.2 (Sammy 2026-04-30): 蓝改灰
         { id:6, label:"占成", render:a => {
           if (a.shareRatio == null) return <span className="text-faint">—</span>;
           if (a.depth === 0) return <span className="num">{fmtPct(a.shareRatio)}</span>;
@@ -754,8 +754,13 @@
         }},
         { id:7, label:"账户余额", render:a => <span className="num">{fmtAmount(a.balance)}</span> },
         { id:8, label:"下线余额", render:a => <span className="num text-muted">{fmtAmount(a.subBalance)}</span> },
-        { id:9, label:"总线余额", render:a => <span className="num text-cool">{fmtAmount(a.totalBalance)}</span> },
-        { id:10, label:"账号类型", render:a => <span className={"chip " + (a.accountType === "普通(顶代)" ? "chip-cool" : a.accountType === "代理" ? "chip-warn" : "chip-info")}>{a.accountType}</span> },
+        { id:9, label:"总线余额", render:a => <span className="num" style={{fontWeight:600}}>{fmtAmount(a.totalBalance)}</span> },  // V0.2 (Sammy 2026-04-30): 蓝改默认主文字 + 加粗保留视觉强调
+        { id:10, label:"账号类型", render:a => {
+          // V0.2 (Sammy 2026-04-30): 顶代蓝改紫 (#9B7FE8 中性强调色), 代理保留黄, 游戏保留灰
+          if (a.accountType === "普通(顶代)") return <span className="chip" style={{background:"#2A1F3D",color:"#9B7FE8"}}>{a.accountType}</span>;
+          if (a.accountType === "代理")     return <span className="chip chip-warn">{a.accountType}</span>;
+          return <span className="chip chip-info">{a.accountType}</span>;
+        } },
         { id:11, label:"开户时间", render:a => <span className="text-muted" style={{fontSize:12}}>{a.createdAt}</span> },
       ].filter(c => cols.includes(c.id));
 
