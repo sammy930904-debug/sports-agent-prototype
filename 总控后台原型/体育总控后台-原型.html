@@ -83,15 +83,16 @@
     // agentCols 编号说明:
     // 1=系统户口号 2=用户账号 3=下线数 4=账号状态 5=币种 6=占成
     // 7=账户余额 8=下线余额 9=总线余额 10=账号类型 11=开户时间
+    // V0.2 收尾 (Sammy 2026-04-30 拍): 隐藏 dashboard + sys.ipwhite 菜单 (代码保留, 后期重启时直接 push 回 menus)
     const ROLES = {
       operator: { name: "平台运营", desc: "operator", color: "#4A9EFF",
-        menus: ["dashboard","agents","reports.bets","reports.sports","reports.ledger","perm.staff","sys.audit","sys.ipwhite"],
+        menus: ["agents","reports.bets","reports.sports","reports.ledger","perm.staff","sys.audit"],
         agentCols: [1,2,3,4,5,6,7,8,9,10,11], canWrite: true },
       risk: { name: "风控审计", desc: "risk", color: "#F0B93A",
-        menus: ["dashboard","agents","reports.bets","reports.sports","sys.audit"],
+        menus: ["agents","reports.bets","reports.sports","sys.audit"],
         agentCols: [1,2,3,4,5,10,11], canWrite: false },
       finance: { name: "财务对账", desc: "finance", color: "#5BC97C",
-        menus: ["dashboard","agents","reports.bets","reports.sports","reports.ledger","sys.audit"],
+        menus: ["agents","reports.bets","reports.sports","reports.ledger","sys.audit"],
         agentCols: [1,2,3,4,5,6,7,8,9,10,11], canWrite: false },
     };
 
@@ -1700,25 +1701,18 @@
     }
 
     // ============== 登录页 ==============
-    // V0.2 加 IP 白名单校验 (Sammy 2026-04-30 拍 B 方案):
-    //   登录提交时检查 simIP 是否命中 ipWhitelist 启用项;无启用项 = 不限制
-    //   simIP 为"模拟登录 IP"输入框, 真实开发由后端从 request 取
-    function LoginPage({ onLogin, ipWhitelist, staffList }) {
+    // V0.2 收尾 (Sammy 2026-04-30 拍): IP 白名单功能 V0.2 不做, LoginPage 只保留账号 + 密码校验
+    // (原 IP 白名单代码 / IPWhitelistPage / 模拟 IP 输入框全部砍掉, 真实 IP 字段保留 mock 默认值给审计日志用)
+    function LoginPage({ onLogin, staffList }) {
       const [user, setUser] = useState("");
       const [pwd, setPwd] = useState("");
       const [showPwd, setShowPwd] = useState(false);
-      const [simIP, setSimIP] = useState("10.4.2.18");  // 默认办公网内 (跟 mock 白名单 10.4.2.0/24 命中)
       const [err, setErr] = useState("");
       const submit = () => {
-        // IP 白名单校验先于账号密码 (跟生产顺序一致 - IP 命中拒登先过)
-        if (!checkIPAllowed(simIP, ipWhitelist)) {
-          setErr("IP "+simIP+" 不在白名单内,拒绝登录");
-          return;
-        }
         const matched = staffList.find(s => s.user === user.trim());
         if (!matched) { setErr("员工账号不存在"); return; }
         if (pwd !== "123456") { setErr("登录密码错误"); return; }  // V0.2 mock: 所有员工密码统一 123456
-        onLogin(matched, simIP);
+        onLogin(matched, "10.4.2.18");  // mock 默认 IP, 真实开发后端从 request 取
       };
       return (
         <div className="min-h-screen bg-app flex items-center justify-center" style={{padding:"24px"}}>
@@ -1739,18 +1733,10 @@
                 <span onClick={()=>setShowPwd(!showPwd)} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",color:"#9AA4B5",cursor:"pointer",fontSize:12,userSelect:"none"}}>{showPwd ? "🙈" : "👁"}</span>
               </div>
             </div>
-            <div className="mb-3" style={{padding:"8px 10px",background:"#0F141C",border:"1px dashed #2A3648",borderRadius:6}}>
-              <label className="block text-xs text-muted mb-1">模拟登录 IP <span className="text-faint" style={{fontSize:10}}>(原型用,真实开发由后端从 request 取)</span></label>
-              <input className="input mono" style={{fontSize:13}} value={simIP} onChange={e=>setSimIP(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") submit();}} placeholder="例: 10.4.2.18"/>
-            </div>
             {err && <div className="text-xs mb-3" style={{color:"#FF6B6B"}}>{err}</div>}
             <button className="btn btn-primary w-full" style={{padding:"10px 0",marginTop:6}} onClick={submit}>登录</button>
             <div className="text-xs text-faint mt-4" style={{fontSize:10,color:"#5C6878"}}>
               V0.2 mock 员工: admin / risk-mei / finance-luo / ops-chen,密码统一 123456
-            </div>
-            <div className="text-xs text-faint mt-2" style={{fontSize:10,color:"#5C6878"}}>
-              V0.2 mock 白名单:10.4.2.0/24(办公网段) / 118.139.32.18(运营家用)<br/>
-              试 10.4.2.18(命中)vs 8.8.8.8(拒登)
             </div>
           </div>
         </div>
@@ -2204,7 +2190,7 @@
       // ⚠ React Hooks 规则: 所有 hooks 必须在 early return 之前,且每次 render 调用顺序一致
       const [currentUser, setCurrentUser] = useState(null);  // null = 未登录
       const [loginIP, setLoginIP] = useState(null);          // 登录时记录的 IP, 给右上块 / 操作日志展示
-      const [active, setActive] = useState("dashboard");
+      const [active, setActive] = useState("agents");  // V0.2 收尾: dashboard 隐藏后默认进顶代户口
       const [showChangePwd, setShowChangePwd] = useState(false);
       const [showUserMenu, setShowUserMenu] = useState(false);
       const [ipWhitelist, setIpWhitelist] = useState(() => [...INITIAL_IPWHITE]);
@@ -2249,7 +2235,7 @@
         setStaff(staff.map(x => x.user === s.user ? fresh : x));
         setCurrentUser(fresh); setLoginIP(ip);
         appendSystemLog("登录", "S 端 / 角色: "+s.role, { user: fresh, ip });
-      }} ipWhitelist={ipWhitelist} staffList={staff}/>;
+      }} staffList={staff}/>;
 
       const Menu = ({ id, label, icon }) => visibleMenus.includes(id) && (
         <div className={"menu-item " + (active===id?"active":"")} onClick={()=>setActive(id)}>
@@ -2280,7 +2266,7 @@
               <div className="text-xs text-faint mt-1 ml-5">总控后台 V0.2</div>
             </div>
             <nav className="flex-1 px-3 py-3 overflow-y-auto">
-              <Menu id="dashboard" label="数据看板" icon="◈"/>
+              {/* V0.2 收尾 (Sammy 2026-04-30 拍): 数据看板 / IP 白名单 菜单隐藏 (代码保留 in App, 后期重启时把 ROLES.menus 加回 + 这里 Menu 加回即可) */}
 
               <div className="menu-group">账号管理</div>
               <Menu id="agents" label="顶代户口" icon="◉"/>
@@ -2295,7 +2281,6 @@
 
               <div className="menu-group">系统管理</div>
               <Menu id="sys.audit" label="操作日志" icon="◓"/>
-              <Menu id="sys.ipwhite" label="IP 白名单" icon="◔"/>
             </nav>
             <div className="px-4 py-3 border-t border-line text-xs text-faint">
               <div>内部工具 · 仅限授权员工</div>

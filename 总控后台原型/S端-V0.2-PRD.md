@@ -54,14 +54,16 @@
 
 | 模块 | 二级页 | 状态 |
 |---|---|---|
-| 数据看板 | 数据看板 | ✅ 简洁版(4 KPI + 最近 10 条系统日志) |
+| 数据看板 | 数据看板 | ⏸ **V0.2 暂隐藏**(原型代码保留,菜单不显示;真实开发不做) |
 | 账号管理 | 顶代户口 | ✅ Tree Table + 4 类写动作 |
 | 报表管理 | 体育注单记录 | ✅ |
 | 报表管理 | 体育场次记录 | ✅ 含「游戏明细」弹窗 |
 | 报表管理 | 交易流水记录 | ✅ |
 | 权限管理 | 员工账号 | ✅ 仅 operator 可见 |
 | 系统管理 | 操作日志 | ✅ 系统 / 玩家双 Tab |
-| 系统管理 | IP 白名单 | ✅ 仅 operator 可见 |
+| 系统管理 | IP 白名单 | ⏸ **V0.2 暂隐藏**(原型代码保留,菜单不显示;LoginPage 不做 IP 拒登;真实开发不做) |
+
+> **默认进系统跳「顶代户口」**(数据看板隐藏后,跟 V0.1 一致)
 
 ### 1.3 三角色
 
@@ -115,22 +117,22 @@
 
 ```
 /login                          → LoginPage(未登录态)
-/                               → 主框架,默认重定向到 /dashboard
-/dashboard                      → DashboardPage
-/agents                         → AgentsPage(顶代户口)
+/                               → 主框架,默认重定向到 /agents
+/agents                         → AgentsPage(顶代户口) ← V0.2 默认页
 /reports/bets                   → BetsPage(体育注单)
 /reports/sports                 → SportsSessionsPage(体育场次)
 /reports/ledger                 → LedgerPage(交易流水)
 /perm/staff                     → StaffPage(员工账号,operator only)
 /sys/audit                      → AuditPage(操作日志)
-/sys/ipwhite                    → IPWhitelistPage(IP 白名单,operator only)
+
+# V0.2 暂隐藏(代码保留, 真实开发不做):
+/dashboard                      → DashboardPage
+/sys/ipwhite                    → IPWhitelistPage
 ```
 
 ### 3.2 菜单结构
 
 ```
-🏠 数据看板 (一级,无下挂)
-
 账号管理 (一级)
 └── 顶代户口
 
@@ -143,22 +145,25 @@
 └── 员工账号
 
 系统管理 (一级)
-├── 操作日志
-└── IP 白名单 (仅 operator 可见)
+└── 操作日志
+
+# V0.2 暂隐藏:
+# ─ 🏠 数据看板 (一级)
+# ─ 系统管理 / IP 白名单 (operator only)
 ```
 
 ### 3.3 三角色权限矩阵(UI 菜单 + 字段过滤)
 
 | 菜单 | operator | risk | finance |
 |---|:---:|:---:|:---:|
-| 数据看板 | ✓ | ✓ | ✓ |
 | 顶代户口 | ✓ 11 列 + 写 | ✓ 7 列 只读 | ✓ 11 列 只读 |
 | 体育注单记录 | ✓ | ✓ 隐派彩/输赢 | ✓ |
 | 体育场次记录 | ✓ | ✓ | ✓ |
 | 交易流水记录 | ✓ | ✗ | ✓ |
 | 员工账号 | ✓ | ✗ | ✗ |
 | 操作日志 | ✓ | ✓ 只读 | ✓ 只读 |
-| IP 白名单 | ✓ | ✗ | ✗ |
+| ~~数据看板~~ | ⏸ V0.2 隐藏 | ⏸ | ⏸ |
+| ~~IP 白名单~~ | ⏸ V0.2 隐藏 | ✗ | ✗ |
 
 ### 3.4 三角色权限矩阵(API 级别)
 
@@ -473,12 +478,12 @@ operator 多 1 列 **操作**(canWrite=true);risk / finance 不显示操作列�
 |---|---|---|---|
 | 员工账号 | text | ✓ | 必须存在于 staff 表 |
 | 登录密码 | password | ✓ | mock 统一 `123456`;**眼睛切换显隐** |
-| 模拟登录 IP | text(原型用) | ✓ | 默认 `10.4.2.18`;**真实开发后端从 request 自动取,前端不显示此字段** |
 
-**校验顺序**(跟生产一致):
-1. **IP 白名单**:不命中 → `"IP X 不在白名单内,拒绝登录"`
-2. **员工账号是否存在**:不存在 → `"员工账号不存在"`
-3. **密码正确**:错误 → `"登录密码错误"`(`failed_login_count + 1`)
+> V0.2 砍掉 IP 白名单,LoginPage 不再做 IP 拒登;真实 IP 仍由后端从 request 取(给审计日志记录)
+
+**校验顺序**:
+1. **员工账号是否存在**:不存在 → `"员工账号不存在"`
+2. **密码正确**:错误 → `"登录密码错误"`(`failed_login_count + 1`)
 
 **登录成功**:
 1. 把 staff 表里该员工的 `last_login_at` 更新为本次登录时间
@@ -500,8 +505,8 @@ operator 多 1 列 **操作**(canWrite=true);risk / finance 不显示操作列�
   "ip": "10.4.2.18"
 }
 
-// 错误
-{ "code": "IP_DENIED" | "STAFF_NOT_FOUND" | "PWD_WRONG", "message": "..." }
+// 错误 (V0.2 砍 IP_DENIED)
+{ "code": "STAFF_NOT_FOUND" | "PWD_WRONG", "message": "..." }
 ```
 
 **POST `/api/s/v1/auth/logout`**:仅 token 鉴权;副作用写审计 `登出`
@@ -515,7 +520,10 @@ operator 多 1 列 **操作**(canWrite=true);risk / finance 不显示操作列�
 
 校验:新密码 ≥ 6 位 / 新密码 ≠ 旧密码 / 旧密码必须正确。
 
-### 6.2 DashboardPage(数据看板)
+### 6.2 DashboardPage(数据看板) ⏸ V0.2 暂隐藏
+
+> V0.2 收尾(Sammy 2026-04-30 拍):菜单不显示,**默认进入「顶代户口」**。组件代码保留 in `App.jsx`,后期重启时把 `dashboard` 加回 `ROLES.menus` + 把 sidebar 的 `<Menu id="dashboard"/>` 加回即可。
+
 
 **布局**:
 ```
@@ -921,7 +929,10 @@ operator 多 1 列 **操作**(canWrite=true);risk / finance 不显示操作列�
 
 > 写动作 audit 由后端各 API 内部触发;前端不主动调用 audit 写接口。
 
-### 6.9 IPWhitelistPage(IP 白名单)
+### 6.9 IPWhitelistPage(IP 白名单) ⏸ V0.2 暂隐藏
+
+> V0.2 收尾(Sammy 2026-04-30 拍):菜单不显示;LoginPage 不再做 IP 拒登(也不显示「模拟登录 IP」输入框)。组件代码 + `ipMatches` / `checkIPAllowed` 工具函数保留 in `App.jsx`,后期重启时把 `sys.ipwhite` 加回 `ROLES.menus` + sidebar `<Menu>` 加回 + LoginPage 接 `ipWhitelist` prop 恢复校验即可。
+
 
 **仅 operator 可见**
 
