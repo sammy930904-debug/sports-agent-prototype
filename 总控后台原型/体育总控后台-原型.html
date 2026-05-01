@@ -261,7 +261,7 @@
                         <td className="mono" style={{fontSize:11}}>{b.id}</td>
                         <td className="mono text-muted">{b.playerSysId}</td>
                         <td className="mono">{b.playerUser}</td>
-                        <td><span className="chip chip-cool">{b.currency}</span></td>
+                        <td><span className="chip chip-info">{b.currency}</span></td>
                         <td className="text-muted" style={{fontSize:11}}>{b.betTime}</td>
                         <td className="text-muted" style={{fontSize:11}}>{b.settleTime}</td>
                         <td className="num text-right">{fmtAmount(b.stake)}</td>
@@ -1278,7 +1278,7 @@
                       <td className="mono" style={{fontSize:11}}>{b.id}</td>
                       <td className="mono text-muted">{b.playerSysId}</td>
                       <td className="mono">{b.playerUser}</td>
-                      <td><span className="chip chip-cool">{b.currency}</span></td>
+                      <td><span className="chip chip-info">{b.currency}</span></td>
                       <td className="text-muted" style={{fontSize:12}}>{b.betTime}</td>
                       <td className="text-muted" style={{fontSize:12}}>{b.settleTime}</td>
                       <td className="num text-right">{fmtAmount(b.stake)}</td>
@@ -1417,9 +1417,9 @@
                         {s.totalWinLoss > 0 ? "+" : ""}{fmtAmount(s.totalWinLoss)}
                       </td>
                       <td className="num text-right">{fmtAmount(s.validStake)}</td>
-                      <td><span className="chip chip-cool">{s.currency}</span></td>
+                      <td><span className="chip chip-info">{s.currency}</span></td>
                       <td className="num text-right">{fmtPct(s.rate)}</td>
-                      <td className="num text-right text-cool">{fmtAmount(s.commission)}</td>
+                      <td className="num text-right" style={{fontWeight:600}}>{fmtAmount(s.commission)}</td>
                       <td className="text-muted" style={{fontSize:12}}>{s.workStartAt}</td>
                       <td className="text-muted" style={{fontSize:12}}>{s.workEndAt}</td>
                       <td><StatusChip status={s.status}/></td>
@@ -1563,7 +1563,7 @@
                       <td className="mono">{l.mainUser || "—"}</td>
                       <td>{l.typeLabel}</td>
                       <td><span className={"chip " + (isIn ? "chip-active" : "chip-warn")} style={{fontSize:11}}>{isIn ? "转入" : "转出"}</span></td>
-                      <td><span className="chip chip-cool">{l.currency}</span></td>
+                      <td><span className="chip chip-info">{l.currency}</span></td>
                       <td className="num text-right">{fmtAmount(l.amount)}</td>
                       <td className="text-muted" style={{fontSize:12}}>{l.time}</td>
                     </tr>
@@ -1671,7 +1671,13 @@
                   {data.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).map((r, i) => (
                     <tr key={i}>
                       <td className="text-muted" style={{fontSize:12}}>{r.time}</td>
-                      <td><span className={"chip " + (r.actorType === "员工" ? "chip-cool" : (r.actorType === "代理" ? "chip-warn" : "chip-info"))}>{r.actorType}</span></td>
+                      {/* V0.2 (Sammy 2026-04-30): 员工 chip-cool → 紫色, 跟顶代账号类型紫保持一致 */}
+                      <td>{r.actorType === "员工"
+                        ? <span className="chip" style={{background:"#2A1F3D",color:"#9B7FE8"}}>{r.actorType}</span>
+                        : r.actorType === "代理"
+                          ? <span className="chip chip-warn">{r.actorType}</span>
+                          : <span className="chip chip-info">{r.actorType}</span>}
+                      </td>
                       <td className="mono">{r.actor}</td>
                       <td>{r.action}</td>
                       <td className="mono text-faint" style={{fontSize:11}}>{r.ip}</td>
