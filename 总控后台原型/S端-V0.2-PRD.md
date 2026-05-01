@@ -1153,50 +1153,112 @@ def run_session_batch():
 ## 8. 写动作回写审计
 
 > **后端硬规则**:每个写动作 API 内部必须 `service.appendAudit(...)`,跟数据库写动作在同一事务(或异步 MQ 但保证落库)。
+>
+> **`target` 字段** V0.2 前端隐藏(Sammy 拍 一期不展示),但**后端必须按下面模板规范写入 `audit_log.target`**(后期重启前端只需把 `<th>目标</th>` 加回即可,数据已在库)。
 
-### 8.1 13 类系统审计(actor_type=`员工`)
+### 8.1 系统 Tab(actor_type=`员工`)— 13 类动作 target 模板
 
-| 接口 | action 字符串 | target 模板 |
+| # | 接口 | action 字符串 | target 模板(占位符) | 具体例子 |
+|---|---|---|---|---|
+| 1 | `POST /auth/login` | `登录` | `S 端 / 角色: ${role}` | `S 端 / 角色: operator` |
+| 2 | `POST /auth/logout` | `登出` | `S 端 / 角色: ${role}` | `S 端 / 角色: operator` |
+| 3 | `POST /auth/change-password` | `修改密码` | `自身账号 ${user} (强制重登)` | `自身账号 admin (强制重登)` |
+| 3' | 同上自动连写 | `登出 (改密强制)` | `S 端 / 角色: ${role} (改密强制)` | `S 端 / 角色: operator (改密强制)` |
+| 4 | `PUT /agents/:sysId/:currency/profile`(改资料) | `修改资料` | `${type} ${user} (${sysId}) ${diffs.join(' / ')}` | `下线 qw-003 (qweqwe-2) 状态: 启用 → 禁用 / 佣金率 5.00% → 6.00%` |
+| 4' | 同上 + `resetPwd != null` | `重置下线密码` | `${user} (${sysId}) 强制下次登录改密` | `qw-003 (qweqwe-2) 强制下次登录改密` |
+| 5 | `POST /agents/:parentSysId/:parentCurrency/sub`(新增下级) | `新增下级` | `${parentType} ${parent.user} (${currency}) 下新增${childType} ${childUser} (${newSysId})` | `顶代 qweqwe (KRW) 下新增代理 carry03 (qweqwe-3)` |
+| 6 | `POST /agents/:sysId/:currency/credit` | `上分` | `下线 ${user} (${sysId}) +${amount} ${currency}` | `下线 qw-008 (qweqwe-1) +200,000 KRW` |
+| 7 | `POST /agents/:sysId/:currency/debit` | `下分` | `下线 ${user} (${sysId}) -${amount} ${currency}` | `下线 luk-002 (lucky88-1) -1,000 PHP` |
+| 8 | `POST /perm/staff` | `新增员工` | `${user} / 角色 ${roleName}` | `ops-zhang / 角色 平台运营` |
+| 9 | `DELETE /perm/staff/:user` | `删除员工` | `${user} / 角色 ${roleName}` | `ops-chen / 角色 平台运营` |
+| 10 | `PUT /perm/staff/:user/role` | `修改员工角色` | `${user}  ${oldRoleName} → ${newRoleName} (该员工已登录会话需重登才生效)` | `risk-mei  风控审计 → 财务对账 (该员工已登录会话需重登才生效)` |
+| 11 | `POST /sys/ipwhite` | `新增 IP 白名单` | `${ip} (${label}, ${enabled?'启用':'已停用'})` | `192.168.1.0/24 (办公网段, 启用)` |
+| 12 | `PUT /sys/ipwhite/:id/toggle` | `启用 IP 白名单` / `停用 IP 白名单` | `${ip} (${label})` | `10.4.2.0/24 (办公网段)` |
+| 13 | `DELETE /sys/ipwhite/:id` | `删除 IP 白名单` | `${ip} (${label})` | `61.74.110.55 (风控外勤备用)` |
+| 14 | `POST /reports/:type/export` | `导出 Excel` | `${menuName} / 全量 ${count} 条 → ${filename}` | `体育注单记录 / 全量 30 条 → 2026-04-30_体育注单记录.xlsx` |
+
+#### 8.1.1 `修改资料` diff 拼接规则(action #4)
+
+`diffs` 数组按以下规则生成,以 ` / ` 拼接:
+
+| 字段 | 改动判定 | 输出格式 | 例子 |
+|---|---|---|---|
+| `status` | `data.status !== old.status` | `状态: ${oldZh} → ${newZh}` | `状态: 启用 → 禁用` |
+| `nick` | `data.nick !== old.nick` | `昵称: ${old} → ${new}` | `昵称: 三号 → 三号哥` |
+| `shareRatio` | `data.shareRatio != null && data.shareRatio !== old.shareRatio` | `占成: ${oldPct} → ${newPct}` | `占成: 18.75% → 20.00%`(V0.2 前端隐藏,但后端仍记录)|
+| `refRate` | `data.refRate != null && data.refRate !== old.refRate` | `佣金率: ${oldPct} → ${newPct}` | `佣金率: 5.00% → 6.00%` |
+
+> **status 中文翻译表**:`{ active: "启用", frozen: "禁用" }`(跟 StatusChip 一致)
+>
+> **空 diffs 不写**:如果 4 个字段都没改(只改了 phone / phone2),不写「修改资料」审计(只改电话不算敏感动作)
+
+#### 8.1.2 `${type}` 在动作 #4 / #5 占位符规则
+
+| accountType 字段值 | type 中文 | 例子 |
 |---|---|---|
-| `POST /auth/login` | `登录` | `S 端 / 角色: ${role}` |
-| `POST /auth/logout` | `登出` | `S 端 / 角色: ${role}` |
-| `POST /auth/change-password` | `修改密码` + `登出 (改密强制)` | `自身账号 ${user} (强制重登)` |
-| `PUT /agents/:.../profile` | `修改资料` | `${type} ${user} (${sysId}) ${diffs.join(' / ')}` |
-| 同上 + resetPwd 非空 | `重置下线密码` | `${user} (${sysId}) 强制下次登录改密` |
-| `POST /agents/:.../sub` | `新增下级` | `顶代 ${parent.user} (${currency}) 下新增${type} ${user} (${newSysId})` |
-| `POST /agents/:.../credit` | `上分` | `下线 ${user} (${sysId}) +${amount} ${currency}` |
-| `POST /agents/:.../debit` | `下分` | `下线 ${user} (${sysId}) -${amount} ${currency}` |
-| `POST /perm/staff` | `新增员工` | `${user} / 角色 ${roleName}` |
-| `DELETE /perm/staff/:user` | `删除员工` | `${user} / 角色 ${roleName}` |
-| `PUT /perm/staff/:user/role` | `修改员工角色` | `${user}  ${oldRoleName} → ${newRoleName} (该员工已登录会话需重登才生效)` |
-| `POST /sys/ipwhite` | `新增 IP 白名单` | `${ip} (${label}, ${enabled?'启用':'已停用'})` |
-| `PUT /sys/ipwhite/:id/toggle` | `启用 IP 白名单` / `停用 IP 白名单` | `${ip} (${label})` |
-| `DELETE /sys/ipwhite/:id` | `删除 IP 白名单` | `${ip} (${label})` |
-| `POST /reports/:type/export` | `导出 Excel` | `${menuName} / 全量 ${count} 条 → ${filename}` |
+| `普通(顶代)` | `顶代` | `顶代 qweqwe` |
+| `代理` | `代理` | `代理 carry01` |
+| `游戏` | `下线` | `下线 qw-008`(玩家 / 下线代理统称「下线」)|
 
-### 8.2 玩家 Tab(代理 / 玩家)
+> **action #4 修改资料**:统一用「下线」前缀(顶代行修改资料也可,但 V0.2 顶代占成由账房管,只能改 nick / phone / status)
+>
+> **action #5 新增下级**:`childType` 用 accountType 中文(`代理 / 游戏`),`parentType` 用「顶代 / 代理」
 
-后端在 B 端 / C 端写动作时回灌审计到 S 端 `audit_log` 表:
+### 8.2 玩家 Tab(actor_type=`代理` / `玩家`)— 14 类动作 target 模板
 
-**B 端代理动作**(actor_type=`代理`):
-- 登录 / 登出(B 端代理后台)
-- 新增下线
-- 修改资料(含修改下线 / 改密 / 改状态)
-- 上分 / 下分(给下线)
-- 禁用账号 / 启用账号
-- 修改交收方案(顶代独有,FN-ACC-12 三步向导)
-- 修改密码(自身)
-- 切换语言
+> 后端在 B 端 / C 端写动作时回灌审计到 S 端 `audit_log` 表(actor_type 区分代理 / 玩家)。
 
-**C 端玩家动作**(actor_type=`玩家`):
-- 登录 / 登出(C 端 STAR VIP GAME)
-- 选交收方案
-- 选游戏分类
-- 进入游戏
-- 返回大厅(回收)
-- 切换语言
+#### 8.2.1 B 端代理动作(actor_type=`代理`)— 9 类
 
-> **不进 S 端审计**:三方注单(走注单表 + 流水表,不属于用户主动写动作);UI 偏好(隐藏列等)
+| # | 触发位置 | action 字符串 | target 模板 | 具体例子 |
+|---|---|---|---|---|
+| 1 | B 端登录 | `登录` | `B 端代理后台 / ${type}: ${user}` | `B 端代理后台 / 顶代: qweqwe` |
+| 2 | B 端登出 | `登出` | `B 端代理后台 / ${type}: ${user}` | `B 端代理后台 / 代理: carry01` |
+| 3 | B 端 改自己密码 | `修改密码` | `自身账号 ${user} (强制重登)` | `自身账号 carry01 (强制重登)` |
+| 4 | B 端 新增下线 | `新增下线` | `${childType} ${childUser} (${newSysId}) ${currency}` | `代理 carry03 (qweqwe-3) KRW` |
+| 5 | B 端 修改下线资料(FN-ACC-05) | `修改资料` | `${childType} ${user} (${sysId}) ${diffs.join(' / ')}` | `下线 qw-003 (qweqwe-1-1) 昵称 三号 → 三号哥 / 佣金率 5.00% → 6.00%` |
+| 5' | 同上 + 重置下线密码 | `重置下线密码` | `${user} (${sysId}) 强制下次登录改密` | `qw-003 (qweqwe-1-1) 强制下次登录改密` |
+| 6 | B 端 上分 | `上分` | `下线 ${user} (${sysId}) +${amount} ${currency}` | `下线 qw-008 (qweqwe-1) +200,000 KRW` |
+| 7 | B 端 下分 | `下分` | `下线 ${user} (${sysId}) -${amount} ${currency}` | `下线 luk-002 (lucky88-1) -1,000 PHP` |
+| 8 | B 端 禁用账号 (setStatus 'off') | `禁用账号` | `下线 ${user} (${sysId}) + 子树级联` | `下线 luk-005 (lucky88-2) + 子树级联` |
+| 9 | B 端 启用账号 (setStatus 'on') | `启用账号` | `下线 ${user} (${sysId})` | `下线 qw-005 (qweqwe-5)` |
+| 10 | B 端 修改交收方案(顶代独有 FN-ACC-12) | `修改交收方案` | `下线子树 ≥${count} 条 ${oldScheme} → ${newScheme}` | `下线子树 ≥5 条 KRW-100% → KRW-80%` |
+| 11 | B 端 切换语言(可选) | `切换语言` | `${oldLang} → ${newLang} (B 端)` | `zh → ko (B 端)` |
+
+#### 8.2.2 C 端玩家动作(actor_type=`玩家`)— 5 类
+
+| # | 触发位置 | action 字符串 | target 模板 | 具体例子 |
+|---|---|---|---|---|
+| 1 | C 端登录 | `登录` | `C 端 STAR VIP GAME` | `C 端 STAR VIP GAME` |
+| 2 | C 端登出 | `登出` | `C 端 STAR VIP GAME` | `C 端 STAR VIP GAME` |
+| 3 | C 端 选交收方案 | `选交收方案` | `${currency}-${rate}% (${sysId})` | `KRW-80% (qweqwe-1-1)` |
+| 4 | C 端 选游戏分类 | `选游戏分类` | `${category}` | `体育` / `电子` / `六合彩` |
+| 5 | C 端 进入游戏 | `进入游戏` | `${provider}` | `BBIN 体育` / `PG SOFT` / `VR 六合彩` |
+| 6 | C 端 返回大厅 | `返回大厅` | `${provider} → 大厅 (回收余额)` | `BBIN 体育 → 大厅 (回收余额)` |
+| 7 | C 端 切换语言(可选) | `切换语言` | `${oldLang} → ${newLang} (C 端)` | `zh → en (C 端)` |
+
+### 8.3 共用规则
+
+#### 8.3.1 时间戳
+
+`audit_log.time` 字段用 **服务端当前时间**(秒级精度,`YYYY-MM-DD HH:mm:ss`),不接受客户端传入。
+
+#### 8.3.2 IP 字段
+
+- 系统 Tab:从 token 内的 loginIP 取(LoginPage 提交时记录,V0.2 mock 默认 `10.4.2.18`)
+- 玩家 Tab:从 B 端 / C 端 request 自动取(代理 / 玩家真实 IP)
+
+#### 8.3.3 reason 字段
+
+- V0.2 默认 `-`(前端隐藏,后端写默认)
+- 后续版本若加「写动作输入审计原因」(Q-S35 延伸),仍按本表 reason 字段填具体内容
+
+#### 8.3.4 不进 S 端审计的动作
+
+- **三方注单**:走 `bets` 表 + 流水表,不属于用户主动写动作
+- **UI 本地偏好**(隐藏列 / 排序 / 筛选 / 分页 等):不进审计
+- **读动作**(查列表 / 查详情):V0.2 不审计;Q 议题待:某些敏感读动作(导出 Excel 已审计;查游戏明细可能要)
+- **跑批任务**:`audit_log.actor_type = '系统'`(虚拟主体)写一条,但 V0.2 不实现;真实开发可加
 
 ---
 
