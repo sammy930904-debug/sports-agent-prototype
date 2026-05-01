@@ -83,17 +83,19 @@
     // agentCols 编号说明:
     // 1=系统户口号 2=用户账号 3=下线数 4=账号状态 5=币种 6=占成
     // 7=账户余额 8=下线余额 9=总线余额 10=账号类型 11=开户时间
-    // V0.2 收尾 (Sammy 2026-04-30 拍): 隐藏 dashboard + sys.ipwhite 菜单 (代码保留, 后期重启时直接 push 回 menus)
+    // V0.2 收尾 (Sammy 2026-04-30 拍):
+    //   - 隐藏 dashboard + sys.ipwhite 菜单 (代码保留, 后期重启时直接 push 回 menus)
+    //   - 隐藏占成列 (id=6 从 agentCols 移除, colDefs 保留;后期重启加回)
     const ROLES = {
       operator: { name: "平台运营", desc: "operator", color: "#4A9EFF",
         menus: ["agents","reports.bets","reports.sports","reports.ledger","perm.staff","sys.audit"],
-        agentCols: [1,2,3,4,5,6,7,8,9,10,11], canWrite: true },
+        agentCols: [1,2,3,4,5,7,8,9,10,11], canWrite: true },
       risk: { name: "风控审计", desc: "risk", color: "#F0B93A",
         menus: ["agents","reports.bets","reports.sports","sys.audit"],
         agentCols: [1,2,3,4,5,10,11], canWrite: false },
       finance: { name: "财务对账", desc: "finance", color: "#5BC97C",
         menus: ["agents","reports.bets","reports.sports","reports.ledger","sys.audit"],
-        agentCols: [1,2,3,4,5,6,7,8,9,10,11], canWrite: false },
+        agentCols: [1,2,3,4,5,7,8,9,10,11], canWrite: false },
     };
 
     // 员工账号 mock (新增删除走 state) - V0.2 操作密码 = 登录密码 (Sammy 2026-04-30 拍)
@@ -772,13 +774,7 @@
                 <option value="all">全部币种</option>
                 <option value="KRW">KRW</option><option value="USD">USD</option><option value="PHP">PHP</option><option value="CNY">CNY</option><option value="THB">THB</option>
               </select>
-              <select className="input" style={{width:150}} value={inShareRatio} onChange={e=>setInShareRatio(e.target.value)}>
-                <option value="all">占成 全部</option>
-                <option value="lt10">占成 &lt; 10%</option>
-                <option value="10to20">占成 10% — 20%</option>
-                <option value="20to30">占成 20% — 30%</option>
-                <option value="gte30">占成 ≥ 30%</option>
-              </select>
+              {/* V0.2 隐藏占成筛选 (Sammy 2026-04-30): 后期重启把这块加回 */}
               <ConfigProvider locale={zhCN}>
                 <RangePicker
                   showTime={{ format: "HH:mm:ss" }}
@@ -868,14 +864,13 @@
         if (!/^[A-Za-z0-9]{6,20}$/.test(user)) { setErr("用户账号需 6-20 位英文+数字"); return; }
         if (!pwd) { setErr("请输入登录密码"); return; }
         if (pwd !== pwdC) { setErr("两次密码不一致"); return; }
-        if (refShareRatio === "" || isNaN(+refShareRatio)) { setErr("请输入参考占成"); return; }
-        if (+refShareRatio > +shareUpperPct) { setErr("参考占成不能超过上限 " + shareUpperPct + "%"); return; }
+        // V0.2 隐藏参考占成 (Sammy 2026-04-30): 提交时不再校验, 后端用父级占成兜底 (后期重启把这两行加回)
         if (refRate === "" || isNaN(+refRate)) { setErr("请输入参考佣金率"); return; }
         if (opPwd !== "123456") { setErr("操作密码错误"); return; }
         onSubmit({
           user, nick: nick.trim() || user, type: accType, status: accStatus,
           currency: parent.currency, // 直接继承父级币种, 不让用户选
-          shareRatio: +refShareRatio / 100,
+          shareRatio: parent.shareRatio || null, // V0.2 隐藏参考占成: 直接继承父级占成
           refRate: +refRate / 100,
         });
       };
@@ -929,23 +924,14 @@
               </div>
 
               <div className="section-title">⑤ 游戏条件</div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-muted mb-1">参考占成 <span className="text-cool">*</span></label>
-                  <div className="flex items-center gap-2">
-                    <input type="number" step="0.01" className="input flex-1" value={refShareRatio} onChange={e=>setRefShareRatio(e.target.value)} placeholder={"上限 " + shareUpperPct + "%, 例如 " + (shareUpper * 80).toFixed(2)}/>
-                    <span className="text-muted">%</span>
-                  </div>
-                  <div className="text-faint mt-1" style={{fontSize:11}}>上限 <span className="text-cool">{shareUpperPct}%</span> (继承自上级);列表「占成」列展示</div>
+              {/* V0.2 隐藏「参考占成」(Sammy 2026-04-30): 直接继承父级 shareRatio,后期重启把 grid-cols-1 改回 grid-cols-2 + 参考占成 input 加回 */}
+              <div>
+                <label className="block text-xs text-muted mb-1">参考佣金率 <span className="text-cool">*</span></label>
+                <div className="flex items-center gap-2" style={{maxWidth:280}}>
+                  <input type="number" step="0.01" className="input flex-1" value={refRate} onChange={e=>setRefRate(e.target.value)} placeholder="例: 0.30"/>
+                  <span className="text-muted">%</span>
                 </div>
-                <div>
-                  <label className="block text-xs text-muted mb-1">参考佣金率 <span className="text-cool">*</span></label>
-                  <div className="flex items-center gap-2">
-                    <input type="number" step="0.01" className="input flex-1" value={refRate} onChange={e=>setRefRate(e.target.value)} placeholder="例: 0.30"/>
-                    <span className="text-muted">%</span>
-                  </div>
-                  <div className="text-faint mt-1" style={{fontSize:11}}>上级给该下线的提成比例(对齐 B 端 rate);Q 议题:V0.2 上限规则待</div>
-                </div>
+                <div className="text-faint mt-1" style={{fontSize:11}}>上级给该下线的提成比例(对齐 B 端 rate)</div>
               </div>
 
               <div className="section-title">⑥ 安全校验</div>
@@ -1035,20 +1021,12 @@
               </div>
 
               <div className="section-title">高敏感字段(修改时触发操作密码)</div>
-              {isTop && <div className="text-xs p-2 rounded mb-1" style={{background:"#0F1B2A",color:"#4A9EFF"}}>ℹ 顶代占成由账房侧设置,不在 S 端修改</div>}
+              {/* V0.2 隐藏「参考占成」(Sammy 2026-04-30): 顶代提示文案也隐藏。后期重启把这块加回 */}
               {!isTop && (
-                <div className="grid grid-cols-2 gap-3 mb-2" style={{padding:"8px",background:"#0F141C",borderRadius:6}}>
-                  <div>
-                    <label className="block text-xs text-muted mb-1">参考占成</label>
-                    <div className="flex items-center gap-2">
-                      <input type="number" step="0.01" className="input flex-1" value={refShareRatio} onChange={e=>setRefShareRatio(e.target.value)} placeholder={rateUpperPct ? "上限 " + rateUpperPct + "%" : ""}/>
-                      <span className="text-muted">%</span>
-                    </div>
-                    {rateUpperPct != null && <div className="text-faint mt-1" style={{fontSize:11}}>上限 <span className="text-cool">{rateUpperPct}%</span> (继承自上级 {parentNode ? parentNode.user : "—"})</div>}
-                  </div>
+                <div className="mb-2" style={{padding:"8px",background:"#0F141C",borderRadius:6}}>
                   <div>
                     <label className="block text-xs text-muted mb-1">参考佣金率</label>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2" style={{maxWidth:280}}>
                       <input type="number" step="0.01" className="input flex-1" value={refRate} onChange={e=>setRefRate(e.target.value)} placeholder="例: 0.30"/>
                       <span className="text-muted">%</span>
                     </div>
@@ -1350,7 +1328,7 @@
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-xl font-semibold">体育场次记录</h2>
-              <p className="text-xs text-muted mt-1">每日 00:10 跑批 1 次,生成前一天的体育已结算场次  ·  用于代理佣金结算  ·  <span style={{color:"#F0B93A"}}>上缴佣金率 V0.2 暂不可用,字段仅 mock 演示</span></p>
+              <p className="text-xs text-muted mt-1">每日 00:10 跑批 1 次,生成前一天的体育已结算场次  ·  用于代理佣金结算</p>
             </div>
             <button className="btn btn-ghost" onClick={()=>doExport("体育场次记录", MOCK_SPORTS_SESSIONS.filter(s=>(s.validStake||0)>0).length, appendSystemLog)}>导出 Excel</button>
           </div>
@@ -1366,10 +1344,7 @@
                 <option value="all">全部币种</option>
                 <option value="KRW">KRW</option><option value="USD">USD</option><option value="PHP">PHP</option><option value="CNY">CNY</option><option value="THB">THB</option>
               </select>
-              <select className="input" style={{width:140}} value={inShareRatio} onChange={e=>setInShareRatio(e.target.value)}>
-                <option value="all">全部占成</option>
-                {shareRatioOptions.map(v => <option key={v} value={v}>{(+(v*100).toFixed(2))+"%"}</option>)}
-              </select>
+              {/* V0.2 隐藏占成筛选 (Sammy 2026-04-30): 后期重启把这块加回 */}
               <ConfigProvider locale={zhCN}>
                 <RangePicker
                   format="YYYY-MM-DD"
@@ -1400,12 +1375,11 @@
             <div className="scroll-x">
               <table>
                 <thead><tr>
+                  {/* V0.2 隐藏「占成 / 占成金额 / 上缴佣金率」3 列 (Sammy 2026-04-30): 后期重启把这 3 个 th + 对应 td 加回 */}
                   <th>场次编号</th><th>系统户口号</th><th>用户账号</th>
                   <th className="text-right">输赢</th><th className="text-right">有效投注</th>
                   <th>币种</th>
-                  <th className="text-right">占成</th><th className="text-right">占成金额</th>
                   <th className="text-right">佣金率</th><th className="text-right">佣金</th>
-                  <th className="text-right">上缴佣金率</th>
                   <th>开工时间</th><th>收工时间</th>
                   <th>状态</th>
                   <th>操作</th>
@@ -1421,18 +1395,8 @@
                       </td>
                       <td className="num text-right">{fmtAmount(s.validStake)}</td>
                       <td><span className="chip chip-cool">{s.currency}</span></td>
-                      <td className="num text-right">{fmtPct(s.shareRatio)}</td>
-                      <td className="num text-right">{fmtAmount(s.shareAmount)}</td>
                       <td className="num text-right">{fmtPct(s.rate)}</td>
                       <td className="num text-right text-cool">{fmtAmount(s.commission)}</td>
-                      <td className="text-right" style={{whiteSpace:"nowrap"}}>
-                        {Array.isArray(s.submitRate) ? s.submitRate.map((r,i) => (
-                          <React.Fragment key={i}>
-                            {i > 0 && <span className="text-faint" style={{margin:"0 4px"}}>|</span>}
-                            <span>{r.sysId}:{(+(r.rate * 100).toFixed(2)) + "%"}</span>
-                          </React.Fragment>
-                        )) : <span className="text-faint">—</span>}
-                      </td>
                       <td className="text-muted" style={{fontSize:12}}>{s.workStartAt}</td>
                       <td className="text-muted" style={{fontSize:12}}>{s.workEndAt}</td>
                       <td><StatusChip status={s.status}/></td>
@@ -1547,12 +1511,7 @@
                   style={{ height: 36, width: 380 }}
                 />
               </ConfigProvider>
-              <select className="input" style={{width:120}} value={inStatus} onChange={e=>setInStatus(e.target.value)}>
-                <option value="all">全部状态</option>
-                <option value="成功">成功</option>
-                <option value="超时重试">超时重试</option>
-                <option value="失败">失败</option>
-              </select>
+              {/* V0.2 隐藏「状态」筛选 (Sammy 2026-04-30): 后期重启把这块加回 */}
               <button className="btn btn-primary" style={{padding:"8px 18px"}} onClick={doSearch}>搜索</button>
               <button className="btn btn-ghost" style={{padding:"8px 14px"}} onClick={resetSearch}>重置</button>
             </div>
@@ -1564,7 +1523,8 @@
             <div className="scroll-x">
               <table>
                 <thead><tr>
-                  <th>流水号</th><th>系统户口号</th><th>用户账号</th><th>交易类型</th><th>转入/转出</th><th>币种</th><th className="text-right">金额</th><th>时间</th><th>状态</th>
+                  {/* V0.2 隐藏「状态」列 (Sammy 2026-04-30): 后期重启把 th 状态 + td 状态 chip 加回 */}
+                  <th>流水号</th><th>系统户口号</th><th>用户账号</th><th>交易类型</th><th>转入/转出</th><th>币种</th><th className="text-right">金额</th><th>时间</th>
                 </tr></thead>
                 <tbody>
                   {list.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).map(l => {
@@ -1579,7 +1539,6 @@
                       <td><span className="chip chip-cool">{l.currency}</span></td>
                       <td className="num text-right">{fmtAmount(l.amount)}</td>
                       <td className="text-muted" style={{fontSize:12}}>{l.time}</td>
-                      <td><span className={"chip " + (l.status === "成功" ? "chip-active" : "chip-warn")}>{l.status}</span></td>
                     </tr>
                     );
                   })}
@@ -1678,7 +1637,8 @@
             <div className="scroll-x">
               <table>
                 <thead><tr>
-                  <th>时间</th><th>主体类型</th><th>主体</th><th>动作</th><th>目标</th><th>IP</th>
+                  {/* V0.2 隐藏「目标」列 (Sammy 2026-04-30 拍 一期不加): 后端 target 字段仍写入 audit_log,前端不展示。后期重启把 th 目标 + td 目标 加回 */}
+                  <th>时间</th><th>主体类型</th><th>主体</th><th>动作</th><th>IP</th>
                 </tr></thead>
                 <tbody>
                   {data.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).map((r, i) => (
@@ -1687,7 +1647,6 @@
                       <td><span className={"chip " + (r.actorType === "员工" ? "chip-cool" : (r.actorType === "代理" ? "chip-warn" : "chip-info"))}>{r.actorType}</span></td>
                       <td className="mono">{r.actor}</td>
                       <td>{r.action}</td>
-                      <td className="text-muted" style={{fontSize:12}}>{r.target}</td>
                       <td className="mono text-faint" style={{fontSize:11}}>{r.ip}</td>
                     </tr>
                   ))}
