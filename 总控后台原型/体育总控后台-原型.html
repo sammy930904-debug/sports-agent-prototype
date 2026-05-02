@@ -129,50 +129,47 @@
     //            alice88 (carry01 下) → sysId = "qweqwe-1-1"
     //            bob_hi (alice88 下) → sysId = "qweqwe-1-1-1"
     //   B↔S 命名分歧: B 端字段叫 id, S 端字段叫 sysId (Q-S15 议题待对齐)
+    // V0.2 (Sammy 2026-04-30): 全部 mock 顶代币种统一 PHP, 删 qweqwe USD 树 (frank_us/gina_us)
+    // 顶代多币种 N 行 业务规则保留 (代码 row key = user::currency 不变), 真实业务再扩其他币种
     const ACCOUNTS = {
-      // === qweqwe / KRW 树 (4 层:顶代→代理→孙代理→玩家) ===
-      "qweqwe::KRW": { sysId:"qweqwe", user:"qweqwe", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.1875, balance:12_580_000, subBalance:90_820_000, totalBalance:103_400_000, subCount:6, status:"active", createdAt:"2025-11-12 09:14:33", children:["carry01::KRW","eva_ph::KRW"] },
-      "carry01::KRW": { sysId:"qweqwe-1", user:"carry01", accountType:"代理", currency:"KRW", shareRatio:0.16, balance:50_000_000, subBalance:32_820_000, totalBalance:82_820_000, subCount:4, status:"active", createdAt:"2026-02-10 14:30:22", children:["alice88::KRW","dave_y::KRW","zoe_ph::KRW"] },
-      "alice88::KRW": { sysId:"qweqwe-1-1", user:"alice88", accountType:"代理", currency:"KRW", shareRatio:0.125, balance:30_000_000, subBalance:1_500_000, totalBalance:31_500_000, subCount:1, status:"active", createdAt:"2026-02-28 11:08:55", children:["bob_hi::KRW"] },
-      "bob_hi::KRW": { sysId:"qweqwe-1-1-1", user:"bob_hi", accountType:"游戏", currency:"KRW", shareRatio:0.08, balance:1_500_000, subBalance:0, totalBalance:1_500_000, subCount:0, status:"active", createdAt:"2026-03-15 19:42:08", children:[] },
-      "dave_y::KRW": { sysId:"qweqwe-1-2", user:"dave_y", accountType:"游戏", currency:"KRW", shareRatio:0.075, balance:1_320_000, subBalance:0, totalBalance:1_320_000, subCount:0, status:"active", createdAt:"2026-03-02 16:25:14", children:[] },
-      "zoe_ph::KRW": { sysId:"qweqwe-1-3", user:"zoe_ph", accountType:"游戏", currency:"KRW", shareRatio:0.06, balance:0, subBalance:0, totalBalance:0, subCount:0, status:"frozen", createdAt:"2026-02-15 22:18:33", children:[] },
-      "eva_ph::KRW": { sysId:"qweqwe-2", user:"eva_ph", accountType:"游戏", currency:"KRW", shareRatio:0.10, balance:8_000_000, subBalance:0, totalBalance:8_000_000, subCount:0, status:"active", createdAt:"2026-02-20 09:55:42", children:[] },
+      // === qweqwe 树 (4 层:顶代→代理→孙代理→玩家) ===
+      "qweqwe::PHP": { sysId:"qweqwe", user:"qweqwe", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.1875, balance:12_580_000, subBalance:90_820_000, totalBalance:103_400_000, subCount:6, status:"active", createdAt:"2025-11-12 09:14:33", children:["carry01::PHP","eva_ph::PHP"] },
+      "carry01::PHP": { sysId:"qweqwe-1", user:"carry01", accountType:"代理", currency:"PHP", shareRatio:0.16, balance:50_000_000, subBalance:32_820_000, totalBalance:82_820_000, subCount:4, status:"active", createdAt:"2026-02-10 14:30:22", children:["alice88::PHP","dave_y::PHP","zoe_ph::PHP"] },
+      "alice88::PHP": { sysId:"qweqwe-1-1", user:"alice88", accountType:"代理", currency:"PHP", shareRatio:0.125, balance:30_000_000, subBalance:1_500_000, totalBalance:31_500_000, subCount:1, status:"active", createdAt:"2026-02-28 11:08:55", children:["bob_hi::PHP"] },
+      "bob_hi::PHP": { sysId:"qweqwe-1-1-1", user:"bob_hi", accountType:"游戏", currency:"PHP", shareRatio:0.08, balance:1_500_000, subBalance:0, totalBalance:1_500_000, subCount:0, status:"active", createdAt:"2026-03-15 19:42:08", children:[] },
+      "dave_y::PHP": { sysId:"qweqwe-1-2", user:"dave_y", accountType:"游戏", currency:"PHP", shareRatio:0.075, balance:1_320_000, subBalance:0, totalBalance:1_320_000, subCount:0, status:"active", createdAt:"2026-03-02 16:25:14", children:[] },
+      "zoe_ph::PHP": { sysId:"qweqwe-1-3", user:"zoe_ph", accountType:"游戏", currency:"PHP", shareRatio:0.06, balance:0, subBalance:0, totalBalance:0, subCount:0, status:"frozen", createdAt:"2026-02-15 22:18:33", children:[] },
+      "eva_ph::PHP": { sysId:"qweqwe-2", user:"eva_ph", accountType:"游戏", currency:"PHP", shareRatio:0.10, balance:8_000_000, subBalance:0, totalBalance:8_000_000, subCount:0, status:"active", createdAt:"2026-02-20 09:55:42", children:[] },
 
-      // === qweqwe / USD 树 ===
-      "qweqwe::USD": { sysId:"qweqwe", user:"qweqwe", accountType:"普通(顶代)", currency:"USD", shareRatio:0.275, balance:8_240, subBalance:42_180, totalBalance:50_420, subCount:2, status:"active", createdAt:"2025-11-12 09:14:33", children:["frank_us::USD"] },
-      "frank_us::USD": { sysId:"qweqwe-3", user:"frank_us", accountType:"代理", currency:"USD", shareRatio:0.22, balance:30_000, subBalance:12_180, totalBalance:42_180, subCount:1, status:"active", createdAt:"2026-03-01 13:12:08", children:["gina_us::USD"] },
-      "gina_us::USD": { sysId:"qweqwe-3-1", user:"gina_us", accountType:"游戏", currency:"USD", shareRatio:0.14, balance:12_180, subBalance:0, totalBalance:12_180, subCount:0, status:"active", createdAt:"2026-03-20 17:30:44", children:[] },
-
-      // === lucky88 / PHP 树 ===
+      // === lucky88 树 ===
       "lucky88::PHP": { sysId:"lucky88", user:"lucky88", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.125, balance:894_320, subBalance:2_140_500, totalBalance:3_034_820, subCount:2, status:"active", createdAt:"2025-12-03 11:22:08", children:["luk-002::PHP","luk-005::PHP"] },
       "luk-002::PHP": { sysId:"lucky88-1", user:"luk-002", accountType:"游戏", currency:"PHP", shareRatio:0.07, balance:1_500, subBalance:0, totalBalance:1_500, subCount:0, status:"active", createdAt:"2026-04-12 10:08:15", children:[] },
       "luk-005::PHP": { sysId:"lucky88-2", user:"luk-005", accountType:"游戏", currency:"PHP", shareRatio:0.085, balance:2_139_000, subBalance:0, totalBalance:2_139_000, subCount:0, status:"active", createdAt:"2026-04-20 15:22:30", children:[] },
 
-      // === diamond / USD 树 ===
-      "diamond::USD": { sysId:"diamond", user:"diamond", accountType:"普通(顶代)", currency:"USD", shareRatio:0.225, balance:24_890.55, subBalance:38_120.20, totalBalance:63_010.75, subCount:2, status:"active", createdAt:"2025-09-25 15:48:19", children:["dia-014::USD","dia-021::USD"] },
-      "dia-014::USD": { sysId:"diamond-1", user:"dia-014", accountType:"游戏", currency:"USD", shareRatio:0.13, balance:1_200, subBalance:0, totalBalance:1_200, subCount:0, status:"active", createdAt:"2026-04-15 18:40:11", children:[] },
-      "dia-021::USD": { sysId:"diamond-2", user:"dia-021", accountType:"游戏", currency:"USD", shareRatio:0.15, balance:36_920.20, subBalance:0, totalBalance:36_920.20, subCount:0, status:"active", createdAt:"2026-04-22 12:18:45", children:[] },
+      // === diamond 树 ===
+      "diamond::PHP": { sysId:"diamond", user:"diamond", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.225, balance:24_890.55, subBalance:38_120.20, totalBalance:63_010.75, subCount:2, status:"active", createdAt:"2025-09-25 15:48:19", children:["dia-014::PHP","dia-021::PHP"] },
+      "dia-014::PHP": { sysId:"diamond-1", user:"dia-014", accountType:"游戏", currency:"PHP", shareRatio:0.13, balance:1_200, subBalance:0, totalBalance:1_200, subCount:0, status:"active", createdAt:"2026-04-15 18:40:11", children:[] },
+      "dia-021::PHP": { sysId:"diamond-2", user:"dia-021", accountType:"游戏", currency:"PHP", shareRatio:0.15, balance:36_920.20, subBalance:0, totalBalance:36_920.20, subCount:0, status:"active", createdAt:"2026-04-22 12:18:45", children:[] },
 
-      // === emerald / USD 树 (frozen, 无下线) ===
-      "emerald::USD": { sysId:"emerald", user:"emerald", accountType:"普通(顶代)", currency:"USD", shareRatio:0.05, balance:0, subBalance:0, totalBalance:0, subCount:0, status:"frozen", createdAt:"2025-06-08 14:25:11", children:[] },
+      // === emerald 树 (frozen, 无下线) ===
+      "emerald::PHP": { sysId:"emerald", user:"emerald", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.05, balance:0, subBalance:0, totalBalance:0, subCount:0, status:"frozen", createdAt:"2025-06-08 14:25:11", children:[] },
 
-      // === sapphire / KRW 树 ===
-      "sapphire::KRW": { sysId:"sapphire", user:"sapphire", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.165, balance:3_240_000, subBalance:11_840_000, totalBalance:15_080_000, subCount:2, status:"active", createdAt:"2026-02-14 16:32:55", children:["sap-014::KRW","sap-002::KRW"] },
-      "sap-014::KRW": { sysId:"sapphire-1", user:"sap-014", accountType:"游戏", currency:"KRW", shareRatio:0.11, balance:7_840_000, subBalance:0, totalBalance:7_840_000, subCount:0, status:"active", createdAt:"2026-03-30 09:30:08", children:[] },
-      "sap-002::KRW": { sysId:"sapphire-2", user:"sap-002", accountType:"游戏", currency:"KRW", shareRatio:0.095, balance:4_000_000, subBalance:0, totalBalance:4_000_000, subCount:0, status:"active", createdAt:"2026-04-05 14:50:22", children:[] },
+      // === sapphire 树 ===
+      "sapphire::PHP": { sysId:"sapphire", user:"sapphire", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.165, balance:3_240_000, subBalance:11_840_000, totalBalance:15_080_000, subCount:2, status:"active", createdAt:"2026-02-14 16:32:55", children:["sap-014::PHP","sap-002::PHP"] },
+      "sap-014::PHP": { sysId:"sapphire-1", user:"sap-014", accountType:"游戏", currency:"PHP", shareRatio:0.11, balance:7_840_000, subBalance:0, totalBalance:7_840_000, subCount:0, status:"active", createdAt:"2026-03-30 09:30:08", children:[] },
+      "sap-002::PHP": { sysId:"sapphire-2", user:"sap-002", accountType:"游戏", currency:"PHP", shareRatio:0.095, balance:4_000_000, subBalance:0, totalBalance:4_000_000, subCount:0, status:"active", createdAt:"2026-04-05 14:50:22", children:[] },
 
-      // === goldenstar / KRW 树 (pending, 无下线) ===
-      "goldenstar::KRW": { sysId:"goldenstar", user:"goldenstar", accountType:"普通(顶代)", currency:"KRW", shareRatio:0.30, balance:1_200_000, subBalance:0, totalBalance:1_200_000, subCount:0, status:"active", createdAt:"2026-04-25 10:14:22", children:[] },
+      // === goldenstar 树 (无下线) ===
+      "goldenstar::PHP": { sysId:"goldenstar", user:"goldenstar", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.30, balance:1_200_000, subBalance:0, totalBalance:1_200_000, subCount:0, status:"active", createdAt:"2026-04-25 10:14:22", children:[] },
 
-      // === bigwhale / CNY 大客户 (老顶代 / 低占成 / 大额) ===
-      "bigwhale::CNY": { sysId:"bigwhale", user:"bigwhale", accountType:"普通(顶代)", currency:"CNY", shareRatio:0.08, balance:50_000_000, subBalance:72_400_000, totalBalance:122_400_000, subCount:138, status:"active", createdAt:"2024-08-15 10:20:30", children:[] },
+      // === bigwhale 大客户 (老顶代 / 低占成 / 大额) ===
+      "bigwhale::PHP": { sysId:"bigwhale", user:"bigwhale", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.08, balance:50_000_000, subBalance:72_400_000, totalBalance:122_400_000, subCount:138, status:"active", createdAt:"2024-08-15 10:20:30", children:[] },
 
-      // === rookie01 / THB 新开户 (高占成 / 余额 0 / 待审核) ===
-      "rookie01::THB": { sysId:"rookie01", user:"rookie01", accountType:"普通(顶代)", currency:"THB", shareRatio:0.33, balance:0, subBalance:0, totalBalance:0, subCount:0, status:"active", createdAt:"2026-04-28 18:42:11", children:[] },
+      // === rookie01 新开户 (高占成 / 余额 0) ===
+      "rookie01::PHP": { sysId:"rookie01", user:"rookie01", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.33, balance:0, subBalance:0, totalBalance:0, subCount:0, status:"active", createdAt:"2026-04-28 18:42:11", children:[] },
     };
-    // 顶代行 = 列表起点 (按多币种 N 行)
-    const TOP_AGENT_KEYS = ["qweqwe::KRW","qweqwe::USD","lucky88::PHP","diamond::USD","emerald::USD","sapphire::KRW","goldenstar::KRW","bigwhale::CNY","rookie01::THB"];
+    // 顶代行 = 列表起点 (V0.2 全 PHP, 8 顶代)
+    const TOP_AGENT_KEYS = ["qweqwe::PHP","lucky88::PHP","diamond::PHP","emerald::PHP","sapphire::PHP","goldenstar::PHP","bigwhale::PHP","rookie01::PHP"];
 
     // 注单 mock - 三方游戏商每笔回调 (Sammy 2026-04-30 截图对齐字段)
     // 注单号统一 18 位数字 (三方真实流水号风格)
@@ -638,7 +635,7 @@
       const [inSysIdQ, setInSysIdQ] = useState(""), [sysIdQ, setSysIdQ] = useState("");
       const [inUserQ, setInUserQ] = useState(""), [userQ, setUserQ] = useState("");
       const [inStatus, setInStatus] = useState("all"), [statusFilter, setStatusFilter] = useState("all");
-      const [inCurrency, setInCurrency] = useState("all"), [currencyFilter, setCurrencyFilter] = useState("all");
+      const [inCurrency, setInCurrency] = useState("PHP"), [currencyFilter, setCurrencyFilter] = useState("PHP");  // V0.2 (Sammy 2026-04-30): 默认 PHP
       const [inShareRatio, setInShareRatio] = useState("all"), [shareRatioFilter, setShareRatioFilter] = useState("all");
       const [inDateFrom, setInDateFrom] = useState(""), [dateFrom, setDateFrom] = useState("");
       const [inDateTo, setInDateTo] = useState(""), [dateTo, setDateTo] = useState("");
@@ -648,8 +645,9 @@
         setShareRatioFilter(inShareRatio); setDateFrom(inDateFrom); setDateTo(inDateTo); setPageNum(0);
       };
       const resetSearch = () => {
-        setInSysIdQ(""); setInUserQ(""); setInStatus("all"); setInCurrency("all"); setInShareRatio("all"); setInDateFrom(""); setInDateTo("");
-        setSysIdQ(""); setUserQ(""); setStatusFilter("all"); setCurrencyFilter("all"); setShareRatioFilter("all"); setDateFrom(""); setDateTo(""); setPageNum(0);
+        // V0.2 重置时币种默认 PHP (Sammy 2026-04-30)
+        setInSysIdQ(""); setInUserQ(""); setInStatus("all"); setInCurrency("PHP"); setInShareRatio("all"); setInDateFrom(""); setInDateTo("");
+        setSysIdQ(""); setUserQ(""); setStatusFilter("all"); setCurrencyFilter("PHP"); setShareRatioFilter("all"); setDateFrom(""); setDateTo(""); setPageNum(0);
       };
 
       // Tree 扁平化: 顶代行先过筛选; 下线行只在父级展开时才出现 (V0.1 同款懒加载)
@@ -665,13 +663,29 @@
           if (userQ_ && !node.user.toLowerCase().includes(userQ_)) return false;
           return true;
         };
-        // 当前节点或任意后代匹配 (用于决定是否显示顶代行 / 是否强制展开)
-        const hasMatchInSubtree = (key) => {
-          const node = accounts[key];
-          if (!node) return false;
-          if (matches(node)) return true;
-          return (node.children || []).some(c => hasMatchInSubtree(c));
-        };
+
+        // V0.2 (Sammy 2026-04-30): 搜索时不显示祖先链, 平铺命中节点(任意层级)作为 depth=0 显示, 可展开看下级
+        // 默认模式 (无搜索): 顶代行按 createdAt DESC + Tree Table 展开下线
+        if (hasQ) {
+          // 搜索模式: 平铺命中
+          const matchedKeys = Object.keys(accounts).filter(k => matches(accounts[k]));
+          // 命中节点也按 createdAt DESC 排
+          matchedKeys.sort((a,b) => (accounts[b].createdAt || "").localeCompare(accounts[a].createdAt || ""));
+          function walkSearch(key, depth) {
+            const node = accounts[key]; if (!node) return;
+            out.push({ ...node, key, depth });
+            // 搜索模式下展开仍受 expanded 控制 (用户主动展开看下级)
+            if (expanded.has(key)) {
+              (node.children || []).forEach(c => walkSearch(c, depth + 1));
+            }
+          }
+          matchedKeys.forEach(k => walkSearch(k, 0));
+          return out;
+        }
+
+        // 默认模式: 顶代行 + 展开下线 + 顶代行筛选
+        // V0.2 (Sammy 2026-04-30): 顶代行按 createdAt DESC 排序 (最新开户在前)
+        const sortedTopKeys = [...topKeys].sort((a,b) => (accounts[b]?.createdAt || "").localeCompare(accounts[a]?.createdAt || ""));
         function walk(key, depth) {
           const node = accounts[key];
           if (!node) return;
@@ -698,16 +712,13 @@
               if (toCmp.length === 16) toCmp += ":59";
               if (node.createdAt > toCmp) return;
             }
-            if (hasQ && !hasMatchInSubtree(key)) return;
           }
           out.push({ ...node, key, depth });
-          const autoExpand = hasQ && (node.children || []).some(c => hasMatchInSubtree(c));
-          const shouldExpand = expanded.has(key) || autoExpand;
-          if (shouldExpand) {
+          if (expanded.has(key)) {
             (node.children || []).forEach(child => walk(child, depth + 1));
           }
         }
-        topKeys.forEach(k => walk(k, 0));
+        sortedTopKeys.forEach(k => walk(k, 0));
         return out;
       }, [accounts, topKeys, sysIdQ, userQ, statusFilter, currencyFilter, shareRatioFilter, dateFrom, dateTo, expanded]);
 
