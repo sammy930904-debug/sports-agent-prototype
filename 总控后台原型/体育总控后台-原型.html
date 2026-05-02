@@ -796,9 +796,17 @@
                 <option value="active">启用</option>
                 <option value="frozen">禁用</option>
               </select>
-              <select className="input" style={{width:120}} value={inCurrency} onChange={e=>setInCurrency(e.target.value)}>
-                <option value="all">全部币种</option>
-                <option value="KRW">KRW</option><option value="USD">USD</option><option value="PHP">PHP</option><option value="CNY">CNY</option><option value="THB">THB</option>
+              {/* V0.2 (Sammy 2026-04-30): 顶代户口 币种 select 即时触发 + 砍「全部币种」(业务规则: 一次只能筛选 1 个币种, 默认 PHP) */}
+              <select className="input" style={{width:120}} value={inCurrency} onChange={e=>{
+                setInCurrency(e.target.value);
+                setCurrencyFilter(e.target.value);
+                setPageNum(0);
+              }}>
+                <option value="PHP">PHP</option>
+                <option value="KRW">KRW</option>
+                <option value="USD">USD</option>
+                <option value="CNY">CNY</option>
+                <option value="THB">THB</option>
               </select>
               {/* V0.2 隐藏占成筛选 (Sammy 2026-04-30): 后期重启把这块加回 */}
               <ConfigProvider locale={zhCN}>
