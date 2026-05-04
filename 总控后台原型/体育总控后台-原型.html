@@ -1523,8 +1523,8 @@
           </div>
           <div className="bg-panel border border-line rounded-lg p-3 mb-4">
             <div className="flex flex-wrap gap-2 items-center">
-              <input className="input" style={{width:180}} placeholder="搜索流水号" value={inTxId} onChange={e=>setInTxId(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
-              <input className="input" style={{width:180}} placeholder="搜索系统户口号" value={inSysIdQ} onChange={e=>setInSysIdQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              {/* V0.2 隐藏「流水号」搜索 (Sammy 2026-04-30) */}
+              <input className="input" style={{width:200}} placeholder="搜索系统户口号" value={inSysIdQ} onChange={e=>setInSysIdQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
               <input className="input" style={{width:180}} placeholder="搜索用户账号" value={inUserQ} onChange={e=>setInUserQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
               <select className="input" style={{width:160}} value={inTxType} onChange={e=>setInTxType(e.target.value)}>
                 <option value="all">全部交易类型</option>
@@ -1570,14 +1570,14 @@
               <table>
                 <thead><tr>
                   {/* V0.2 隐藏「状态」列 (Sammy 2026-04-30): 后期重启把 th 状态 + td 状态 chip 加回 */}
-                  <th>流水号</th><th>系统户口号</th><th>用户账号</th><th>交易类型</th><th>转入/转出</th><th>币种</th><th className="text-right">金额</th><th>时间</th>
+                  {/* V0.2 隐藏「流水号」列 (Sammy 2026-04-30): 后期重启把 th + td 流水号 加回; 字段后端仍存 */}
+                  <th>系统户口号</th><th>用户账号</th><th>交易类型</th><th>转入/转出</th><th>币种</th><th className="text-right">金额</th><th>时间</th>
                 </tr></thead>
                 <tbody>
                   {list.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).map(l => {
                     const isIn = isCredit(l.type) || l.type === "transfer_in";
                     return (
                     <tr key={l.id}>
-                      <td className="mono" style={{fontSize:11}}>{l.id}</td>
                       <td className="mono text-muted">{l.mainSysId || "—"}</td>
                       <td className="mono">{l.mainUser || "—"}</td>
                       <td>{l.typeLabel}</td>

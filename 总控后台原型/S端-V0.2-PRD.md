@@ -813,21 +813,23 @@ operator 多 1 列 **操作**(canWrite=true);risk / finance 不显示操作列�
 
 **说明文案**:`三层资金动作合一 · 账房 ↔ 顶代 / 顶代 ↔ 下线 / 玩家 ↔ 三方体育平台`
 
-**筛选区**(V0.2 7 项,提交触发):
+**筛选区**(V0.2 6 项,提交触发):
 | # | 筛选项 | 选项 |
 |---|---|---|
-| 1 | 流水号 | text |
-| 2a | 系统户口号 | text(`mainSysId.includes`)|
-| 2b | 用户账号 | text(`mainUser.includes`)|
-| 3 | 交易类型 | `all / credit(上分) / debit(下分) / transfer_in(三方体育上分) / transfer_out(三方体育下分)` |
-| 4 | 转入 / 转出 | `all / in / out` |
-| 5 | 币种 | select |
-| 6 | 交易时间 RangePicker | |
+| 1a | 系统户口号 | text(`mainSysId.includes`)|
+| 1b | 用户账号 | text(`mainUser.includes`)|
+| 2 | 交易类型 | `all / credit(上分) / debit(下分) / transfer_in(三方体育上分) / transfer_out(三方体育下分)` |
+| 3 | 转入 / 转出 | `all / in / out` |
+| 4 | 币种 | select |
+| 5 | 交易时间 RangePicker | |
+| ~~⏸~~ | ~~流水号 search~~ V0.2 隐藏 |
 | ~~⏸~~ | ~~状态 `all / 成功 / 超时重试 / 失败`~~ V0.2 隐藏 |
 
-**表头 8 列(V0.2)**:流水号 / 系统户口号 / 用户账号 / 交易类型 / 转入/转出 / 币种 / 金额 / 时间
+**表头 7 列(V0.2)**:系统户口号 / 用户账号 / 交易类型 / 转入/转出 / 币种 / 金额 / 时间
 
-**V0.2 隐藏「状态」列**(代码保留,后期重启把 th 状态 + td 状态 chip 加回)
+**V0.2 隐藏列**(代码保留,后期重启把 th + td 加回):
+- 流水号 — Sammy 2026-04-30 拍移除
+- 状态 — Sammy 2026-04-30 拍移除
 
 **主体账号(mainSysId / mainUser)规则**:每条流水的"被影响账号"(非账房非三方平台)
 - `house_credit/debit`:主体 = 顶代,sysId = user
