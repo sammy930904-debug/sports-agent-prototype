@@ -625,7 +625,7 @@ function AddSubModal({parent, onClose, onSubmit, toast}){
         {!isTopAgent ? (
           <div className="bg-elev bd border rounded p-3 text-sm">
             <div>下线账号继承上级交收方案,不可更换(币种 = {TOP_SCHEMES.find(s=>s.id===parent.schemeId)?.currency})</div>
-            <div className="muted text-xs mt-1">如需更换,走 FN-ACC-12 修改交收方案高危流程</div>
+            <div className="muted text-xs mt-1">如需更换,请走「修改交收方案」高危流程</div>
           </div>
         ) : (
           <>
@@ -650,7 +650,7 @@ function AddSubModal({parent, onClose, onSubmit, toast}){
                 ))}
               </tbody>
             </table>
-            <div className="muted text-xs mt-2">下线创建后终身单一币种 / 单一交收方案,切换须走 FN-ACC-12。</div>
+            <div className="muted text-xs mt-2">下线创建后终身单一币种 / 单一交收方案,如需切换请走「修改交收方案」高危流程。</div>
           </>
         )}
       </Section>
