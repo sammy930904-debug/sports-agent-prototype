@@ -675,7 +675,8 @@ function AddSubModal({parent, onClose, onSubmit, toast}){
         <div>
           <FieldLabel req>操作密码</FieldLabel>
           <input type="password" className="input w-80" value={form.opPwd} onChange={e=>set("opPwd",e.target.value)} placeholder="当前登录代理的登录密码"/>
-          <div className="muted text-xs mt-1">Mock 密码:123456;多次错误后操作会暂时受限</div>
+          <div className="muted text-xs mt-1">多次错误后操作会暂时受限</div>
+          <div className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):原型 mock 密码统一 123456</div>
           {errors.opPwd && <div className="danger text-xs mt-1">{errors.opPwd}</div>}
         </div>
       </Section>
@@ -781,7 +782,7 @@ function EditProfileModal({account, onClose, onSubmit, toast}){
               <input type="number" step="0.01" className="input flex-1" value={form.rate} onChange={e=>set("rate",e.target.value)}/>
               <span className="muted">%</span>
             </div>
-            <div className="muted text-xs mt-1">上级上限 {parentRate}%;下线最大值 0.3%(mock)</div>
+            <div className="muted text-xs mt-1">上级上限 {parentRate}%;下线最大值 0.3%</div>
             {errors.rate && <div className="danger text-xs mt-1">{errors.rate}</div>}
           </div>
           <div>
@@ -801,7 +802,6 @@ function EditProfileModal({account, onClose, onSubmit, toast}){
           <div>
             <FieldLabel req>操作密码</FieldLabel>
             <input type="password" className="input w-80" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
-            <div className="muted text-xs mt-1">Mock 密码:123456</div>
             {errors.opPwd && <div className="danger text-xs mt-1">{errors.opPwd}</div>}
           </div>
         </Section>
@@ -872,7 +872,6 @@ function CreditModal({dir, account, parent, onClose, onSubmit, toast}){
       <Section title="④ 安全校验">
         <FieldLabel req>操作密码</FieldLabel>
         <input type="password" className="input w-80" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
-        <div className="muted text-xs mt-1">Mock 密码:123456</div>
         {err.opPwd && <div className="danger text-xs mt-1">{err.opPwd}</div>}
       </Section>
     </Modal>
@@ -1028,7 +1027,6 @@ function SchemeModal({account, accounts, onClose, onSubmit, toast}){
             <div>
               <FieldLabel req>操作密码</FieldLabel>
               <input type="password" className="input w-full" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
-              <div className="muted text-xs mt-1">Mock 密码:123456</div>
             </div>
           </div>
           <label className="flex items-center gap-2 cursor-pointer mb-3">
@@ -1091,8 +1089,8 @@ function ChangePwdModal({onClose, forceLogout, toast, forced}){
               {err[k] && <div className="danger text-xs mt-1">{err[k]}</div>}
             </div>
           ))}
-          <div className="muted text-xs">
-            Mock 旧密码:<span className="gold">123456</span>。
+          <div className="text-xs" style={{color:"#9B7FE8"}}>
+            📝 PM 说明(非产品文案):mock 旧密码 123456。
             {forced
               ? "当前为「首次登录强制」场景:× / 取消 → 直接退出登录;修改成功 → 退出重登;旧密码不正确 → 保持弹窗允许重试。"
               : "当前为「页内主动」场景:× / 取消 → 仅关闭弹窗,会话保持;修改成功 → 仍强制重登;旧密码不正确 → 保持弹窗允许重试。"}
@@ -1142,10 +1140,10 @@ function LoginPage({onLogin}){
         <FieldLabel req>账号</FieldLabel>
         <input className="input w-full mb-4" value={user} onChange={e=>setUser(e.target.value)}/>
         <FieldLabel req>密码</FieldLabel>
-        <input type="password" className="input w-full mb-4" value={pwd} onChange={e=>setPwd(e.target.value)} placeholder="Mock 密码:123456"/>
+        <input type="password" className="input w-full mb-4" value={pwd} onChange={e=>setPwd(e.target.value)} placeholder="请输入您的密码"/>
         {err && <div className="danger text-xs mb-3">{err}</div>}
         <button className="btn-primary w-full h-11" onClick={submit}>登录</button>
-        <div className="muted text-xs mt-4 text-center">原型版 · 仅用于走查 PRD V1.5</div>
+        <div className="text-xs mt-4 text-center" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):原型 mock 账号 qweqwe / 密码 123456</div>
       </div>
     </div>
   );
@@ -1253,9 +1251,9 @@ function App(){
 
           <DownlineTable accounts={accounts} expanded={expanded} toggle={toggle} openModal={openModal} searchHits={searchHits}/>
 
-          <div className="muted text-xs mt-6 leading-6">
-            <div>{t.tips_title}</div>
-            <div>• {t.tips_pwd}<span className="gold">123456</span></div>
+          <div className="text-xs mt-6 leading-6" style={{color:"#9B7FE8"}}>
+            <div>📝 PM 说明(非产品文案 / 走查辅助,正式环境删除):</div>
+            <div>• {t.tips_pwd}<span style={{color:"#9B7FE8",fontWeight:600}}>123456</span></div>
             <div>• {t.tips_search}</div>
             <div>• {t.tips_add}</div>
             <div>• {t.tips_scheme}</div>
