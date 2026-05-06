@@ -63,11 +63,11 @@
   .dev-bar {
     position:fixed; top:12px; left:12px; z-index:9999;
     background:rgba(26,26,28,.92); border:1px solid #2A2A2C; border-radius:8px;
-    padding:8px 12px; font-size:12px; color:#8E8E93; backdrop-filter: blur(8px);
+    padding:8px 12px; font-size:12px; color:#9B7FE8; backdrop-filter: blur(8px);
   }
   .dev-bar button { padding:4px 10px; border-radius:4px; margin-left:6px; }
   .dev-bar button.on { background:#F0B93A; color:#1F1F1F; font-weight:600; }
-  .dev-bar button.off { background:#2A2A2C; color:#8E8E93; }
+  .dev-bar button.off { background:#2A2A2C; color:#9B7FE8; }
 
   .lang-btn { padding:4px 10px; font-size:12px; border-radius:4px; color:#8E8E93; }
   .lang-btn.active { color:#F0B93A; background:rgba(240,185,58,.08); border:1px solid rgba(240,185,58,.4); }
@@ -320,7 +320,8 @@ const I18N = {
     btn_cancel:"取消",
     btn_enter:"进入游戏",
     third_party_title:"已进入第三方游戏",
-    third_party_desc:"此页面由第三方游戏商提供,本原型仅演示到此;账号余额已按所选方案带入本局。",
+    third_party_desc:"此页面由第三方游戏商提供,账号余额已按所选方案带入本局。",
+    third_party_pm:"原型仅演示到此(由真实第三方游戏商页面接管)",
     third_party_player:"玩家",
     third_party_scheme:"当前方案",
     third_party_balance:"带入余额",
@@ -407,7 +408,8 @@ const I18N = {
     btn_cancel:"Cancel",
     btn_enter:"Enter Game",
     third_party_title:"Entered Third-Party Game",
-    third_party_desc:"This page is served by a third-party provider. Prototype ends here; your balance for the selected scheme has been brought into this session.",
+    third_party_desc:"This page is served by a third-party provider. Your balance for the selected scheme has been brought into this session.",
+    third_party_pm:"Prototype ends here (a real third-party game page would take over)",
     third_party_player:"Player",
     third_party_scheme:"Active Scheme",
     third_party_balance:"Carried Balance",
@@ -493,7 +495,8 @@ const I18N = {
     btn_cancel:"취소",
     btn_enter:"게임 입장",
     third_party_title:"서드파티 게임 입장 완료",
-    third_party_desc:"이 페이지는 서드파티 게임 제공자에 의해 제공됩니다. 프로토타입은 여기까지이며, 선택하신 정산안의 잔액이 본 세션으로 이전되었습니다.",
+    third_party_desc:"이 페이지는 서드파티 게임 제공자에 의해 제공됩니다. 선택하신 정산안의 잔액이 본 세션으로 이전되었습니다.",
+    third_party_pm:"프로토타입은 여기까지(실제로는 서드파티 게임 페이지가 인계됩니다)",
     third_party_player:"플레이어",
     third_party_scheme:"활성 방식",
     third_party_balance:"이관 잔액",
@@ -596,7 +599,7 @@ function DevBar({ role, setRole, lang, onReset }){
   const t = I18N[lang];
   return (
     <div className="dev-bar">
-      <span>{t.dev_label}:</span>
+      <span>📝 PM {t.dev_label}:</span>
       <button className={role==="top"?"on":"off"} onClick={()=>{setRole("top"); onReset();}}>{t.dev_top}</button>
       <button className={role==="sub"?"on":"off"} onClick={()=>{setRole("sub"); onReset();}}>{t.dev_sub}</button>
     </div>
@@ -737,7 +740,7 @@ function LoginPage({ lang, setLang, devRole, onLoggedIn, isMobile }){
 
           {/* 演示提示 + 场景预览(仅原型评审用,正式环境删除) */}
           <div className="w-full max-w-sm mt-6">
-            <div className="text-xs muted text-center mb-3">{t.hint_demo}</div>
+            <div className="text-xs text-center mb-3" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):{t.hint_demo}</div>
             <CopyPreview lang={lang}/>
           </div>
         </div>
@@ -794,7 +797,7 @@ function LoginPage({ lang, setLang, devRole, onLoggedIn, isMobile }){
 
               <button className="btn-primary mt-2" onClick={submit}>{t.btn_login}</button>
 
-              <div className="text-xs muted text-center pt-2">{t.hint_demo}</div>
+              <div className="text-xs text-center pt-2" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):{t.hint_demo}</div>
             </div>
           </div>
 
@@ -837,8 +840,8 @@ function CopyPreview({ lang }){
   ];
   return (
     <details className="mt-4 bg-card bd border rounded-xl px-4 py-3">
-      <summary className="text-xs muted cursor-pointer select-none hover:text-white">
-        <span className="gold mr-1">▸</span>{t.preview_title}
+      <summary className="text-xs cursor-pointer select-none hover:text-white" style={{color:"#9B7FE8"}}>
+        <span className="gold mr-1">▸</span>📝 PM 说明(非产品文案):{t.preview_title}
       </summary>
       <div className="mt-3 space-y-4">
         {groups.map((g,i)=>(
@@ -1110,7 +1113,8 @@ function ThirdPartyGame({ lang, user, scheme, onBackToLobby }){
         <div className="bg-card bd border rounded-xl p-8 max-w-xl w-full text-center">
           <div className="text-5xl gold mb-4">🎮</div>
           <div className="text-xl font-semibold mb-3">{t.third_party_title}</div>
-          <div className="text-sm muted mb-6 leading-relaxed">{t.third_party_desc}</div>
+          <div className="text-sm muted mb-2 leading-relaxed">{t.third_party_desc}</div>
+          <div className="text-xs mb-6" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):{t.third_party_pm}</div>
 
           <div className="text-left bg-elev bd border rounded-lg p-4 space-y-2 text-sm">
             <div className="flex justify-between">
