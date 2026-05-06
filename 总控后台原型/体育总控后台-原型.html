@@ -781,12 +781,13 @@
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-xl font-semibold">顶代户口</h2>
-              <p className="text-xs text-muted mt-1">账号管理 · 平台直辖顶代  ·  1 顶代多币种 = N 行(按币种拆)  ·  {ROLES[role].name} 视角可见 {cols.length} 列</p>
+              <p className="text-xs text-muted mt-1">{ROLES[role].name} 视角可见 {cols.length} 列</p>
+              <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):账号管理 · 平台直辖顶代 · 1 顶代多币种 = N 行(按币种拆)</p>
             </div>
           </div>
-          <div className="bg-cool-soft border border-cool rounded-lg p-3 mb-4 text-xs flex items-start gap-2">
-            <span className="text-cool">ℹ</span>
-            <span><b>账号来源:</b>顶代账号由<b>账房侧</b>创建并下发户口(系统户口号 + 初始币种 + 初始占成),本页仅查看与管理(冻结 / 调占成 / 调币种),<b>不负责创建</b>。下线数 / 下线余额 / 总线余额 主信源在 B 端代理后台。</span>
+          <div className="rounded-lg p-3 mb-4 text-xs flex items-start gap-2" style={{background:"rgba(155,127,232,0.08)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <span style={{marginTop:1}}>📝</span>
+            <span><b>PM 说明(非产品文案):</b>顶代账号由账房侧创建并下发户口(系统户口号 + 初始币种 + 初始占成),本页仅查看与管理,不负责创建。下线数 / 下线余额 / 总线余额 主信源在 B 端代理后台。</span>
           </div>
           <div className="bg-panel border border-line rounded-lg p-3 mb-4">
             <div className="flex flex-wrap gap-2 items-center">
@@ -1250,7 +1251,7 @@
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-xl font-semibold">体育注单记录</h2>
-              <p className="text-xs text-muted mt-1">只保存已结算的体育注单(跟体育场次记录数据源一致)  ·  电子 / 六合彩 暂不在 S 端展示</p>
+              <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):只保存已结算的体育注单(跟体育场次记录数据源一致);电子 / 六合彩 暂不在 S 端展示</p>
             </div>
             <button className="btn btn-ghost" onClick={()=>doExport("体育注单记录", MOCK_BETS.filter(b=>b.gameType.includes("体育")&&b.status==="已结算").length, appendSystemLog)}>导出 Excel</button>
           </div>
@@ -1370,7 +1371,7 @@
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-xl font-semibold">体育场次记录</h2>
-              <p className="text-xs text-muted mt-1">每日 00:10 跑批 1 次,生成前一天的体育已结算场次  ·  用于代理佣金结算</p>
+              <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):每日 00:10 跑批 1 次,生成前一天的体育已结算场次,用于代理佣金结算</p>
             </div>
             <button className="btn btn-ghost" onClick={()=>doExport("体育场次记录", MOCK_SPORTS_SESSIONS.filter(s=>(s.validStake||0)>0).length, appendSystemLog)}>导出 Excel</button>
           </div>
@@ -1518,7 +1519,7 @@
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-xl font-semibold">交易流水记录</h2>
-              <p className="text-xs text-muted mt-1">三层资金动作合一  ·  账房 ↔ 顶代 / 顶代 ↔ 下线 / 玩家 ↔ 三方体育平台</p>
+              <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):三层资金动作合一 · 账房 ↔ 顶代 / 顶代 ↔ 下线 / 玩家 ↔ 三方体育平台</p>
             </div>
             <button className="btn btn-ghost" onClick={()=>doExport("交易流水记录", MOCK_LEDGER.length, appendSystemLog)}>导出 Excel</button>
           </div>
@@ -1646,7 +1647,8 @@
         <div className="p-6">
           <div className="mb-5">
             <h2 className="text-xl font-semibold">操作日志</h2>
-            <p className="text-xs text-muted mt-1">系统 = 平台员工动作  ·  玩家 = C 端玩家 + B 端代理动作 (在 S 端视角下,代理也是被管对象)</p>
+            <p className="text-xs text-muted mt-1">系统 = 平台员工动作  ·  玩家 = C 端玩家 + B 端代理动作</p>
+            <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):S 端视角下,代理也是被管对象,所以归在「玩家」Tab</p>
           </div>
           <div className="border-b border-line mb-4 flex">
             <div className={"tab " + (tab==="system"?"active":"")} onClick={()=>switchTab("system")}>系统</div>
@@ -1834,7 +1836,8 @@
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-xl font-semibold">员工账号</h2>
-              <p className="text-xs text-muted mt-1">仅 operator 可见 · 新增 / 删除登录总控后台的员工 · 角色决定可见菜单与可写动作</p>
+              <p className="text-xs text-muted mt-1">仅 operator 可见</p>
+              <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):新增 / 删除登录总控后台的员工;角色决定可见菜单与可写动作</p>
             </div>
             <button className="btn btn-primary" onClick={()=>setShowAdd(true)} style={{padding:"8px 18px"}}>+ 新增员工</button>
           </div>
@@ -2017,7 +2020,8 @@
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-xl font-semibold">IP 白名单</h2>
-              <p className="text-xs text-muted mt-1">仅 operator 可见 · 限定哪些 IP 段可登录总控后台 · 命中白名单外 IP 直接拒登</p>
+              <p className="text-xs text-muted mt-1">仅 operator 可见</p>
+              <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):限定哪些 IP 段可登录总控后台;命中白名单外 IP 直接拒登</p>
             </div>
             <button className="btn btn-primary" onClick={()=>setShowAdd(true)} style={{padding:"8px 18px"}}>+ 新增白名单</button>
           </div>
