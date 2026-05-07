@@ -921,8 +921,8 @@
               <div className="section-title">① 关联信息</div>
               <div className="bg-card border border-line rounded p-3 text-xs">
                 <div>上级:<span className="mono text-cool">{parent.user}</span> ({parent.accountType}) · 系统户口号 <span className="mono">{parent.sysId}</span></div>
-                <div className="mt-1">系统户口号(自动派生):<span className="mono text-cool">{parent.sysId}-{(parent.children||[]).length+1}</span></div>
-                <div className="mt-1 text-faint" style={{fontSize:11}}>系统户口号永不回收、永不复用、永不变更</div>
+                <div className="mt-1">系统户口号(自动生成):<span className="mono text-cool">{parent.sysId}-{(parent.children||[]).length+1}</span></div>
+                <div className="mt-1" style={{fontSize:11,color:"#9B7FE8"}}>📝 PM 说明(非产品文案):系统户口号永不回收、永不复用、永不变更(数据契约)</div>
               </div>
 
               <div className="section-title">② 基本信息</div>
@@ -957,7 +957,7 @@
               <div className="bg-card border border-line rounded p-3 text-xs">
                 <div>下线账号<b>整条线</b>继承上级币种 + 方案,不可更换</div>
                 <div className="text-muted mt-1">币种:<span className="chip chip-cool">{parent.currency}</span></div>
-                <div className="text-faint mt-1" style={{fontSize:11}}>如需另外币种,请回到顶代户口列表,在该顶代的其他币种行点新增下级</div>
+                <div className="mt-1" style={{fontSize:11,color:"#9B7FE8"}}>📝 PM 说明(非产品文案):mock 简化「1 顶代多币种 = N 行」,如需另外币种回到顶代户口列表在该顶代的其他币种行点新增下级</div>
               </div>
 
               <div className="section-title">⑤ 游戏条件</div>
