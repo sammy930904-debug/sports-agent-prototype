@@ -1183,10 +1183,11 @@ function InviteLinkModal({parent, onClose, toast}){
   const link = useMemo(()=>{
     const origin = window.location.origin;
     const refId = parent.id;
+    // 直接指向具体 html 文件 (避免 redirect 中转丢 query string;同时 redirect index.html 也已修复透传 query)
     if(type === "player"){
-      return origin + "/游戏端原型/?route=register&ref=" + encodeURIComponent(refId) + "&type=player";
+      return origin + "/游戏端原型/STAR-VIP-GAME-登录-原型.html?route=register&ref=" + encodeURIComponent(refId) + "&type=player";
     }
-    return origin + "/体育后台原型/?route=register&ref=" + encodeURIComponent(refId) + "&type=agent";
+    return origin + "/体育后台原型/体育代理后台-账号管理-原型.html?route=register&ref=" + encodeURIComponent(refId) + "&type=agent";
   }, [type, parent.id]);
   const doCopy = ()=>{
     navigator.clipboard?.writeText(link).then(()=>toast(t.invite_copied), ()=>toast(t.invite_copied));

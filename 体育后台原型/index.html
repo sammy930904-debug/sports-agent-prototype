@@ -12,9 +12,10 @@
   </style>
 </head>
 <body>
-  <script>location.replace("体育代理后台-账号管理-原型.html");</script>
+  <script>location.replace("体育代理后台-账号管理-原型.html" + window.location.search);</script>
   <div class="wrap">
-    <p>如未自动跳转,请 <a href="体育代理后台-账号管理-原型.html">点此进入原型</a>。</p>
+    <p>如未自动跳转,请 <a id="fallbackLink" href="体育代理后台-账号管理-原型.html">点此进入原型</a>。</p>
   </div>
+  <script>document.getElementById("fallbackLink").href = "体育代理后台-账号管理-原型.html" + window.location.search;</script>
 </body>
 </html>

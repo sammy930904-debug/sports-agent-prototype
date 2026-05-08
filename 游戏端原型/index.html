@@ -12,9 +12,10 @@
   </style>
 </head>
 <body>
-  <script>location.replace("STAR-VIP-GAME-登录-原型.html");</script>
+  <script>location.replace("STAR-VIP-GAME-登录-原型.html" + window.location.search);</script>
   <div class="wrap">
-    <p>如未自动跳转,请 <a href="STAR-VIP-GAME-登录-原型.html">点此进入原型</a>。</p>
+    <p>如未自动跳转,请 <a id="fallbackLink" href="STAR-VIP-GAME-登录-原型.html">点此进入原型</a>。</p>
   </div>
+  <script>document.getElementById("fallbackLink").href = "STAR-VIP-GAME-登录-原型.html" + window.location.search;</script>
 </body>
 </html>
