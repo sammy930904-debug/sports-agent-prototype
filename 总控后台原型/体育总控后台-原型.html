@@ -1165,9 +1165,6 @@
                   <input type="number" step="0.0001" className="input flex-1" value={amount} onChange={e=>setAmount(e.target.value)} placeholder={isCredit ? "上限 " + parentBalanceWan.toLocaleString("zh-CN",{maximumFractionDigits:4}) + " (上级余额)" : "上限 " + balanceWan.toLocaleString("zh-CN",{maximumFractionDigits:4}) + " (当前余额)"}/>
                   <span className="text-muted">万 {account.currency}</span>
                 </div>
-                <div className="text-faint mt-1" style={{fontSize:11}}>
-                  {isCredit ? "上分: 直属上级余额 -X, 当前账号余额 +X (整树总线余额不变)" : "下分: 当前账号余额 -X, 直属上级余额 +X (整树总线余额不变)"}
-                </div>
               </div>
               <div>
                 <label className="block text-xs text-muted mb-1">操作密码 <span style={{color:"#FF6B6B"}}>*</span></label>
