@@ -369,7 +369,23 @@ const I18N = {
     cat_lottery:"六合彩",
     cat_lottery_desc:"官方开奖 · 多种玩法",
     // V0.4 大厅导航回退
-    btn_back_to_lobby:"返回大厅"
+    btn_back_to_lobby:"返回大厅",
+    // V0.5 新增 — 自主注册
+    reg_title:"加入 STAR VIP",
+    reg_inviter_label:"邀请人(自动识别,不可修改)",
+    reg_account:"用户账号", reg_account_ph:"6-20 位英文 + 数字",
+    reg_pwd:"登录密码", reg_pwd_ph:"6-20 位",
+    reg_pwd_confirm:"确认密码",
+    reg_nick:"账户昵称", reg_nick_ph:"选填",
+    reg_phone:"联系电话", reg_phone_ph:"选填,异常登录通知",
+    reg_submit:"立即注册",
+    reg_no_ref_title:"加入 STAR VIP 需要邀请",
+    reg_no_ref_desc:"请联系您的专属客服或代理获取邀请链接",
+    reg_success:"注册成功,正在为您登录",
+    reg_err_account:"用户账号需 6-20 位英文+数字",
+    reg_err_pwd:"密码需 6-20 位",
+    reg_err_pwd_match:"两次密码不一致",
+    login_to_register:"还没账号?"
   },
   "en-US": {
     _name:"English", _short:"EN",
@@ -456,7 +472,22 @@ const I18N = {
     cat_lottery:"Mark Six",
     cat_lottery_desc:"Official draws · Multiple bets",
     // V0.4 Lobby nav back
-    btn_back_to_lobby:"Back to Lobby"
+    btn_back_to_lobby:"Back to Lobby",
+    reg_title:"Join STAR VIP",
+    reg_inviter_label:"Inviter (auto-detected)",
+    reg_account:"Username", reg_account_ph:"6-20 alphanumeric chars",
+    reg_pwd:"Password", reg_pwd_ph:"6-20 chars",
+    reg_pwd_confirm:"Confirm Password",
+    reg_nick:"Nickname", reg_nick_ph:"Optional",
+    reg_phone:"Phone", reg_phone_ph:"Optional, login alerts",
+    reg_submit:"Sign Up Now",
+    reg_no_ref_title:"Joining STAR VIP requires an invite",
+    reg_no_ref_desc:"Please contact your concierge or agent for an invite link",
+    reg_success:"Sign-up successful, signing you in",
+    reg_err_account:"Username must be 6-20 alphanumeric chars",
+    reg_err_pwd:"Password must be 6-20 chars",
+    reg_err_pwd_match:"Passwords do not match",
+    login_to_register:"No account yet?"
   },
   "ko-KR": {
     _name:"한국어", _short:"한",
@@ -543,7 +574,22 @@ const I18N = {
     cat_lottery:"Mark Six",
     cat_lottery_desc:"공식 추첨 · 다양한 베팅",
     // V0.4 로비 복귀
-    btn_back_to_lobby:"로비로 돌아가기"
+    btn_back_to_lobby:"로비로 돌아가기",
+    reg_title:"STAR VIP 가입",
+    reg_inviter_label:"초대자 (자동 인식)",
+    reg_account:"사용자 계정", reg_account_ph:"6-20자 영문+숫자",
+    reg_pwd:"로그인 비밀번호", reg_pwd_ph:"6-20자",
+    reg_pwd_confirm:"비밀번호 확인",
+    reg_nick:"계정 닉네임", reg_nick_ph:"선택",
+    reg_phone:"전화번호", reg_phone_ph:"선택, 이상 로그인 알림",
+    reg_submit:"지금 가입",
+    reg_no_ref_title:"STAR VIP 가입은 초대가 필요합니다",
+    reg_no_ref_desc:"전담 컨시어지 또는 대리에게 초대 링크를 요청하세요",
+    reg_success:"가입 성공, 로그인 중입니다",
+    reg_err_account:"사용자 계정은 6-20자 영문+숫자",
+    reg_err_pwd:"비밀번호는 6-20자",
+    reg_err_pwd_match:"비밀번호가 일치하지 않습니다",
+    login_to_register:"계정이 아직 없으신가요?"
   }
 };
 
@@ -1140,14 +1186,106 @@ function ThirdPartyGame({ lang, user, scheme, onBackToLobby }){
 }
 
 /* =========================
+   自主注册页 (V0.5 新增 — 邀请链接落地)
+   - URL: ?route=register&ref={parentSysId}&type=player
+   - 无 ref 显示「需要邀请」提示
+   - 注册成功 mock onDone(自动登录跳大厅)
+========================= */
+function RegisterPage({ lang, setLang, refId, isMobile, onDone }){
+  const t = I18N[lang];
+  const [account, setAccount] = useState("");
+  const [pwd, setPwd] = useState("");
+  const [pwdC, setPwdC] = useState("");
+  const [nick, setNick] = useState("");
+  const [phone, setPhone] = useState("");
+  const [err, setErr] = useState("");
+
+  const submit = ()=>{
+    if(!/^[A-Za-z0-9]{6,20}$/.test(account)){ setErr(t.reg_err_account); return; }
+    if(!/^.{6,20}$/.test(pwd)){ setErr(t.reg_err_pwd); return; }
+    if(pwd !== pwdC){ setErr(t.reg_err_pwd_match); return; }
+    onDone({ account, pwd, nick: nick.trim() || account, phone });
+  };
+
+  if(!refId){
+    return (
+      <div className="stadium-bg min-h-screen flex flex-col items-center justify-center px-6">
+        <div className="bg-card bd border rounded-xl p-8 shadow-2xl text-center" style={{maxWidth:420,width:"100%"}}>
+          <div className="text-4xl gold mb-3">★</div>
+          <div className="text-lg font-semibold mb-3">{t.reg_no_ref_title}</div>
+          <div className="text-sm muted leading-relaxed">{t.reg_no_ref_desc}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="stadium-bg min-h-screen flex flex-col">
+      <div className="flex items-center justify-between px-6 py-4 relative z-10">
+        <div className="flex items-center gap-2">
+          <span className="gold text-xl font-bold tracking-wider">★</span>
+          <span className="font-semibold tracking-wider">{t.brand}</span>
+        </div>
+        <LangSwitcher lang={lang} setLang={setLang}/>
+      </div>
+      <div className="flex-1 flex items-center justify-center px-6 relative z-10 py-6">
+        <div className="w-full" style={{maxWidth:isMobile?"100%":"480px"}}>
+          <div className="text-center mb-6 logo-glow">
+            <div className="text-4xl gold leading-none">★</div>
+            <div className="text-2xl font-bold tracking-widest mt-2 gold">{t.reg_title}</div>
+          </div>
+          <div className="bg-card bd border rounded-xl p-6 shadow-2xl">
+            <div className="bg-elev bd border rounded p-3 text-xs mb-4">
+              <span className="muted">{t.reg_inviter_label}:</span>
+              <span className="gold ml-2" style={{fontFamily:"monospace"}}>{refId}</span>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs muted mb-1">{t.reg_account}</label>
+                <input className="input" value={account} onChange={e=>{setAccount(e.target.value); setErr("");}} placeholder={t.reg_account_ph}/>
+              </div>
+              <div>
+                <label className="block text-xs muted mb-1">{t.reg_pwd}</label>
+                <input className="input" type="password" value={pwd} onChange={e=>{setPwd(e.target.value); setErr("");}} placeholder={t.reg_pwd_ph}/>
+              </div>
+              <div>
+                <label className="block text-xs muted mb-1">{t.reg_pwd_confirm}</label>
+                <input className="input" type="password" value={pwdC} onChange={e=>{setPwdC(e.target.value); setErr("");}}/>
+              </div>
+              <div>
+                <label className="block text-xs muted mb-1">{t.reg_nick}</label>
+                <input className="input" value={nick} onChange={e=>setNick(e.target.value)} placeholder={t.reg_nick_ph}/>
+              </div>
+              <div>
+                <label className="block text-xs muted mb-1">{t.reg_phone}</label>
+                <input className="input" value={phone} onChange={e=>setPhone(e.target.value)} placeholder={t.reg_phone_ph}/>
+              </div>
+              {err && <div className="text-xs" style={{color:"#FF4D4F"}}>{err}</div>}
+              <button className="btn-primary mt-2" onClick={submit}>{t.reg_submit}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="h-8"></div>
+    </div>
+  );
+}
+
+/* =========================
    根组件 — 驱动三种视图 + 演示顶代/非顶代分支
 ========================= */
 function App(){
+  // V0.5 新增 — 邀请链接落地: ?route=register&ref={parentSysId}&type=player
+  // hooks 顺序硬规则: 在所有 useState 之前求值, 但 isRegister 不能影响 hooks 顺序 (见 feedback_role_pm_dev.md)
+  const _params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams("");
+  const isRegister = _params.get("route") === "register";
+  const _refId = _params.get("ref") || "";
+
   const vp = useViewport();
   const [lang, setLang] = useState("zh-CN");
   const [devRole, setDevRole] = useState("top"); // top | sub
   // stage: login | lobby | scheme | game
-  const [stage, setStage] = useState("login");
+  const [stage, setStage] = useState(isRegister ? "register" : "login");
   const [user, setUser] = useState(null);
   const [category, setCategory] = useState(null); // sports | egame | lottery
   const [scheme, setScheme] = useState(null);
@@ -1189,6 +1327,16 @@ function App(){
   return (
     <div>
       <DevBar role={devRole} setRole={setDevRole} lang={lang} onReset={reset}/>
+
+      {stage==="register" && (
+        <RegisterPage lang={lang} setLang={setLang}
+                      refId={_refId}
+                      isMobile={vp.isMobile}
+                      onDone={(form)=>{
+                        // mock: 注册成功 -> 跳回不带 query 的当前 URL, App 重新 mount 进登录页
+                        setTimeout(()=>{ window.location.replace(window.location.pathname); }, 1200);
+                      }}/>
+      )}
 
       {stage==="login" && (
         <LoginPage lang={lang} setLang={setLang}
