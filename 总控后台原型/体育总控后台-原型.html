@@ -78,7 +78,7 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useMemo } = React;
+    const { useState, useMemo, useRef } = React;
     // antd 4 RangePicker (仅开户时间用, 其他筛选/UI 仍用 Tailwind)
     moment.locale("zh-cn"); // 月份 / 星期 / 今天 等内部文案中文化
     const { DatePicker, ConfigProvider } = antd;
@@ -468,12 +468,27 @@
 
     // ============== 通用 hover tooltip (V0.x 新增: 字段说明, 给开发对接) ==============
     // 用法: <FieldHint hint="字段含义 / 计算公式 / 三角色权限...">字段名</FieldHint>
-    // CSS 已加 .field-hint + .field-hint-bubble (hover 切换 display)
+    // 修复 (Sammy 2026-05-11): bubble 用 React.createPortal 渲染到 body, 脱离 .scroll-x / .bg-panel
+    // 的 overflow:hidden 裁切; hover 时计算锚点坐标用 fixed 定位
     function FieldHint({ hint, children }) {
+      const anchorRef = useRef(null);
+      const [show, setShow] = useState(false);
+      const [pos, setPos] = useState({ left: 0, top: 0 });
+      const handleEnter = () => {
+        const el = anchorRef.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        setPos({ left: r.left + r.width / 2, top: r.top });
+        setShow(true);
+      };
+      const handleLeave = () => setShow(false);
       return (
-        <span className="field-hint">
+        <span ref={anchorRef} className="field-hint" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
           {children}
-          <span className="field-hint-bubble">{hint}</span>
+          {show && ReactDOM.createPortal(
+            <span className="field-hint-bubble" style={{position:"fixed",left:pos.left,top:pos.top,transform:"translate(-50%,calc(-100% - 6px))",display:"block"}}>{hint}</span>,
+            document.body
+          )}
         </span>
       );
     }
