@@ -1379,6 +1379,33 @@
             <span className="text-cool">ℹ</span>
             <span>电子 / 六合彩 的代理佣金结算暂未实现,本页仅体育数据</span>
           </div>
+          {/* V0.x 新增:📝 业务规则 折叠面板 (给开发对接, 正式环境删除) */}
+          <details className="rounded-lg p-3 mb-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(给开发对接,正式环境删除)</summary>
+            <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
+              <div><b>① 默认过滤(硬过滤,不可关闭):</b></div>
+              <div>· <code>validStake &gt; 0</code> — 空跑批不展示(后端跑批层就不入库,前端再加一道兜底)</div>
+              <div>· 当前 <code>rate = 0</code> 仍展示(commission 列显示 0);如需补过滤,改 SportsSessionsPage.list filter</div>
+              <div className="mt-2"><b>② 跑批口径(后端跑批 cron):</b></div>
+              <div>· <code>每日 00:10</code> 跑前一天体育已结算注单 → 按 (顶代, 币种) 聚合 → 写入 <code>sports_sessions</code> 表</div>
+              <div>· 来源 SQL:<code>bets WHERE game_type='体育' AND status='已结算' AND DATE(settle_time)=yesterday</code></div>
+              <div>· 场次编号:<code>SP-{"{"}YYYYMMDDHHMM{"}"}-{"{"}NNN{"}"}</code>(年月日时分 = 跑批生成时间,NNN 按 batch 内重置)</div>
+              <div className="mt-2"><b>③ 字段计算公式:</b></div>
+              <div>· <code>commission = validStake × rate</code>(本顶代当日总佣金)</div>
+              <div>· <code>shareAmount = validStake × shareRatio</code>(本顶代当日占成金额,V0.2 列隐藏)</div>
+              <div>· <code>totalWinLoss = Σ bet.winLoss</code>(本顶代当日所有玩家输赢汇总)</div>
+              <div className="mt-2"><b>④ 三角色字段权限(后端按 token role 过滤,risk 字段不返回):</b></div>
+              <div>· <code>admin / finance</code>:可见全字段</div>
+              <div>· <code>risk</code>:不返回 <code>shareRatio / shareAmount</code>(占成相关)+ <code>balance / subBalance / totalBalance</code>(顶代户口页同步过滤)</div>
+              <div className="mt-2"><b>⑤ V0.2 隐藏字段(代码保留,后期重启加回):</b></div>
+              <div>· <code>占成 / 占成金额 / 上缴佣金率</code> 3 列已从表头 + td 砍掉 — Sammy 2026-04-30 拍</div>
+              <div>· 后端 <code>submit_rate</code> 字段仍 mock 保留,V0.2 不算/不展示</div>
+              <div className="mt-2"><b>⑥ 导出 Excel:</b></div>
+              <div>· 文件名规则:<code>{"{"}YYYY-MM-DD{"}"}_体育场次记录.xlsx</code>(导出日期前缀)</div>
+              <div>· 范围:跟列表过滤后一致(全量 <code>validStake &gt; 0</code> 数据,不按当前筛选)</div>
+              <div>· 写动作回写 auditSystem(actor=当前员工,action=导出 Excel)</div>
+            </div>
+          </details>
           <div className="bg-panel border border-line rounded-lg p-3 mb-4">
             <div className="flex flex-wrap gap-2 items-center">
               <input className="input" style={{width:200}} placeholder="搜索场次编号" value={inSessionId} onChange={e=>setInSessionId(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
