@@ -66,6 +66,12 @@
     .scroll-x{overflow-x:auto}
     .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
     .mono{font-family:"SF Mono",Monaco,Consolas,monospace}
+    /* V0.x 新增: 字段 hover tooltip (紫色 PM 提示, 给开发对接, 正式环境删除) */
+    .field-hint{position:relative;cursor:help;border-bottom:1px dotted rgba(155,127,232,0.5)}
+    .field-hint .field-hint-bubble{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);padding:8px 12px;background:rgba(15,15,16,0.98);border:1px solid #9B7FE8;border-radius:6px;color:#E6EAF0;font-size:11px;line-height:1.5;min-width:220px;max-width:340px;z-index:100;text-align:left;white-space:normal;box-shadow:0 6px 20px rgba(0,0,0,0.5);pointer-events:none;font-weight:normal}
+    .field-hint .field-hint-bubble::before{content:"📝 业务规则:";display:block;color:#9B7FE8;font-weight:600;margin-bottom:4px;font-size:10px;letter-spacing:.5px}
+    .field-hint .field-hint-bubble::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#9B7FE8}
+    .field-hint:hover .field-hint-bubble{display:block}
   </style>
 </head>
 <body>
@@ -459,6 +465,16 @@
       alert("导出 Excel\n\n文件名: "+filename+"\n范围: 全量数据 (不按当前筛选)\n总条数: "+totalCount+" 条");
       appendSystemLog && appendSystemLog("导出 Excel", menuName+" / 全量 "+totalCount+" 条 → "+filename);
     };
+
+    // ============== 通用 hover tooltip (V0.x 新增: 字段说明, 给开发对接) ==============
+    function FieldHint({ hint, children }) {
+      return (
+        <span className="field-hint">
+          {children}
+          <span className="field-hint-bubble">{hint}</span>
+        </span>
+      );
+    }
 
     // ============== 通用分页组件 (列表页统一 20 条/页) ==============
     const PAGE_SIZE = 20;
@@ -1428,7 +1444,7 @@
           </div>
           {/* V0.x 新增:📝 业务规则 折叠面板 (给开发对接, 正式环境删除) */}
           <details className="rounded-lg p-3 mb-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
-            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(给开发对接,正式环境删除)</summary>
+            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(跨字段;字段说明 hover 表头查看)</summary>
             <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
               <div><b>① 默认过滤(硬过滤,不可关闭):</b></div>
               <div>· <code>validStake &gt; 0</code> — 空跑批不展示(后端跑批层就不入库,前端再加一道兜底)</div>
@@ -1436,11 +1452,9 @@
               <div className="mt-2"><b>② 跑批口径(后端跑批 cron):</b></div>
               <div>· <code>每日 00:10</code> 跑前一天体育已结算注单 → 按 (顶代, 币种) 聚合 → 写入 <code>sports_sessions</code> 表</div>
               <div>· 来源 SQL:<code>bets WHERE game_type='体育' AND status='已结算' AND DATE(settle_time)=yesterday</code></div>
-              <div>· 场次编号:<code>SP-{"{"}YYYYMMDDHHMM{"}"}-{"{"}NNN{"}"}</code>(年月日时分 = 跑批生成时间,NNN 按 batch 内重置)</div>
-              <div className="mt-2"><b>③ 字段计算公式:</b></div>
-              <div>· <code>commission = validStake × rate</code>(本顶代当日总佣金)</div>
-              <div>· <code>shareAmount = validStake × shareRatio</code>(本顶代当日占成金额,V0.2 列隐藏)</div>
-              <div>· <code>totalWinLoss = Σ bet.winLoss</code>(本顶代当日所有玩家输赢汇总)</div>
+              <div className="mt-2"><b>③ 字段说明(鼠标 hover 表头查看):</b></div>
+              <div>· 鼠标 hover 表头任一字段(场次编号 / 输赢 / 有效投注 / 佣金率 / 佣金 等)即出该字段的紫色说明气泡</div>
+              <div>· 说明含字段含义 / 计算公式 / 三角色可见性 / 跨端命名差异</div>
               <div className="mt-2"><b>④ 三角色字段权限(后端按 token role 过滤,risk 字段不返回):</b></div>
               <div>· <code>admin / finance</code>:可见全字段</div>
               <div>· <code>risk</code>:不返回 <code>shareRatio / shareAmount</code>(占成相关)+ <code>balance / subBalance / totalBalance</code>(顶代户口页同步过滤)</div>
@@ -1494,12 +1508,17 @@
               <table>
                 <thead><tr>
                   {/* V0.2 隐藏「占成 / 占成金额 / 上缴佣金率」3 列 (Sammy 2026-04-30): 后期重启把这 3 个 th + 对应 td 加回 */}
-                  <th>场次编号</th><th>系统户口号</th><th>用户账号</th>
-                  <th className="text-right">输赢</th><th className="text-right">有效投注</th>
-                  <th>币种</th>
-                  <th className="text-right">佣金率</th><th className="text-right">佣金</th>
-                  <th>开工时间</th><th>收工时间</th>
-                  <th>状态</th>
+                  <th><FieldHint hint="格式 SP-YYYYMMDDHHMM-NNN(年月日时分=跑批生成时间,NNN 按 batch 内重置)。每日 00:10 跑批生成前一天数据。">场次编号</FieldHint></th>
+                  <th><FieldHint hint="顶代户口的系统户口号 sysId(B 端字段名 id ↔ S 端字段名 sysId,跨端命名差异)。永不回收、永不复用、永不变更。">系统户口号</FieldHint></th>
+                  <th><FieldHint hint="顶代登录用户账号(6-20 位英数)。1 顶代多币种 = N 行,所以同一 user 可能出现多次(不同 currency)。">用户账号</FieldHint></th>
+                  <th className="text-right"><FieldHint hint="totalWinLoss = Σ bet.winLoss(本顶代当日所有玩家输赢汇总,平台视角)。正数 = 玩家赢 / 平台输;负数 = 玩家输 / 平台赢。risk 角色 V0.2 仍可见。">输赢</FieldHint></th>
+                  <th className="text-right"><FieldHint hint="validStake = 该顶代当日所有 bets 的 valid_stake 累加(NULL 时取 stake)。默认硬过滤 validStake > 0(空跑批不展示,后端跑批层就不入库)。">有效投注</FieldHint></th>
+                  <th><FieldHint hint="顶代户口的结算币种。1 顶代多币种 = N 行(按 currency 拆 sysId::currency 复合 key)。">币种</FieldHint></th>
+                  <th className="text-right"><FieldHint hint="顶代级别的佣金费率(0-100%)。代表本顶代当日整体的提成费率。rate=0 当前仍展示 commission=0(未过滤)。">佣金率</FieldHint></th>
+                  <th className="text-right"><FieldHint hint="commission = validStake × rate(本顶代当日总佣金)。用于代理佣金结算。">佣金</FieldHint></th>
+                  <th><FieldHint hint="跑批数据涵盖时段起点。YYYY-MM-DD 00:00:00(前一天起点)。">开工时间</FieldHint></th>
+                  <th><FieldHint hint="跑批数据涵盖时段终点。YYYY-MM-DD 23:59:59(前一天终点)。">收工时间</FieldHint></th>
+                  <th><FieldHint hint="已结算 / 未结算。本表只展示已结算场次(后端跑批已锁定);未结算不入 sports_sessions 表。">状态</FieldHint></th>
                   <th>操作</th>
                 </tr></thead>
                 <tbody>
