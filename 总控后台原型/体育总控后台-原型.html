@@ -467,6 +467,7 @@
     };
 
     // ============== 通用 hover tooltip (V0.x 新增: 字段说明, 给开发对接) ==============
+<<<<<<< HEAD
     // 用法: <FieldHint hint="字段含义 / 计算公式 / 三角色权限...">字段名</FieldHint>
     // 修复 (Sammy 2026-05-11): bubble 用 React.createPortal 渲染到 body, 脱离 .scroll-x / .bg-panel
     // 的 overflow:hidden 裁切; hover 时计算锚点坐标用 fixed 定位
@@ -489,6 +490,13 @@
             <span className="field-hint-bubble" style={{position:"fixed",left:pos.left,top:pos.top,transform:"translate(-50%,calc(-100% - 6px))",display:"block"}}>{hint}</span>,
             document.body
           )}
+=======
+    function FieldHint({ hint, children }) {
+      return (
+        <span className="field-hint">
+          {children}
+          <span className="field-hint-bubble">{hint}</span>
+>>>>>>> 947ce5b591bb5dda7b077569b7bcf6e67b9fdb77
         </span>
       );
     }
@@ -1469,7 +1477,14 @@
               <div className="mt-2"><b>② 跑批口径(后端跑批 cron):</b></div>
               <div>· <code>每日 00:10</code> 跑前一天体育已结算注单 → 按 (顶代, 币种) 聚合 → 写入 <code>sports_sessions</code> 表</div>
               <div>· 来源 SQL:<code>bets WHERE game_type='体育' AND status='已结算' AND DATE(settle_time)=yesterday</code></div>
+<<<<<<< HEAD
               <div className="mt-2"><b>③ 三角色字段权限(后端按 token role 过滤,risk 字段不返回):</b></div>
+=======
+              <div className="mt-2"><b>③ 字段说明(鼠标 hover 表头查看):</b></div>
+              <div>· 鼠标 hover 表头任一字段(场次编号 / 输赢 / 有效投注 / 佣金率 / 佣金 等)即出该字段的紫色说明气泡</div>
+              <div>· 说明含字段含义 / 计算公式 / 三角色可见性 / 跨端命名差异</div>
+              <div className="mt-2"><b>④ 三角色字段权限(后端按 token role 过滤,risk 字段不返回):</b></div>
+>>>>>>> 947ce5b591bb5dda7b077569b7bcf6e67b9fdb77
               <div>· <code>admin / finance</code>:可见全字段</div>
               <div>· <code>risk</code>:不返回 <code>shareRatio / shareAmount</code>(占成相关)+ <code>balance / subBalance / totalBalance</code>(顶代户口页同步过滤)</div>
               <div className="mt-2"><b>④ V0.2 隐藏字段(代码保留,后期重启加回):</b></div>
