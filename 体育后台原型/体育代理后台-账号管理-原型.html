@@ -1427,6 +1427,40 @@ function App(){
             <div className="muted text-sm ml-3">{t.top_logged}</div>
           </div>
 
+          <details className="rounded-lg p-3 mb-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(给开发对接,正式环境删除)</summary>
+            <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
+              <div><b>① 数据契约:</b></div>
+              <div>· 系统户口号 <code>id</code> 永不回收、永不复用、永不变更(S 端字段名 <code>sysId</code> ↔ B 端字段名 <code>id</code>,跨端命名差异)</div>
+              <div>· 下线 id 派生规则:<code>${"{"}parent.id{"}"}-${"{"}seq{"}"}</code>(seq = 父级 children 数 +1)</div>
+              <div>· 下线创建后终身单一币种 + 单一交收方案,只能走「修改交收方案」高危流程切换</div>
+              <div className="mt-2"><b>② 5 类写动作 + 操作密码二次确认:</b></div>
+              <div>· <code>新增下线</code>:顶代入口可选 3 条交收方案;代理行入口方案继承不可选</div>
+              <div>· <code>修改资料</code>:高敏感字段(参考佣金率 / 状态 / 重置密码 / 类型)任一改动触发操作密码</div>
+              <div>· <code>上分</code> / <code>下分</code>:资金从上级转下来(上分)或回到上级(下分),整树总余额不变</div>
+              <div>· <code>启用 / 禁用</code>:禁用级联整棵子树;启用仅自己(不级联)</div>
+              <div>· <code>修改交收方案</code>:三步向导,子树余额非 0 时第三步硬校验阻断</div>
+              <div className="mt-2"><b>③ 字段计算公式:</b></div>
+              <div>· <code>totalBalance</code> = 自己 balance + 所有下线子树 balance 递归累加(总线余额)</div>
+              <div>· <code>childCount</code>:穿透总下线数(整个子树,V0.2 跟 S 端对齐)</div>
+              <div>· <code>占成</code>:上级让利公式 X% → 上下分实扣 ${"{"}amount{"}"} × (1 − X%)</div>
+              <div className="mt-2"><b>④ 邀请链接(V0.5 新增):</b></div>
+              <div>· 代理生成时勾选「邀请玩家」/「邀请代理」 → 生成永久有效 URL(不限注册次数)</div>
+              <div>· URL 格式:<code>{"{"}origin{"}"}/游戏端原型/...?route=register&ref={"{"}parent.id{"}"}&type=player</code> 或 <code>...type=agent</code></div>
+              <div>· 入口:顶级「+ 生成邀请链接」按钮 + 每个代理行「邀请」按钮</div>
+              <div>· 注册成功后下线自动挂在该代理名下(后端按 ref + type 落库)</div>
+              <div className="mt-2"><b>⑤ 三语 i18n + 友好文案:</b></div>
+              <div>· 三语 zh-CN / en / ko 三套,通过 LangSwitcher 切换</div>
+              <div>· 中文模式金额全量按「万」展示(8,000 → 0.8 万、300 → 0.03 万);英文 / 韩文不用万</div>
+              <div>· 错误文案走 xlsx 单一信源(场景文案总表),不在原型里写死</div>
+              <div className="mt-2"><b>⑥ V0.2 隐藏字段(代码保留):</b></div>
+              <div>· 「显示佣金率」列已隐藏,数据 / i18n / 弹窗保留</div>
+              <div className="mt-2"><b>⑦ 修改密码场景:</b></div>
+              <div>· ① 页内主动:× / 取消 = 仅关闭,会话保持;② 首次登录强制:× / 取消 = 直接登出</div>
+              <div>· 两场景修改成功后都强制重登;旧密码错误 → 保持弹窗允许重试</div>
+            </div>
+          </details>
+
           <TimeFilter value={timeRange} onChange={setTimeRange} start={start} end={end} setStart={setStart} setEnd={setEnd}/>
 
           <CurrencySummary accounts={accounts}/>

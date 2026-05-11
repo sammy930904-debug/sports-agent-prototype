@@ -789,6 +789,31 @@
             <span style={{marginTop:1}}>📝</span>
             <span><b>PM 说明(非产品文案):</b>顶代账号由账房侧创建并下发户口(系统户口号 + 初始币种 + 初始占成),本页仅查看与管理,不负责创建。下线数 / 下线余额 / 总线余额 主信源在 B 端代理后台。</span>
           </div>
+          <details className="rounded-lg p-3 mb-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(给开发对接,正式环境删除)</summary>
+            <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
+              <div><b>① 数据契约:</b></div>
+              <div>· 系统户口号 <code>sysId</code> 永不回收、永不复用、永不变更(B 端字段名 <code>id</code> ↔ S 端字段名 <code>sysId</code>,跨端命名差异)</div>
+              <div>· 1 顶代多币种 = N 行(按币种拆,如 qweqwe::PHP / qweqwe::USD 是同一顶代不同币种户口)</div>
+              <div>· 顶代账号由账房侧创建,S 端不负责创建,本页只读 + 修改资料 + 上下分 + 启停</div>
+              <div className="mt-2"><b>② 三角色字段权限(后端按 token role 过滤):</b></div>
+              <div>· <code>admin / finance</code>:可见全字段(10 列)</div>
+              <div>· <code>risk</code>:不返回 <code>shareRatio / shareAmount / balance / subBalance / totalBalance</code> 5 个字段(占成 + 余额相关全屏蔽)</div>
+              <div className="mt-2"><b>③ 写动作(改资料 / 上下分 / 启停 / 改方案):</b></div>
+              <div>· <code>修改资料</code>:高敏感字段(占成 / 佣金率 / 状态 / 类型 / 重置密码)任一改动触发操作密码二次确认</div>
+              <div>· <code>上分 / 下分</code>:资金内部转移,整树总余额不变,触发操作密码二次确认 + 写 audit_log</div>
+              <div>· <code>禁用账号</code>:级联禁用整棵子树;<code>启用账号</code>:仅启用自己(不级联)</div>
+              <div>· 所有写动作回写 <code>audit_log</code>(actor = 当前员工,target = 顶代 sysId,diffs = 字段变更明细)</div>
+              <div className="mt-2"><b>④ Tree Table 懒加载:</b></div>
+              <div>· 顶代行默认展开;下线行懒加载(点击 ▶ 展开)</div>
+              <div>· 搜索模式:扁平显示命中节点(任意层级,不显示祖先链),命中节点可独立展开看下级</div>
+              <div className="mt-2"><b>⑤ V0.2 隐藏字段(代码保留,后期重启加回):</b></div>
+              <div>· <code>占成</code> 列从 colDefs 移除,后端 <code>shareRatio</code> 字段仍 mock 保留</div>
+              <div>· <code>显示佣金率</code> 列已隐藏,数据 / i18n / 弹窗保留</div>
+              <div className="mt-2"><b>⑥ 导出 Excel:</b></div>
+              <div>· 文件名:<code>{"{"}YYYY-MM-DD{"}"}_顶代户口.xlsx</code> · 范围:全量(不按筛选)· 写 audit_log</div>
+            </div>
+          </details>
           <div className="bg-panel border border-line rounded-lg p-3 mb-4">
             <div className="flex flex-wrap gap-2 items-center">
               <input className="input" style={{width:200}} placeholder="搜索系统户口号" value={inSysIdQ} onChange={e=>setInSysIdQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
@@ -1255,6 +1280,28 @@
             </div>
             <button className="btn btn-ghost" onClick={()=>doExport("体育注单记录", MOCK_BETS.filter(b=>b.gameType.includes("体育")&&b.status==="已结算").length, appendSystemLog)}>导出 Excel</button>
           </div>
+          <details className="rounded-lg p-3 mb-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(给开发对接,正式环境删除)</summary>
+            <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
+              <div><b>① 硬过滤(后端必加,不可关闭):</b></div>
+              <div>· <code>game_type = '体育'</code> AND <code>status = '已结算'</code> — 跟体育场次记录数据源对齐</div>
+              <div>· 电子 / 六合彩 / 未结算 注单 V0.2 不在 S 端展示</div>
+              <div className="mt-2"><b>② 数据来源:</b></div>
+              <div>· 三方平台每笔投注/结算回调 → 入 <code>bets</code> 表(准实时)</div>
+              <div>· 注单 → 体育场次记录:每日 00:10 跑批聚合(按顶代 + 币种)写入 <code>sports_sessions</code> 表</div>
+              <div className="mt-2"><b>③ 字段计算:</b></div>
+              <div>· <code>winLoss</code> = 派彩(payout) − 投注金额(stake);后端写入注单结算时即算好</div>
+              <div>· <code>validStake</code>(有效投注):部分游戏类型需扣除特定盘口,默认 = stake</div>
+              <div className="mt-2"><b>④ 三角色字段权限(后端按 token role 过滤):</b></div>
+              <div>· <code>admin / finance</code>:可见全字段(stake / payout / winLoss)</div>
+              <div>· <code>risk</code>:不返回 <code>payout / winLoss</code> 字段(只看投注情况,不看资金流水)</div>
+              <div className="mt-2"><b>⑤ 筛选区(提交触发,跟顶代户口 / 体育场次记录 一致):</b></div>
+              <div>· 注单号 / 系统户口号 / 用户账号 / 币种 / 投注时间范围 5 项</div>
+              <div>· 默认按 <code>betTime DESC</code> 排序;时间格式 <code>YYYY-MM-DD HH:mm:ss</code></div>
+              <div className="mt-2"><b>⑥ 导出 Excel:</b></div>
+              <div>· 文件名:<code>{"{"}YYYY-MM-DD{"}"}_体育注单记录.xlsx</code> · 范围:全量已结算体育注单(不按筛选)· 写 audit_log</div>
+            </div>
+          </details>
           <div className="bg-panel border border-line rounded-lg p-3 mb-4">
             <div className="flex flex-wrap gap-2 items-center">
               <input className="input" style={{width:200}} placeholder="搜索注单号" value={inBetId} onChange={e=>setInBetId(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
@@ -1550,6 +1597,31 @@
             </div>
             <button className="btn btn-ghost" onClick={()=>doExport("交易流水记录", MOCK_LEDGER.length, appendSystemLog)}>导出 Excel</button>
           </div>
+          <details className="rounded-lg p-3 mb-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(给开发对接,正式环境删除)</summary>
+            <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
+              <div><b>① 三层资金动作合一(本表囊括 3 层流水):</b></div>
+              <div>· 第 1 层 <code>账房 ↔ 顶代</code>:credit / debit(账房给顶代上分 / 下分)</div>
+              <div>· 第 2 层 <code>顶代 ↔ 下线</code>(代理↔代理 / 代理↔玩家):credit / debit</div>
+              <div>· 第 3 层 <code>玩家 ↔ 三方体育平台</code>:transfer_in(平台→玩家钱包) / transfer_out(玩家钱包→平台)</div>
+              <div className="mt-2"><b>② 交易类型枚举:</b></div>
+              <div>· <code>credit</code>(上分,资金从上级转下来)/ <code>debit</code>(下分,资金回到上级)</div>
+              <div>· <code>transfer_in</code>(三方→玩家)/ <code>transfer_out</code>(玩家→三方)</div>
+              <div>· <code>flow=in</code> = credit + transfer_in;<code>flow=out</code> = debit + transfer_out</div>
+              <div className="mt-2"><b>③ 资金守恒(整树总余额不变):</b></div>
+              <div>· 上下分是内部转移:A.balance −X,B.balance +X(同一币种线内,跨币种禁止)</div>
+              <div>· 三方上下分:玩家钱包 ↔ 三方钱包之间转账,玩家整体可用资金不变(只是分布变了)</div>
+              <div className="mt-2"><b>④ 状态(V0.2 列隐藏,字段保留):</b></div>
+              <div>· <code>已成功</code> / <code>处理中</code> / <code>已失败</code> — V0.2 默认全展示「已成功」,后端 status 字段保留 mock</div>
+              <div className="mt-2"><b>⑤ 三角色字段权限(后端按 token role 过滤):</b></div>
+              <div>· <code>admin / finance</code>:可见全字段(包括金额)</div>
+              <div>· <code>risk</code>:可见全字段(流水类风控查账必看)</div>
+              <div className="mt-2"><b>⑥ V0.2 隐藏字段(代码保留):</b></div>
+              <div>· <code>流水号 ledgerId</code> 列已砍 + 搜索框已砍(Sammy 2026-04-30 拍)— 后端字段仍存</div>
+              <div className="mt-2"><b>⑦ 导出 Excel:</b></div>
+              <div>· 文件名:<code>{"{"}YYYY-MM-DD{"}"}_交易流水记录.xlsx</code> · 范围:全量(不按筛选)· 写 audit_log</div>
+            </div>
+          </details>
           <div className="bg-panel border border-line rounded-lg p-3 mb-4">
             <div className="flex flex-wrap gap-2 items-center">
               {/* V0.2 隐藏「流水号」搜索 (Sammy 2026-04-30) */}
@@ -1677,6 +1749,31 @@
             <p className="text-xs text-muted mt-1">系统 = 平台员工动作  ·  玩家 = C 端玩家 + B 端代理动作</p>
             <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):S 端视角下,代理也是被管对象,所以归在「玩家」Tab</p>
           </div>
+          <details className="rounded-lg p-3 mb-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(给开发对接,正式环境删除)</summary>
+            <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
+              <div><b>① 双 Tab 数据源:</b></div>
+              <div>· <code>系统</code> Tab:平台员工(admin / risk / finance / ops)的写动作,actorType ∈ {"{"} 员工 {"}"}</div>
+              <div>· <code>玩家</code> Tab:C 端玩家 + B 端代理的写动作,actorType ∈ {"{"} 代理 / 玩家 {"}"} — 代理也是被管对象,所以归在玩家 Tab</div>
+              <div className="mt-2"><b>② 写动作触发(后端硬规则):</b></div>
+              <div>· 每个写动作 API 内部必须 <code>service.appendAudit(...)</code>,跟 DB 写动作同一事务(或异步 MQ 但保证落库)</div>
+              <div>· 跑批任务:<code>actor_type = '系统'</code>(虚拟主体)V0.2 不实现,真实开发可加</div>
+              <div className="mt-2"><b>③ 27 类动作 target 模板(常见):</b></div>
+              <div>· <code>修改资料</code> → <code>${"{"}type{"}"} ${"{"}user{"}"} (${"{"}sysId{"}"}) ${"{"}diffs.join(' / '){"}"}</code></div>
+              <div>· <code>上分</code> / <code>下分</code> → <code>${"{"}type{"}"} ${"{"}user{"}"} (${"{"}sysId{"}"}) ${"{"}amount{"}"} ${"{"}currency{"}"}</code></div>
+              <div>· <code>禁用账号</code> / <code>启用账号</code> → <code>${"{"}type{"}"} ${"{"}user{"}"} (${"{"}sysId{"}"})</code> + 是否级联说明</div>
+              <div>· <code>导出 Excel</code> → <code>${"{"}menuName{"}"} / 全量 ${"{"}totalCount{"}"} 条 → ${"{"}filename{"}"}</code></div>
+              <div>· 完整 27 类动作 target 模板详见 PRD §8.1 / §8.2 / §8.3</div>
+              <div className="mt-2"><b>④ 字段计算 diff 规则(以修改资料为例):</b></div>
+              <div>· <code>refRate</code>:<code>if (data.refRate != null && data.refRate !== old.refRate) diffs.push(`佣金率: ${"{"}oldPct{"}"} → ${"{"}newPct{"}"}`)</code></div>
+              <div>· <code>status</code>:中文 <code>启用 / 禁用</code>(不用 active/frozen 英文)</div>
+              <div className="mt-2"><b>⑤ 切 Tab 重置筛选:</b></div>
+              <div>· 避免上个 Tab 的过滤值/页码串入下个 Tab(switchTab → resetSearch)</div>
+              <div className="mt-2"><b>⑥ 三角色字段权限:</b></div>
+              <div>· <code>admin / risk / finance</code>:都可见全部日志(只读)</div>
+              <div>· 操作日志不可修改 / 不可删除(append-only,合规要求)</div>
+            </div>
+          </details>
           <div className="border-b border-line mb-4 flex">
             <div className={"tab " + (tab==="system"?"active":"")} onClick={()=>switchTab("system")}>系统</div>
             <div className={"tab " + (tab==="player"?"active":"")} onClick={()=>switchTab("player")}>玩家</div>
@@ -1868,6 +1965,29 @@
             </div>
             <button className="btn btn-primary" onClick={()=>setShowAdd(true)} style={{padding:"8px 18px"}}>+ 新增员工</button>
           </div>
+          <details className="rounded-lg p-3 mb-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(给开发对接,正式环境删除)</summary>
+            <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
+              <div><b>① 角色枚举(4 种):</b></div>
+              <div>· <code>admin</code> 平台运营:可见全菜单,可写所有动作,可管理员工</div>
+              <div>· <code>risk</code> 风控:不可见占成 / 余额相关字段,只读核查</div>
+              <div>· <code>finance</code> 财务:全字段可见,负责导出 / 对账</div>
+              <div>· <code>ops</code> 客服:有限字段,不可见员工账号管理菜单</div>
+              <div className="mt-2"><b>② 字段:</b></div>
+              <div>· 员工账号 <code>user</code>(4-20 位英数+中划线,唯一)/ 角色 <code>role</code> / 电话 <code>phone</code> / 创建时间 <code>createdAt</code> / 最近登录 <code>lastLogin</code> + lastLoginIP</div>
+              <div>· V0.2 mock 操作密码 = 登录密码(简化);真实开发拆分:登录密码 + 操作密码 双密码体系</div>
+              <div className="mt-2"><b>③ 写动作(增 / 删 / 改 / 启停):</b></div>
+              <div>· <code>新增员工</code>:必填 user / pwd / role / phone(选填) + 操作密码二次确认</div>
+              <div>· <code>删除员工</code>:不能删除 <code>admin</code> 超级账号 + 不能删除自己(防自锁)</div>
+              <div>· <code>修改角色</code>:admin → 其他角色禁止(防超级账号丢失)</div>
+              <div>· 修改 / 删除写 audit_log + 强制踢已登录会话(真实开发)</div>
+              <div className="mt-2"><b>④ 登录态(V0.2 修 bug,Sammy 2026-04-30 拍):</b></div>
+              <div>· staff state lift 到 App 层 — 切菜单 unmount 不丢 mock(新员工立即可登录、删除立即生效)</div>
+              <div>· <code>lastLogin</code> 字段在 onLogin 时同步刷新(setStaff(staff.map(...lastLogin:now)))</div>
+              <div className="mt-2"><b>⑤ 三角色字段权限:</b></div>
+              <div>· 只有 <code>admin / operator</code> 角色能看见本页菜单 + 增删改;其他角色菜单隐藏</div>
+            </div>
+          </details>
           <div className="bg-panel border border-line rounded-lg overflow-hidden">
             <div className="scroll-x">
               <table>
@@ -2059,6 +2179,33 @@
               {" "}· <b>启用项 {enabledCount} 条</b>(0 条 = 所有 IP 均可登录)· 校验范围:LoginPage 提交时;停用 / 删除最后一条启用项有防自锁拦截
             </span>
           </div>
+          <details className="rounded-lg p-3 mb-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(给开发对接,正式环境删除)</summary>
+            <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
+              <div><b>① IP 校验时机:</b></div>
+              <div>· LoginPage 提交时(后端 onLogin API 拿 request IP 比对白名单)</div>
+              <div>· 命中白名单外 IP 直接拒登,提示「您的 IP 不在登录白名单内,请联系超级管理员」</div>
+              <div>· 启用项 = 0 时跳过校验(所有 IP 均可登录),便于系统初始化</div>
+              <div className="mt-2"><b>② IP 格式支持(V0.2):</b></div>
+              <div>· IPv4 单 IP:<code>192.168.1.1</code></div>
+              <div>· CIDR /N 段:<code>10.4.2.0/24</code>(整个 /24 段都允许)</div>
+              <div>· 真实开发可换 ip-cidr / netmask 库;mock 用纯 JS 实现</div>
+              <div className="mt-2"><b>③ 写动作(增 / 删 / 启停):</b></div>
+              <div>· <code>新增白名单</code>:必填 IP + 备注 + 操作密码二次确认</div>
+              <div>· <code>启用 / 停用</code>:切换 status,操作密码二次确认</div>
+              <div>· <code>删除</code>:操作密码二次确认</div>
+              <div className="mt-2"><b>④ 防自锁拦截:</b></div>
+              <div>· 停用 / 删除最后一条启用项之前,检查当前登录 IP 是否在剩余启用项里</div>
+              <div>· 不在 → 阻断动作,提示「停用后您将无法再登录」</div>
+              <div>· 在 → 允许(但建议先确认有其他超级账号可登录)</div>
+              <div className="mt-2"><b>⑤ 三角色字段权限:</b></div>
+              <div>· 只有 <code>admin / operator</code> 角色能看见本菜单 + 增删改</div>
+              <div className="mt-2"><b>⑥ V0.2 收尾(Sammy 2026-04-30 拍):</b></div>
+              <div>· 本菜单 V0.2 在 ROLES.menus 里隐藏(代码保留,后期重启加回)</div>
+              <div>· LoginPage 只保留账号 + 密码校验,IP 校验逻辑暂不接入</div>
+              <div>· 真实 IP 字段(<code>lastLoginIP</code>)保留 mock 默认值给审计日志用</div>
+            </div>
+          </details>
           <div className="bg-panel border border-line rounded-lg p-3 mb-4">
             <div className="flex flex-wrap gap-2 items-center">
               <input className="input mono" style={{width:280,fontSize:13}} placeholder="搜索 IP / IP 段 / 备注" value={inIP} onChange={e=>setInIP(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
@@ -2196,6 +2343,26 @@
             <h2 className="text-xl font-semibold">数据看板</h2>
             <p className="text-xs text-muted mt-1">欢迎 <span className="text-cool">{r.name}</span></p>
           </div>
+          <details className="rounded-lg p-3 mb-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(给开发对接,正式环境删除)</summary>
+            <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
+              <div><b>① 4 张 KPI 卡口径:</b></div>
+              <div>· <code>顶代户口数</code>:启用 + 冻结合计人数 / 启用人数 / 总行数(多币种拆分)— 数据源 accounts state(lift to App)</div>
+              <div>· <code>累计体育场次</code>:<code>MOCK_SPORTS_SESSIONS.filter(s=>(s.validStake||0)&gt;0).length</code> 跟体育场次记录页过滤一致</div>
+              <div>· <code>累计已结算注单</code>:<code>MOCK_BETS.filter(b=>b.gameType.includes('体育') && b.status==='已结算').length</code> 跟体育注单记录页过滤一致</div>
+              <div>· <code>最近系统动作</code>:<code>auditSystem.length</code>(系统 audit_log 总数)</div>
+              <div className="mt-2"><b>② 卡片业务对齐(Q-S42 待):</b></div>
+              <div>· Dashboard 累计场次 vs 场次记录页过滤口径需对齐 — V0.2 都按 validStake&gt;0 过滤</div>
+              <div className="mt-2"><b>③ 「最近系统动作」表 5 条:</b></div>
+              <div>· 取 <code>auditSystem.slice(0, 5)</code>;点「查看完整日志 →」跳到操作日志页系统 Tab</div>
+              <div className="mt-2"><b>④ 三角色字段权限:</b></div>
+              <div>· <code>admin / risk / finance</code>:都可见 4 张 KPI</div>
+              <div>· <code>risk</code> 视角 KPI 数值不变(因为 KPI 是聚合数,不暴露占成 / 余额明细)</div>
+              <div className="mt-2"><b>⑤ V0.2 收尾(Sammy 2026-04-30 拍):</b></div>
+              <div>· 本菜单 V0.2 在 ROLES.menus 里隐藏(代码保留,后期重启加回)</div>
+              <div>· 默认菜单切换到「顶代户口」</div>
+            </div>
+          </details>
           <div className="grid grid-cols-4 gap-4 mb-5">
             <Card label="顶代户口数" value={topAgentPeople+" 人"} sub={"启用 "+topActivePeople+" / 冻结 "+(topAgentPeople-topActivePeople)+"  ·  共 "+topAgentRows.length+" 行(多币种拆分)"} color="#4A9EFF"/>
             <Card label="累计体育场次" value={totalSessions+" 条"} sub="跨日已结算" color="#5BC97C"/>

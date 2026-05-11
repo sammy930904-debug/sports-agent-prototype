@@ -788,6 +788,7 @@ function LoginPage({ lang, setLang, devRole, onLoggedIn, isMobile }){
           <div className="w-full max-w-sm mt-6">
             <div className="text-xs text-center mb-3" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):{t.hint_demo}</div>
             <CopyPreview lang={lang}/>
+            <BusinessRulesPanel/>
           </div>
         </div>
 
@@ -848,6 +849,7 @@ function LoginPage({ lang, setLang, devRole, onLoggedIn, isMobile }){
           </div>
 
           <CopyPreview lang={lang}/>
+          <BusinessRulesPanel/>
         </div>
       </div>
 
@@ -903,6 +905,44 @@ function CopyPreview({ lang }){
             </div>
           </div>
         ))}
+      </div>
+    </details>
+  );
+}
+
+/* =========================
+   业务规则面板 (V0.x 新增 — 给开发对接, 正式环境删除)
+   覆盖 C 端全局规则: 登录 / 大厅 / 选方案 / 三方游戏 / 注册 / 钱包
+========================= */
+function BusinessRulesPanel(){
+  return (
+    <details className="rounded-lg p-3 mt-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+      <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(给开发对接,正式环境删除)</summary>
+      <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
+        <div><b>① 3 层用户流程(STAR VIP GAME):</b></div>
+        <div>· 登录页 → 大厅(选游戏分类 体育/电子/六合彩) → 选方案 → 三方游戏占位页</div>
+        <div>· 顶代/非顶代分支:顶代登录后进大厅选游戏 + 选方案;非顶代方案继承上级,跳过选方案直接进三方游戏</div>
+        <div className="mt-2"><b>② 钱包模型 V0.4(已落地):转账钱包,非 seamless:</b></div>
+        <div>· 玩家钱包 ↔ 三方钱包独立;选方案进游戏 = transfer_in(玩家→三方),返回大厅 = transfer_out(三方→玩家)</div>
+        <div>· 未结算注单:三方那侧异步回补到玩家钱包(返回大厅时若 pending → 等回调结算后再回补)</div>
+        <div className="mt-2"><b>③ 友好文案硬规则(C 端):</b></div>
+        <div>· 「您」敬称 / 禁冷词(失败/错误/无效) / 兜底「专属客服」/ 锁定不暴露阈值 / xlsx 为单一信源</div>
+        <div>· 三语 zh-CN / en-US / ko-KR;场景预览面板 CopyPreview 给评审走查所有错误文案</div>
+        <div className="mt-2"><b>④ H5 响应式规则:</b></div>
+        <div>· 断点 <code>w≤767</code> 或 横屏矮窗 <code>h≤520</code> → 走 H5 布局</div>
+        <div>· H5 去代理网入口 + 底部语言胶囊;桌面保留代理网入口 + 顶部三语按钮</div>
+        <div>· 方案页 H5 走全屏页(非弹窗);卡片仅展示「余额 + 佣金率」(不透传占成 / 洗码)</div>
+        <div className="mt-2"><b>⑤ 自主注册 V0.5(已落地):</b></div>
+        <div>· URL 落地页:<code>?route=register&ref={"{"}parentSysId{"}"}&type=player</code></div>
+        <div>· 无 ref → 显示「加入 STAR VIP 需要邀请,请联系您的专属客服或代理」</div>
+        <div>· 注册字段:账号 / 密码 / 确认密码 / 昵称(选填)/ 联系电话(选填)</div>
+        <div>· 注册成功 → mock 自动登录跳大厅(真实开发后端 token 签发)</div>
+        <div className="mt-2"><b>⑥ 三方游戏占位页:</b></div>
+        <div>· 显示玩家昵称 / 当前方案 / 带入余额;V0.4 起右上「返回大厅」(原「退出游戏」)</div>
+        <div>· 真实开发由第三方游戏商页面接管,原型仅演示到此</div>
+        <div className="mt-2"><b>⑦ 密码输入:</b></div>
+        <div>· 桌面 + H5 两端密码框眼睛按钮可切换显示/隐藏</div>
+        <div>· LoginPage mock 接受任意账号 / 密码(顶代 = top / 非顶代 = player + 密码任意)</div>
       </div>
     </details>
   );
@@ -1264,6 +1304,7 @@ function RegisterPage({ lang, setLang, refId, isMobile, onDone }){
               <button className="btn-primary mt-2" onClick={submit}>{t.reg_submit}</button>
             </div>
           </div>
+          <BusinessRulesPanel/>
         </div>
       </div>
       <div className="h-8"></div>
