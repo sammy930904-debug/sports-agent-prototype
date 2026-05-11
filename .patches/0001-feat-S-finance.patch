@@ -1,0 +1,227 @@
+From 4ee8c8fb99c4ea432eabaa0775c39007551fea74 Mon Sep 17 00:00:00 2001
+From: Claude <claude@anthropic.local>
+Date: Mon, 11 May 2026 18:15:26 +0800
+Subject: [PATCH] =?UTF-8?q?feat:=20S=20=E7=AB=AF=E4=BD=93=E8=82=B2?=
+ =?UTF-8?q?=E5=9C=BA=E6=AC=A1=E8=AE=B0=E5=BD=95=E5=8A=A0=E7=BB=93=E7=AE=97?=
+ =?UTF-8?q?=E5=8A=9F=E8=83=BD(=E6=9C=AA=E7=BB=93=E7=AE=97=E2=86=92?=
+ =?UTF-8?q?=E5=B7=B2=E7=BB=93=E7=AE=97=20finance=20=E5=86=99=E5=8A=A8?=
+ =?UTF-8?q?=E4=BD=9C)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- MOCK 数据混 4 已结算 + 3 未结算(未结算 commission=null + settledAt/settledBy=null)
+- SportsSessionsPage 加 sessions useState + settleModal state
+- doSettle 函数:mock 算 commission=validStake×rate → 写 audit_log → setSessions
+- SettleSessionModal 弹窗:520px,展示场次基本信息 + 算式预览 + 操作密码二次确认
+- 操作列加「结算」按钮,仅 status='未结算' && role=finance 时显示
+- 佣金列 commission=null 时显示「—」
+- 业务规则面板 ② 跑批口径改:跑批落库为未结算 + commission=null;来源 SQL 不再限 status='已结算'
+- 业务规则面板新增 ⑦ 写动作:结算场次(finance 角色,账房功能)
+- 佣金 / 状态 列 FieldHint 同步更新结算工作流
+---
+ ...345\217\260-\345\216\237\345\236\213.html" | 115 ++++++++++++++----
+ 1 file changed, 94 insertions(+), 21 deletions(-)
+
+diff --git "a/\346\200\273\346\216\247\345\220\216\345\217\260\345\216\237\345\236\213/\344\275\223\350\202\262\346\200\273\346\216\247\345\220\216\345\217\260-\345\216\237\345\236\213.html" "b/\346\200\273\346\216\247\345\220\216\345\217\260\345\216\237\345\236\213/\344\275\223\350\202\262\346\200\273\346\216\247\345\220\216\345\217\260-\345\216\237\345\236\213.html"
+index 48b763f..908381f 100644
+--- "a/\346\200\273\346\216\247\345\220\216\345\217\260\345\216\237\345\236\213/\344\275\223\350\202\262\346\200\273\346\216\247\345\220\216\345\217\260-\345\216\237\345\236\213.html"
++++ "b/\346\200\273\346\216\247\345\220\216\345\217\260\345\216\237\345\236\213/\344\275\223\350\202\262\346\200\273\346\216\247\345\220\216\345\217\260-\345\216\237\345\236\213.html"
+@@ -314,17 +314,16 @@
+ 
+     // 体育场次记录 mock - 每顶代每天一行 (Sammy 2026-04-30 拍 15 列)
+     // submitRate 数组: 上缴给多个上级顶代的佣金率 [{ sysId, rate }, ...]
+-    //   sysId 是真实顶代的系统户口号 (从 ACCOUNTS 里取),代表上级顶代
+-    //   每条 2-3 个上级,样式: 系统户口号:比例%
++    // 状态:跑批生成后默认「未结算」+ commission=null (Sammy 2026-05-11 拍);finance 角色结算后 → status='已结算' + commission 算好
+     const MOCK_SPORTS_SESSIONS = [
+-      // 编号规则: SP-年月日时分-自然数 (年月日时分 = 跑批生成时间, 每日 00:10 跑前一天的数据;04-28 数据于 04-29 00:10 跑批)
+-      { id:"SP-202604290010-001", date:"2026-04-28", topAgent:"qweqwe",  sysId:"qweqwe",  user:"qweqwe",  currency:"KRW", shareRatio:0.1875, validStake:118_000_000, shareAmount:22_125_000, totalWinLoss:8_320_000, rate:0.0750, commission:8_850_000,  submitRate:[{sysId:"lucky88",rate:0.02},{sysId:"sapphire",rate:0.015},{sysId:"bigwhale",rate:0.005}], workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
+-      { id:"SP-202604290010-002", date:"2026-04-28", topAgent:"diamond", sysId:"diamond", user:"diamond", currency:"USD", shareRatio:0.225,  validStake:210_500,     shareAmount:47_362.50,  totalWinLoss:18_300,    rate:0.0800, commission:16_840,     submitRate:[{sysId:"qweqwe",rate:0.018},{sysId:"lucky88",rate:0.012}],                                 workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
+-      { id:"SP-202604290010-003", date:"2026-04-28", topAgent:"lucky88", sysId:"lucky88", user:"lucky88", currency:"PHP", shareRatio:0.125,  validStake:2_980_000,   shareAmount:372_500,    totalWinLoss:-184_000,  rate:0.0600, commission:178_800,    submitRate:[{sysId:"qweqwe",rate:0.02},{sysId:"sapphire",rate:0.015}],                                  workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
+-      { id:"SP-202604290010-004", date:"2026-04-28", topAgent:"sapphire",sysId:"sapphire",user:"sapphire",currency:"KRW", shareRatio:0.165,  validStake:52_300_000,  shareAmount:8_629_500,  totalWinLoss:3_140_000, rate:0.0750, commission:3_922_500,  submitRate:[{sysId:"qweqwe",rate:0.02},{sysId:"lucky88",rate:0.015},{sysId:"diamond",rate:0.005}],     workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算" },
+-      { id:"SP-202604290010-005", date:"2026-04-28", topAgent:"emerald", sysId:"emerald", user:"emerald", currency:"USD", shareRatio:0.05,   validStake:0,           shareAmount:0,          totalWinLoss:0,         rate:0.0700, commission:0,          submitRate:[{sysId:"qweqwe",rate:0.02},{sysId:"lucky88",rate:0.015}],                                   workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"未结算" },
+-      { id:"SP-202604280010-001", date:"2026-04-27", topAgent:"qweqwe",  sysId:"qweqwe",  user:"qweqwe",  currency:"KRW", shareRatio:0.1875, validStake:135_800_000, shareAmount:25_462_500, totalWinLoss:-4_180_000,rate:0.0750, commission:10_185_000, submitRate:[{sysId:"lucky88",rate:0.02},{sysId:"sapphire",rate:0.015},{sysId:"bigwhale",rate:0.005}], workStartAt:"2026-04-27 00:00:00", workEndAt:"2026-04-27 23:59:59", status:"已结算" },
+-      { id:"SP-202604280010-002", date:"2026-04-27", topAgent:"diamond", sysId:"diamond", user:"diamond", currency:"USD", shareRatio:0.225,  validStake:241_200,     shareAmount:54_270,     totalWinLoss:-12_400,   rate:0.0800, commission:19_296,     submitRate:[{sysId:"qweqwe",rate:0.018},{sysId:"lucky88",rate:0.012}],                                 workStartAt:"2026-04-27 00:00:00", workEndAt:"2026-04-27 23:59:59", status:"已结算" },
++      // 编号规则: SP-年月日时分-自然数 (每日 00:10 跑前一天的数据)
++      { id:"SP-202604290010-001", date:"2026-04-28", topAgent:"qweqwe",  sysId:"qweqwe",  user:"qweqwe",  currency:"KRW", shareRatio:0.1875, validStake:118_000_000, shareAmount:22_125_000, totalWinLoss:8_320_000, rate:0.0750, commission:8_850_000,  submitRate:[{sysId:"lucky88",rate:0.02},{sysId:"sapphire",rate:0.015},{sysId:"bigwhale",rate:0.005}], workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算", settledAt:"2026-04-29 09:30:12", settledBy:"finance-luo" },
++      { id:"SP-202604290010-002", date:"2026-04-28", topAgent:"diamond", sysId:"diamond", user:"diamond", currency:"USD", shareRatio:0.225,  validStake:210_500,     shareAmount:47_362.50,  totalWinLoss:18_300,    rate:0.0800, commission:null,        submitRate:[{sysId:"qweqwe",rate:0.018},{sysId:"lucky88",rate:0.012}],                                 workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"未结算", settledAt:null, settledBy:null },
++      { id:"SP-202604290010-003", date:"2026-04-28", topAgent:"lucky88", sysId:"lucky88", user:"lucky88", currency:"PHP", shareRatio:0.125,  validStake:2_980_000,   shareAmount:372_500,    totalWinLoss:-184_000,  rate:0.0600, commission:178_800,    submitRate:[{sysId:"qweqwe",rate:0.02},{sysId:"sapphire",rate:0.015}],                                  workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算", settledAt:"2026-04-29 09:32:08", settledBy:"finance-luo" },
++      { id:"SP-202604290010-004", date:"2026-04-28", topAgent:"sapphire",sysId:"sapphire",user:"sapphire",currency:"KRW", shareRatio:0.165,  validStake:52_300_000,  shareAmount:8_629_500,  totalWinLoss:3_140_000, rate:0.0750, commission:null,        submitRate:[{sysId:"qweqwe",rate:0.02},{sysId:"lucky88",rate:0.015},{sysId:"diamond",rate:0.005}],     workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"未结算", settledAt:null, settledBy:null },
++      { id:"SP-202604290010-005", date:"2026-04-28", topAgent:"emerald", sysId:"emerald", user:"emerald", currency:"USD", shareRatio:0.05,   validStake:0,           shareAmount:0,          totalWinLoss:0,         rate:0.0700, commission:null,        submitRate:[{sysId:"qweqwe",rate:0.02},{sysId:"lucky88",rate:0.015}],                                   workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"未结算", settledAt:null, settledBy:null },
++      { id:"SP-202604280010-001", date:"2026-04-27", topAgent:"qweqwe",  sysId:"qweqwe",  user:"qweqwe",  currency:"KRW", shareRatio:0.1875, validStake:135_800_000, shareAmount:25_462_500, totalWinLoss:-4_180_000,rate:0.0750, commission:10_185_000, submitRate:[{sysId:"lucky88",rate:0.02},{sysId:"sapphire",rate:0.015},{sysId:"bigwhale",rate:0.005}], workStartAt:"2026-04-27 00:00:00", workEndAt:"2026-04-27 23:59:59", status:"已结算", settledAt:"2026-04-28 09:28:55", settledBy:"finance-luo" },
++      { id:"SP-202604280010-002", date:"2026-04-27", topAgent:"diamond", sysId:"diamond", user:"diamond", currency:"USD", shareRatio:0.225,  validStake:241_200,     shareAmount:54_270,     totalWinLoss:-12_400,   rate:0.0800, commission:null,        submitRate:[{sysId:"qweqwe",rate:0.018},{sysId:"lucky88",rate:0.012}],                                 workStartAt:"2026-04-27 00:00:00", workEndAt:"2026-04-27 23:59:59", status:"未结算", settledAt:null, settledBy:null },
+     ];
+ 
+     // 主体 = 这条流水的"被影响账号" (非账房非三方平台);sysId 用层级派生 (顶代=user, 下线=父-N, 玩家=父-N-M)
+@@ -1404,9 +1403,12 @@
+     }
+ 
+     // ============== 体育场次记录页 ==============
+-    function SportsSessionsPage({ role, appendSystemLog }) {
++    function SportsSessionsPage({ role, appendSystemLog, currentUser }) {
+       // 提交触发模式 (跟体育注单 / 顶代户口筛选区一致)
+       // V0.2 (Sammy 2026-04-30): 系统户口号 / 用户账号 拆 2 个独立筛选框
++      // V0.x (Sammy 2026-05-11): 场次跑批生成后默认未结算, 加结算 state + finance 写动作
++      const [sessions, setSessions] = useState(MOCK_SPORTS_SESSIONS);
++      const [settleModal, setSettleModal] = useState(null);
+       const [inSessionId, setInSessionId] = useState(""), [sessionId, setSessionId] = useState("");
+       const [inSysIdQ, setInSysIdQ] = useState(""), [sysIdQ, setSysIdQ] = useState("");
+       const [inUserQ, setInUserQ] = useState(""), [userQ, setUserQ] = useState("");
+@@ -1427,10 +1429,22 @@
+         setSessionId(""); setSysIdQ(""); setUserQ(""); setCurrency("all"); setShareRatioQ("all"); setDateFrom(""); setDateTo(""); setStatusQ("all"); setPageNum(0);
+       };
+ 
++      // 结算写动作:mock 计算 commission = validStake × rate, 改 status, 写 audit_log
++      const doSettle = (session) => {
++        const commission = Math.round(session.validStake * session.rate * 100) / 100;
++        const now = new Date();
++        const pad = n => String(n).padStart(2,'0');
++        const settledAt = now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate())+" "+pad(now.getHours())+":"+pad(now.getMinutes())+":"+pad(now.getSeconds());
++        const settledBy = currentUser ? currentUser.user : "finance-luo";
++        setSessions(prev => prev.map(s => s.id === session.id ? {...s, status:"已结算", commission, settledAt, settledBy} : s));
++        appendSystemLog && appendSystemLog("结算场次", session.id+" / "+session.user+" / 佣金 "+fmtAmount(commission)+" "+session.currency);
++        setSettleModal(null);
++      };
++
+       // 占成下拉的所有可选值 (从 mock 数据 distinct)
+-      const shareRatioOptions = Array.from(new Set(MOCK_SPORTS_SESSIONS.map(s => s.shareRatio))).sort((a,b)=>a-b);
++      const shareRatioOptions = Array.from(new Set(sessions.map(s => s.shareRatio))).sort((a,b)=>a-b);
+ 
+-      const list = MOCK_SPORTS_SESSIONS.filter(s => {
++      const list = sessions.filter(s => {
+         if ((s.validStake || 0) === 0) return false; // 过滤无有效投注的场次 (空跑批不展示)
+         if (sessionId && !s.id.includes(sessionId)) return false;
+         if (sysIdQ && !((s.sysId || "").includes(sysIdQ))) return false;
+@@ -1455,7 +1469,7 @@
+           <div className="flex items-center justify-between mb-5">
+             <div>
+               <h2 className="text-xl font-semibold">体育场次记录</h2>
+-              <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):每日 00:10 跑批 1 次,生成前一天的体育已结算场次,用于代理佣金结算</p>
++              <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):每日 00:10 跑批 1 次,生成前一天的体育场次(默认未结算);账房在本页点「结算」即出佣金</p>
+             </div>
+             <button className="btn btn-ghost" onClick={()=>doExport("体育场次记录", MOCK_SPORTS_SESSIONS.filter(s=>(s.validStake||0)>0).length, appendSystemLog)}>导出 Excel</button>
+           </div>
+@@ -1471,8 +1485,9 @@
+               <div>· <code>validStake &gt; 0</code> — 空跑批不展示(后端跑批层就不入库,前端再加一道兜底)</div>
+               <div>· 当前 <code>rate = 0</code> 仍展示(commission 列显示 0);如需补过滤,改 SportsSessionsPage.list filter</div>
+               <div className="mt-2"><b>② 跑批口径(后端跑批 cron):</b></div>
+-              <div>· <code>每日 00:10</code> 跑前一天体育已结算注单 → 按 (顶代, 币种) 聚合 → 写入 <code>sports_sessions</code> 表</div>
+-              <div>· 来源 SQL:<code>bets WHERE game_type='体育' AND status='已结算' AND DATE(settle_time)=yesterday</code></div>
++              <div>· <code>每日 00:10</code> 跑前一天体育注单 → 按 (顶代, 币种) 聚合 → 写入 <code>sports_sessions</code> 表</div>
++              <div>· 跑批落库时 <code>status='未结算'</code> + <code>commission=null</code> + <code>settled_at=null</code> + <code>settled_by=null</code>(Sammy 2026-05-11 拍:跑批不算佣金,留给账房算)</div>
++              <div>· 来源 SQL:<code>bets WHERE game_type='体育' AND DATE(bet_time)=yesterday</code>(不限注单状态;跑批聚合时 valid_stake 已经把未结算 / 撤单 / 无效注单剔除)</div>
+               <div className="mt-2"><b>③ 字段说明(鼠标 hover 表头查看):</b></div>
+               <div>· 鼠标 hover 表头任一字段(场次编号 / 输赢 / 有效投注 / 佣金率 / 佣金 等)即出该字段的紫色说明气泡</div>
+               <div>· 说明含字段含义 / 计算公式 / 三角色可见性 / 跨端命名差异</div>
+@@ -1486,6 +1501,13 @@
+               <div>· 文件名规则:<code>{"{"}YYYY-MM-DD{"}"}_体育场次记录.xlsx</code>(导出日期前缀)</div>
+               <div>· 范围:跟列表过滤后一致(全量 <code>validStake &gt; 0</code> 数据,不按当前筛选)</div>
+               <div>· 写动作回写 auditSystem(actor=当前员工,action=导出 Excel)</div>
++              <div className="mt-2"><b>⑦ 写动作:结算场次(finance 角色,账房功能):</b></div>
++              <div>· 入口:本页操作列「结算」按钮,仅 <code>status='未结算'</code> 且当前 role=<code>finance</code> 时显示</div>
++              <div>· 二次确认弹窗:展示场次基本信息(场次编号 / 顶代 / 币种 / 有效投注 / 佣金率)+ 算式预览 <code>commission = validStake × rate</code> + 操作密码</div>
++              <div>· 计算口径:<code>commission = round(validStake × rate, 2)</code>(mock 实现;真实开发后端按币种小数位入账)</div>
++              <div>· 落库字段:<code>status='已结算'</code> + <code>commission</code> + <code>settled_at=now()</code> + <code>settled_by=当前员工 user</code></div>
++              <div>· 单向不可逆:已结算场次不允许再回滚为未结算(如需冲正走"调整"流程,V0.2 不实现)</div>
++              <div>· audit_log:actor=当前员工,action=结算场次,target=场次编号 / 顶代 / 佣金额 / 币种</div>
+             </div>
+           </details>
+           <div className="bg-panel border border-line rounded-lg p-3 mb-4">
+@@ -1536,10 +1558,10 @@
+                   <th className="text-right"><FieldHint hint="validStake = 该顶代当日所有 bets 的 valid_stake 累加(NULL 时取 stake)。默认硬过滤 validStake > 0(空跑批不展示,后端跑批层就不入库)。">有效投注</FieldHint></th>
+                   <th><FieldHint hint="顶代户口的结算币种。1 顶代多币种 = N 行(按 currency 拆 sysId::currency 复合 key)。">币种</FieldHint></th>
+                   <th className="text-right"><FieldHint hint="顶代级别的佣金费率(0-100%)。代表本顶代当日整体的提成费率。rate=0 当前仍展示 commission=0(未过滤)。">佣金率</FieldHint></th>
+-                  <th className="text-right"><FieldHint hint="commission = validStake × rate(本顶代当日总佣金)。用于代理佣金结算。">佣金</FieldHint></th>
++                  <th className="text-right"><FieldHint hint="commission = validStake × rate(本顶代当日总佣金)。未结算时 = NULL 显示「—」;finance 角色点「结算」后落库具体数值。">佣金</FieldHint></th>
+                   <th><FieldHint hint="跑批数据涵盖时段起点。YYYY-MM-DD 00:00:00(前一天起点)。">开工时间</FieldHint></th>
+                   <th><FieldHint hint="跑批数据涵盖时段终点。YYYY-MM-DD 23:59:59(前一天终点)。">收工时间</FieldHint></th>
+-                  <th><FieldHint hint="已结算 / 未结算。本表只展示已结算场次(后端跑批已锁定);未结算不入 sports_sessions 表。">状态</FieldHint></th>
++                  <th><FieldHint hint="跑批生成后默认「未结算」+ commission=null。finance 角色在本页操作列点「结算」→ mock 计算 commission=validStake×rate → status='已结算'。V0.2 单向不可逆。">状态</FieldHint></th>
+                   <th>操作</th>
+                 </tr></thead>
+                 <tbody>
+@@ -1554,11 +1576,16 @@
+                       <td className="num text-right">{fmtAmount(s.validStake)}</td>
+                       <td><span className="chip chip-info">{s.currency}</span></td>
+                       <td className="num text-right">{fmtPct(s.rate)}</td>
+-                      <td className="num text-right" style={{fontWeight:600}}>{fmtAmount(s.commission)}</td>
++                      <td className="num text-right" style={{fontWeight:600}}>{s.commission == null ? <span className="text-faint">—</span> : fmtAmount(s.commission)}</td>
+                       <td className="text-muted" style={{fontSize:12}}>{s.workStartAt}</td>
+                       <td className="text-muted" style={{fontSize:12}}>{s.workEndAt}</td>
+                       <td><StatusChip status={s.status}/></td>
+-                      <td><button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setDetailModal(s)}>游戏明细</button></td>
++                      <td>
++                        <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setDetailModal(s)}>游戏明细</button>
++                        {s.status === "未结算" && role === "finance" && (
++                          <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,color:"#F0B93A",fontWeight:600}} onClick={()=>setSettleModal(s)}>结算</button>
++                        )}
++                      </td>
+                     </tr>
+                   ))}
+                 </tbody>
+@@ -1567,6 +1594,52 @@
+             <Pagination total={list.length} pageNum={pageNum} setPageNum={setPageNum}/>
+           </div>
+           {detailModal && <SessionDetailModal session={detailModal} onClose={()=>setDetailModal(null)} appendSystemLog={appendSystemLog}/>}
++          {settleModal && <SettleSessionModal session={settleModal} onClose={()=>setSettleModal(null)} onConfirm={doSettle}/>}
++        </div>
++      );
++    }
++
++    // ============== 场次结算 弹窗 (Sammy 2026-05-11 拍 — finance 写动作) ==============
++    // 业务: 未结算 → 已结算 单向不可逆;mock 算 commission = validStake × rate;真实开发后端跑过算 + 入账
++    function SettleSessionModal({ session, onClose, onConfirm }) {
++      const [opPwd, setOpPwd] = useState("");
++      const [err, setErr] = useState("");
++      const preview = Math.round(session.validStake * session.rate * 100) / 100;
++      const submit = () => {
++        if (opPwd !== "123456") { setErr("操作密码错误"); return; }
++        onConfirm(session);
++      };
++      return (
++        <div className="modal-backdrop" onClick={onClose}>
++          <div className="modal" onClick={e=>e.stopPropagation()} style={{width:520}}>
++            <h3 className="text-base font-semibold mb-1">结算场次:{session.id}</h3>
++            <p className="text-xs text-faint mb-1">单向写动作 — 已结算不可回滚;V0.2 不支持「重新结算」</p>
++            <p className="text-xs mb-4" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):mock 本地算 commission = validStake × rate;真实开发后端跑算 + 入账 + 写 audit_log</p>
++            <div className="bg-card border border-line rounded p-3 text-xs mb-4">
++              <div className="grid grid-cols-2 gap-2">
++                <div><span className="text-muted">顶代:</span> <span className="mono text-cool">{session.user}</span> ({session.sysId})</div>
++                <div><span className="text-muted">币种:</span> <span className="chip chip-info">{session.currency}</span></div>
++                <div><span className="text-muted">业务日期:</span> {session.date}</div>
++                <div><span className="text-muted">佣金率:</span> {fmtPct(session.rate)}</div>
++                <div><span className="text-muted">有效投注:</span> <span className="num">{fmtAmount(session.validStake)}</span></div>
++                <div><span className="text-muted">输赢:</span> <span className="num" style={{color: session.totalWinLoss > 0 ? "#5BC97C" : (session.totalWinLoss < 0 ? "#FF6B6B" : "#9AA4B5")}}>{session.totalWinLoss > 0 ? "+" : ""}{fmtAmount(session.totalWinLoss)}</span></div>
++              </div>
++            </div>
++            <div className="rounded-lg p-3 mb-4" style={{background:"rgba(240,185,58,0.08)",border:"1px solid rgba(240,185,58,0.4)"}}>
++              <div className="text-xs text-muted mb-1">本次结算佣金</div>
++              <div className="num gold text-xl" style={{fontWeight:600}}>{fmtAmount(preview)} {session.currency}</div>
++              <div className="text-xs text-faint mt-1">= 有效投注 {fmtAmount(session.validStake)} × 佣金率 {fmtPct(session.rate)}</div>
++            </div>
++            <div className="mb-3">
++              <label className="block text-xs text-muted mb-1">操作密码 <span style={{color:"#FF6B6B"}}>*</span></label>
++              <input type="password" className="input" placeholder="当前登录员工的登录密码" value={opPwd} onChange={e=>{setOpPwd(e.target.value); setErr("");}} autoFocus/>
++              {err && <div className="text-xs mt-1" style={{color:"#FF6B6B"}}>{err}</div>}
++            </div>
++            <div className="flex justify-end gap-2">
++              <button className="btn btn-ghost" onClick={onClose}>取消</button>
++              <button className="btn btn-primary" onClick={submit}>确认结算</button>
++            </div>
++          </div>
+         </div>
+       );
+     }
+@@ -2583,7 +2656,7 @@
+               {active === "dashboard" && <DashboardPage role={role} auditSystem={auditSystem} setActive={setActive} accounts={accounts}/>}
+               {active === "agents" && <AgentsPage role={role} canWrite={r.canWrite} appendSystemLog={appendSystemLog} accounts={accounts} setAccounts={setAccounts} topKeys={topKeys} setTopKeys={setTopKeys}/>}
+               {active === "reports.bets" && <BetsPage role={role} appendSystemLog={appendSystemLog}/>}
+-              {active === "reports.sports" && <SportsSessionsPage role={role} appendSystemLog={appendSystemLog}/>}
++              {active === "reports.sports" && <SportsSessionsPage role={role} appendSystemLog={appendSystemLog} currentUser={currentUser}/>}
+               {active === "reports.ledger" && <LedgerPage role={role} appendSystemLog={appendSystemLog}/>}
+               {active === "perm.staff" && <StaffPage currentUser={currentUser} appendSystemLog={appendSystemLog} staff={staff} setStaff={setStaff}/>}
+               {active === "sys.audit" && <AuditPage role={role} system={auditSystem} player={auditPlayer}/>}
+-- 
+2.34.1
+
