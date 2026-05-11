@@ -68,7 +68,7 @@
     .mono{font-family:"SF Mono",Monaco,Consolas,monospace}
     /* V0.x 新增: 字段 hover tooltip (紫色 PM 提示, 给开发对接, 正式环境删除) */
     .field-hint{position:relative;cursor:help;border-bottom:1px dotted rgba(155,127,232,0.5)}
-    .field-hint .field-hint-bubble{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);padding:8px 12px;background:rgba(15,15,16,0.98);border:1px solid #9B7FE8;border-radius:6px;color:#E6EAF0;font-size:11px;line-height:1.5;min-width:220px;max-width:340px;z-index:100;text-align:left;white-space:normal;box-shadow:0 6px 20px rgba(0,0,0,0.5);pointer-events:none;font-weight:normal}
+    .field-hint .field-hint-bubble{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);padding:8px 12px;background:rgba(15,15,16,0.98);border:1px solid #9B7FE8;border-radius:6px;color:#E6EAF0;font-size:11px;line-height:1.5;min-width:220px;max-width:340px;z-index:99999;text-align:left;white-space:normal;box-shadow:0 6px 20px rgba(0,0,0,0.5);pointer-events:none;font-weight:normal}
     .field-hint .field-hint-bubble::before{content:"📝 业务规则:";display:block;color:#9B7FE8;font-weight:600;margin-bottom:4px;font-size:10px;letter-spacing:.5px}
     .field-hint .field-hint-bubble::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#9B7FE8}
     .field-hint:hover .field-hint-bubble{display:block}
@@ -467,10 +467,8 @@
     };
 
     // ============== 通用 hover tooltip (V0.x 新增: 字段说明, 给开发对接) ==============
-<<<<<<< HEAD
-    // 用法: <FieldHint hint="字段含义 / 计算公式 / 三角色权限...">字段名</FieldHint>
-    // 修复 (Sammy 2026-05-11): bubble 用 React.createPortal 渲染到 body, 脱离 .scroll-x / .bg-panel
-    // 的 overflow:hidden 裁切; hover 时计算锚点坐标用 fixed 定位
+    // 修复 (Sammy 2026-05-11): bubble 用 ReactDOM.createPortal 渲染到 body, 脱离 .scroll-x / .bg-panel
+    // 的 overflow:hidden 裁切; hover 时计算锚点坐标用 fixed 定位 + z-index:99999 避免被遮
     function FieldHint({ hint, children }) {
       const anchorRef = useRef(null);
       const [show, setShow] = useState(false);
@@ -490,13 +488,6 @@
             <span className="field-hint-bubble" style={{position:"fixed",left:pos.left,top:pos.top,transform:"translate(-50%,calc(-100% - 6px))",display:"block"}}>{hint}</span>,
             document.body
           )}
-=======
-    function FieldHint({ hint, children }) {
-      return (
-        <span className="field-hint">
-          {children}
-          <span className="field-hint-bubble">{hint}</span>
->>>>>>> 947ce5b591bb5dda7b077569b7bcf6e67b9fdb77
         </span>
       );
     }
@@ -1477,26 +1468,19 @@
               <div className="mt-2"><b>② 跑批口径(后端跑批 cron):</b></div>
               <div>· <code>每日 00:10</code> 跑前一天体育已结算注单 → 按 (顶代, 币种) 聚合 → 写入 <code>sports_sessions</code> 表</div>
               <div>· 来源 SQL:<code>bets WHERE game_type='体育' AND status='已结算' AND DATE(settle_time)=yesterday</code></div>
-<<<<<<< HEAD
-              <div className="mt-2"><b>③ 三角色字段权限(后端按 token role 过滤,risk 字段不返回):</b></div>
-=======
               <div className="mt-2"><b>③ 字段说明(鼠标 hover 表头查看):</b></div>
               <div>· 鼠标 hover 表头任一字段(场次编号 / 输赢 / 有效投注 / 佣金率 / 佣金 等)即出该字段的紫色说明气泡</div>
               <div>· 说明含字段含义 / 计算公式 / 三角色可见性 / 跨端命名差异</div>
               <div className="mt-2"><b>④ 三角色字段权限(后端按 token role 过滤,risk 字段不返回):</b></div>
->>>>>>> 947ce5b591bb5dda7b077569b7bcf6e67b9fdb77
               <div>· <code>admin / finance</code>:可见全字段</div>
               <div>· <code>risk</code>:不返回 <code>shareRatio / shareAmount</code>(占成相关)+ <code>balance / subBalance / totalBalance</code>(顶代户口页同步过滤)</div>
-              <div className="mt-2"><b>④ V0.2 隐藏字段(代码保留,后期重启加回):</b></div>
+              <div className="mt-2"><b>⑤ V0.2 隐藏字段(代码保留,后期重启加回):</b></div>
               <div>· <code>占成 / 占成金额 / 上缴佣金率</code> 3 列已从表头 + td 砍掉 — Sammy 2026-04-30 拍</div>
               <div>· 后端 <code>submit_rate</code> 字段仍 mock 保留,V0.2 不算/不展示</div>
-              <div className="mt-2"><b>⑤ 导出 Excel:</b></div>
+              <div className="mt-2"><b>⑥ 导出 Excel:</b></div>
               <div>· 文件名规则:<code>{"{"}YYYY-MM-DD{"}"}_体育场次记录.xlsx</code>(导出日期前缀)</div>
               <div>· 范围:跟列表过滤后一致(全量 <code>validStake &gt; 0</code> 数据,不按当前筛选)</div>
               <div>· 写动作回写 auditSystem(actor=当前员工,action=导出 Excel)</div>
-              <div className="mt-2"><b>⑥ 字段说明:</b></div>
-              <div>· 鼠标 hover 表头任一字段(场次编号 / 输赢 / 有效投注 / 佣金率 / 佣金 等)即出该字段的紫色说明气泡</div>
-              <div>· 说明含字段含义 / 计算公式 / 三角色可见性 / 跨端命名差异</div>
             </div>
           </details>
           <div className="bg-panel border border-line rounded-lg p-3 mb-4">
