@@ -39,6 +39,11 @@
   .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:50; display:flex; align-items:center; justify-content:center; }
   details > summary { list-style:none; cursor:pointer; }
   details > summary::-webkit-details-marker { display:none; }
+  /* 字段说明 hover 气泡 (Sammy 2026-05-11 拍: 跟 S 端一致, 字段表头鼠标移上显示业务规则气泡) */
+  .field-hint{position:relative;cursor:help;border-bottom:1px dotted rgba(155,127,232,0.5)}
+  .field-hint-bubble{padding:10px 14px;background:#1A1428;border:2px solid #9B7FE8;border-radius:8px;color:#FFFFFF;font-size:12px;line-height:1.65;min-width:260px;max-width:360px;z-index:99999;text-align:left;white-space:normal;box-shadow:0 8px 32px rgba(0,0,0,0.85),0 0 0 4px rgba(155,127,232,0.15);pointer-events:none;font-weight:normal;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .field-hint-bubble::before{content:"📝 业务规则";display:block;color:#C4A8FF;font-weight:700;margin-bottom:6px;font-size:11px;letter-spacing:.5px;padding-bottom:5px;border-bottom:1px solid rgba(155,127,232,0.4)}
+  .field-hint-bubble::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:8px solid transparent;border-top-color:#9B7FE8}
 </style>
 </head>
 <body>
@@ -46,6 +51,29 @@
 
 <script type="text/babel" data-presets="react">
 const { useState, useMemo, useEffect, useCallback, useRef, Fragment } = React;
+
+// 字段说明 hover 气泡 (Sammy 2026-05-11 拍): portal 渲染到 body, 脱离 overflow:hidden / z-index 裁切
+// 跟 S 端一致, 业务规则面板里的「字段说明」直接走表头 hover, 不堆在面板里
+function FieldHint({ hint, children }) {
+  const anchorRef = useRef(null);
+  const [show, setShow] = useState(false);
+  const [pos, setPos] = useState({ left: 0, top: 0 });
+  const onEnter = () => {
+    const el = anchorRef.current; if (!el) return;
+    const r = el.getBoundingClientRect();
+    setPos({ left: r.left + r.width / 2, top: r.top });
+    setShow(true);
+  };
+  return (
+    <span ref={anchorRef} className="field-hint" onMouseEnter={onEnter} onMouseLeave={()=>setShow(false)}>
+      {children}
+      {show && ReactDOM.createPortal(
+        <span className="field-hint-bubble" style={{position:"fixed",left:pos.left,top:pos.top,transform:"translate(-50%,calc(-100% - 6px))",display:"block"}}>{hint}</span>,
+        document.body
+      )}
+    </span>
+  );
+}
 
 // 通用:点外部即关闭
 function useClickOutside(ref, onClose, active){
@@ -401,12 +429,12 @@ function CurrencySummary({accounts}){
       <table className="w-full text-sm">
         <thead className="table-head">
           <tr className="text-center">
-            <th className="py-3 px-3 font-normal">{t.col_currency}</th>
-            <th className="py-3 px-3 font-normal">{t.col_rate_top}</th>
-            <th className="py-3 px-3 font-normal">{t.col_win_loss}</th>
-            <th className="py-3 px-3 font-normal">{t.col_valid_bet}</th>
-            <th className="py-3 px-3 font-normal">{t.col_balance_top}</th>
-            <th className="py-3 px-3 font-normal">{t.col_total_balance}</th>
+            <th className="py-3 px-3 font-normal"><FieldHint hint="顶代户口结算币种。1 顶代多币种 = N 行,所以同一 user 可能出现多次(不同 currency)。">{t.col_currency}</FieldHint></th>
+            <th className="py-3 px-3 font-normal"><FieldHint hint="本顶代当日的提成费率(0-100%)。来源:平台运营在 S 端配置;变更走审核流程。代理只读, 不能改。">{t.col_rate_top}</FieldHint></th>
+            <th className="py-3 px-3 font-normal"><FieldHint hint="本顶代当日所有下线玩家的输赢汇总(玩家视角)。正数 = 玩家赢 / 平台输;负数 = 玩家输 / 平台赢。已结算注单累加;未结算注单不计。">{t.col_win_loss}</FieldHint></th>
+            <th className="py-3 px-3 font-normal"><FieldHint hint="有效投注 = Σ bet.valid_stake (NULL 时取 stake)。撤单 / 未结算 / 输赢和值=0 等不计入。佣金按此口径算。">{t.col_valid_bet}</FieldHint></th>
+            <th className="py-3 px-3 font-normal"><FieldHint hint="本顶代自己户口的钱包余额(转账钱包模型)。不含下线;下线余额单列。">{t.col_balance_top}</FieldHint></th>
+            <th className="py-3 px-3 font-normal"><FieldHint hint="总线余额 = 自己户口余额 + 全部下线户口余额(递归汇总到玩家层)。账房风控看的指标。">{t.col_total_balance}</FieldHint></th>
           </tr>
         </thead>
         <tbody>
@@ -470,14 +498,14 @@ function DownlineTable({accounts, expanded, toggle, openModal, searchHits}){
       <table className="w-full text-sm">
         <thead className="table-head">
           <tr>
-            <th className="py-3 px-3 font-normal text-left" style={{width:"18%"}}>{t.col_sys_id}</th>
-            <th className="py-3 px-3 font-normal text-left" style={{width:"15%"}}>{t.col_username}</th>
-            <th className="py-3 px-3 font-normal">{t.col_currency}</th>
-            <th className="py-3 px-3 font-normal">{t.col_balance}</th>
-            <th className="py-3 px-3 font-normal">{t.col_total_balance}</th>
-            <th className="py-3 px-3 font-normal">{t.col_child}</th>
-            <th className="py-3 px-3 font-normal">{t.col_status}</th>
-            <th className="py-3 px-3 font-normal">{t.col_type}</th>
+            <th className="py-3 px-3 font-normal text-left" style={{width:"18%"}}><FieldHint hint="系统户口号 sysId(B 端字段名 id ↔ S 端 sysId, 跨端命名差异)。永不回收 / 永不复用 / 永不变更。是底层主键。">{t.col_sys_id}</FieldHint></th>
+            <th className="py-3 px-3 font-normal text-left" style={{width:"15%"}}><FieldHint hint="下线登录用账号(6-20 位英数, 大小写敏感)。代理本人可以改, 但 sysId 不变。1 user × N 币种 = N 行。">{t.col_username}</FieldHint></th>
+            <th className="py-3 px-3 font-normal"><FieldHint hint="下线户口结算币种。1 user 多币种 = N 行(按币种拆 user::currency 复合 key)。">{t.col_currency}</FieldHint></th>
+            <th className="py-3 px-3 font-normal"><FieldHint hint="该下线自己户口的可用余额(转账钱包)。代理上分 / 下分操作的是这个值。不含再下线。">{t.col_balance}</FieldHint></th>
+            <th className="py-3 px-3 font-normal"><FieldHint hint="该下线的总线余额 = 自己余额 + 再下线余额(递归到玩家层)。便于代理快速看到「整条线」的资金。">{t.col_total_balance}</FieldHint></th>
+            <th className="py-3 px-3 font-normal"><FieldHint hint="该下线名下直接下属账户的数量(不含跨级递归)。点击下拉可看具体名单。">{t.col_child}</FieldHint></th>
+            <th className="py-3 px-3 font-normal"><FieldHint hint="账号状态:启用 / 停用。停用后该账号不能登录,但底层 sysId 仍保留, 历史数据不丢。停用 = 上下线写动作冻结。">{t.col_status}</FieldHint></th>
+            <th className="py-3 px-3 font-normal"><FieldHint hint="账号类型:代理 / 玩家。代理可以发展再下线 + 上下分;玩家只能下注 + 玩游戏。类型固定, 不能在 B 端改。">{t.col_type}</FieldHint></th>
             <th className="py-3 px-3 font-normal text-right">{t.col_action}</th>
           </tr>
         </thead>
@@ -683,9 +711,9 @@ function AddSubModal({parent, onClose, onSubmit, toast}){
               <thead className="table-head">
                 <tr>
                   <th className="py-2 px-3 w-10"></th>
-                  <th className="py-2 px-3">币种</th>
-                  <th className="py-2 px-3">佣金率</th>
-                  <th className="py-2 px-3">可用余额</th>
+                  <th className="py-2 px-3"><FieldHint hint="结算币种。每个币种 = 一条独立户口, 1 user 多币种 = N 条。选哪条币种, 上下分就走那条户口的钱包。">币种</FieldHint></th>
+                  <th className="py-2 px-3"><FieldHint hint="本顶代当日佣金率(0-100%)。让利公式:上下分实扣 = (1 - rate) × 金额。这里只展示, 不能改;改要走 S 端审核。">佣金率</FieldHint></th>
+                  <th className="py-2 px-3"><FieldHint hint="本币种可用余额(转账钱包模型)。上分操作的是这个值;余额不足会被拦截。">可用余额</FieldHint></th>
                 </tr>
               </thead>
               <tbody>
@@ -1042,7 +1070,7 @@ function SchemeModal({account, accounts, onClose, onSubmit, toast}){
           <Section title="选择新方案(单选)">
             <table className="w-full text-sm bg-elev bd border rounded overflow-hidden">
               <thead className="table-head">
-                <tr><th className="py-2 px-3 w-10"></th><th className="py-2 px-3">币种</th><th className="py-2 px-3">佣金率</th><th className="py-2 px-3">可用余额</th></tr>
+                <tr><th className="py-2 px-3 w-10"></th><th className="py-2 px-3"><FieldHint hint="结算币种。每个币种 = 一条独立户口, 1 user 多币种 = N 条。选哪条币种, 下分就走那条户口的钱包。">币种</FieldHint></th><th className="py-2 px-3"><FieldHint hint="本币种佣金率(0-100%)。下分让利公式:下级实收 = (1 - rate) × 金额。这里只展示。">佣金率</FieldHint></th><th className="py-2 px-3"><FieldHint hint="下线户口本币种可用余额。下分操作的是该下线的余额;选源币种确认对方有得收。">可用余额</FieldHint></th></tr>
               </thead>
               <tbody>
                 {TOP_SCHEMES.filter(s=>s.id!==account.schemeId).map(s=>(

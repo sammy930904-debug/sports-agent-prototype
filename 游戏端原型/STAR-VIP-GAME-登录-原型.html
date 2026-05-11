@@ -250,13 +250,40 @@
     .lobby-card-desc { font-size:11.5px; }
     .lobby-card-check { width:28px; height:28px; font-size:14px; top:10px; right:10px; }
   }
+  /* 字段说明 hover 气泡 (Sammy 2026-05-11 拍: 跟 S 端 / B 端一致, 字段标签鼠标移上显示业务规则气泡) */
+  .field-hint{position:relative;cursor:help;border-bottom:1px dotted rgba(155,127,232,0.5);display:inline-block}
+  .field-hint-bubble{padding:10px 14px;background:#1A1428;border:2px solid #9B7FE8;border-radius:8px;color:#FFFFFF;font-size:12px;line-height:1.65;min-width:240px;max-width:340px;z-index:99999;text-align:left;white-space:normal;box-shadow:0 8px 32px rgba(0,0,0,0.85),0 0 0 4px rgba(155,127,232,0.15);pointer-events:none;font-weight:normal;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .field-hint-bubble::before{content:"📝 业务规则";display:block;color:#C4A8FF;font-weight:700;margin-bottom:6px;font-size:11px;letter-spacing:.5px;padding-bottom:5px;border-bottom:1px solid rgba(155,127,232,0.4)}
+  .field-hint-bubble::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:8px solid transparent;border-top-color:#9B7FE8}
 </style>
 </head>
 <body>
 <div id="root"></div>
 
 <script type="text/babel" data-presets="react">
-const { useState, useMemo, useEffect } = React;
+const { useState, useMemo, useEffect, useRef } = React;
+
+/* 字段说明 hover 气泡 (Sammy 2026-05-11 拍): portal 渲染到 body, 脱离 overflow / z-index 裁切, 跟 S 端 / B 端一致 */
+function FieldHint({ hint, children }) {
+  const anchorRef = useRef(null);
+  const [show, setShow] = useState(false);
+  const [pos, setPos] = useState({ left: 0, top: 0 });
+  const onEnter = () => {
+    const el = anchorRef.current; if (!el) return;
+    const r = el.getBoundingClientRect();
+    setPos({ left: r.left + r.width / 2, top: r.top });
+    setShow(true);
+  };
+  return (
+    <span ref={anchorRef} className="field-hint" onMouseEnter={onEnter} onMouseLeave={()=>setShow(false)}>
+      {children}
+      {show && ReactDOM.createPortal(
+        <span className="field-hint-bubble" style={{position:"fixed",left:pos.left,top:pos.top,transform:"translate(-50%,calc(-100% - 6px))",display:"block"}}>{hint}</span>,
+        document.body
+      )}
+    </span>
+  );
+}
 
 /* V0.3 新增:视口检测 —— H5(窄屏/横屏矮窗)vs 桌面 */
 function useViewport(){
@@ -828,13 +855,13 @@ function LoginPage({ lang, setLang, devRole, onLoggedIn, isMobile }){
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs muted mb-1">{t.account_label}</label>
+                <label className="block text-xs muted mb-1"><FieldHint hint="账号 = 用户登录名 (6-20 位英数, 大小写敏感)。底层主键是 sysId(系统户口号), 用户看不到, 永不变更。1 user 多币种 = N 个 sysId,但 user 一样。">{t.account_label}</FieldHint></label>
                 <AccountInput t={t} value={account}
                               onChange={v=>{setAccount(v); setErr("");}}
                               onEnter={submit}/>
               </div>
               <div>
-                <label className="block text-xs muted mb-1">{t.pwd_label}</label>
+                <label className="block text-xs muted mb-1"><FieldHint hint="登录密码 (6-20 位)。错 N 次锁定多少不暴露给玩家(防穷举);忘记密码引导找专属客服重置, 不提供自助找回。">{t.pwd_label}</FieldHint></label>
                 <PasswordInput t={t} value={pwd}
                                onChange={v=>{setPwd(v); setErr("");}}
                                onEnter={submit}/>
@@ -993,11 +1020,11 @@ function SchemeModal({ lang, schemes, onCancel, onConfirm }){
                   <div className="text-xs muted">{currencyName}</div>
                   <div className="border-t bd pt-2 space-y-1">
                     <div className="flex justify-between text-sm">
-                      <span className="muted">{t.scheme_balance}</span>
+                      <span className="muted"><FieldHint hint="该方案下您账户当前的可用余额。转账钱包模型 — 进游戏时这笔钱才会带入三方;不进游戏不影响。">{t.scheme_balance}</FieldHint></span>
                       <span className="gold font-semibold">{fmt(s.balance, s.currency)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="muted">{t.scheme_rate}</span>
+                      <span className="muted"><FieldHint hint="本方案的佣金率(0-100%)。让利公式:实扣 = (1 - rate) × 投注。这里只展示, 不能改;有疑问请联系专属客服。">{t.scheme_rate}</FieldHint></span>
                       <span>{s.rate}%</span>
                     </div>
                   </div>
@@ -1281,11 +1308,11 @@ function RegisterPage({ lang, setLang, refId, isMobile, onDone }){
             </div>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs muted mb-1">{t.reg_account}</label>
+                <label className="block text-xs muted mb-1"><FieldHint hint="用户账号 = 登录名 (6-20 位英数, 大小写敏感)。注册后底层会自动生成 sysId(系统户口号)作为永久主键, 用户看不到 sysId。账号本人后续可改, 但 sysId 不变。">{t.reg_account}</FieldHint></label>
                 <input className="input" value={account} onChange={e=>{setAccount(e.target.value); setErr("");}} placeholder={t.reg_account_ph}/>
               </div>
               <div>
-                <label className="block text-xs muted mb-1">{t.reg_pwd}</label>
+                <label className="block text-xs muted mb-1"><FieldHint hint="登录密码 (6-20 位)。注册后立即生效, 首次登录无需修改。后续修改密码需要走「账户设置」(本原型 V0.4 暂未实现)。">{t.reg_pwd}</FieldHint></label>
                 <input className="input" type="password" value={pwd} onChange={e=>{setPwd(e.target.value); setErr("");}} placeholder={t.reg_pwd_ph}/>
               </div>
               <div>
