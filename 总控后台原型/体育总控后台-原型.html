@@ -1403,12 +1403,10 @@
     }
 
     // ============== 体育场次记录页 ==============
-    function SportsSessionsPage({ role, appendSystemLog, currentUser }) {
+    function SportsSessionsPage({ role, appendSystemLog }) {
       // 提交触发模式 (跟体育注单 / 顶代户口筛选区一致)
       // V0.2 (Sammy 2026-04-30): 系统户口号 / 用户账号 拆 2 个独立筛选框
-      // V0.x (Sammy 2026-05-11): 场次跑批生成后默认未结算, 加结算 state + finance 写动作
-      const [sessions, setSessions] = useState(MOCK_SPORTS_SESSIONS);
-      const [settleModal, setSettleModal] = useState(null);
+      // V0.x (Sammy 2026-05-11): 场次跑批生成后默认未结算 (commission=null);本页只展示状态, 不管账房怎么结算
       const [inSessionId, setInSessionId] = useState(""), [sessionId, setSessionId] = useState("");
       const [inSysIdQ, setInSysIdQ] = useState(""), [sysIdQ, setSysIdQ] = useState("");
       const [inUserQ, setInUserQ] = useState(""), [userQ, setUserQ] = useState("");
@@ -1429,22 +1427,10 @@
         setSessionId(""); setSysIdQ(""); setUserQ(""); setCurrency("all"); setShareRatioQ("all"); setDateFrom(""); setDateTo(""); setStatusQ("all"); setPageNum(0);
       };
 
-      // 结算写动作:mock 计算 commission = validStake × rate, 改 status, 写 audit_log
-      const doSettle = (session) => {
-        const commission = Math.round(session.validStake * session.rate * 100) / 100;
-        const now = new Date();
-        const pad = n => String(n).padStart(2,'0');
-        const settledAt = now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate())+" "+pad(now.getHours())+":"+pad(now.getMinutes())+":"+pad(now.getSeconds());
-        const settledBy = currentUser ? currentUser.user : "finance-luo";
-        setSessions(prev => prev.map(s => s.id === session.id ? {...s, status:"已结算", commission, settledAt, settledBy} : s));
-        appendSystemLog && appendSystemLog("结算场次", session.id+" / "+session.user+" / 佣金 "+fmtAmount(commission)+" "+session.currency);
-        setSettleModal(null);
-      };
-
       // 占成下拉的所有可选值 (从 mock 数据 distinct)
-      const shareRatioOptions = Array.from(new Set(sessions.map(s => s.shareRatio))).sort((a,b)=>a-b);
+      const shareRatioOptions = Array.from(new Set(MOCK_SPORTS_SESSIONS.map(s => s.shareRatio))).sort((a,b)=>a-b);
 
-      const list = sessions.filter(s => {
+      const list = MOCK_SPORTS_SESSIONS.filter(s => {
         if ((s.validStake || 0) === 0) return false; // 过滤无有效投注的场次 (空跑批不展示)
         if (sessionId && !s.id.includes(sessionId)) return false;
         if (sysIdQ && !((s.sysId || "").includes(sysIdQ))) return false;
@@ -1469,7 +1455,7 @@
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-xl font-semibold">体育场次记录</h2>
-              <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):每日 00:10 跑批 1 次,生成前一天的体育场次(默认未结算);账房在本页点「结算」即出佣金</p>
+              <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):每日 00:10 跑批 1 次,生成前一天的体育场次(默认未结算);本页只展示状态,结算动作由账房执行,不在 S 端做</p>
             </div>
             <button className="btn btn-ghost" onClick={()=>doExport("体育场次记录", MOCK_SPORTS_SESSIONS.filter(s=>(s.validStake||0)>0).length, appendSystemLog)}>导出 Excel</button>
           </div>
@@ -1501,13 +1487,10 @@
               <div>· 文件名规则:<code>{"{"}YYYY-MM-DD{"}"}_体育场次记录.xlsx</code>(导出日期前缀)</div>
               <div>· 范围:跟列表过滤后一致(全量 <code>validStake &gt; 0</code> 数据,不按当前筛选)</div>
               <div>· 写动作回写 auditSystem(actor=当前员工,action=导出 Excel)</div>
-              <div className="mt-2"><b>⑦ 写动作:结算场次(finance 角色,账房功能):</b></div>
-              <div>· 入口:本页操作列「结算」按钮,仅 <code>status='未结算'</code> 且当前 role=<code>finance</code> 时显示</div>
-              <div>· 二次确认弹窗:展示场次基本信息(场次编号 / 顶代 / 币种 / 有效投注 / 佣金率)+ 算式预览 <code>commission = validStake × rate</code> + 操作密码</div>
-              <div>· 计算口径:<code>commission = round(validStake × rate, 2)</code>(mock 实现;真实开发后端按币种小数位入账)</div>
-              <div>· 落库字段:<code>status='已结算'</code> + <code>commission</code> + <code>settled_at=now()</code> + <code>settled_by=当前员工 user</code></div>
-              <div>· 单向不可逆:已结算场次不允许再回滚为未结算(如需冲正走"调整"流程,V0.2 不实现)</div>
-              <div>· audit_log:actor=当前员工,action=结算场次,target=场次编号 / 顶代 / 佣金额 / 币种</div>
+              <div className="mt-2"><b>⑦ 结算动作不在本页:</b></div>
+              <div>· 本页只展示场次状态(已结算 / 未结算)+ 佣金值,<b>不提供结算入口</b></div>
+              <div>· 结算属于账房写动作,由账房模块 / 真实账房系统执行(S 端 V0.x 原型不模拟)</div>
+              <div>· 结算后状态会同步刷新到本页:<code>status='已结算'</code> + <code>commission</code> 落库 + <code>settled_at</code> + <code>settled_by</code></div>
             </div>
           </details>
           <div className="bg-panel border border-line rounded-lg p-3 mb-4">
@@ -1558,10 +1541,10 @@
                   <th className="text-right"><FieldHint hint="validStake = 该顶代当日所有 bets 的 valid_stake 累加(NULL 时取 stake)。默认硬过滤 validStake > 0(空跑批不展示,后端跑批层就不入库)。">有效投注</FieldHint></th>
                   <th><FieldHint hint="顶代户口的结算币种。1 顶代多币种 = N 行(按 currency 拆 sysId::currency 复合 key)。">币种</FieldHint></th>
                   <th className="text-right"><FieldHint hint="顶代级别的佣金费率(0-100%)。代表本顶代当日整体的提成费率。rate=0 当前仍展示 commission=0(未过滤)。">佣金率</FieldHint></th>
-                  <th className="text-right"><FieldHint hint="commission = validStake × rate(本顶代当日总佣金)。未结算时 = NULL 显示「—」;finance 角色点「结算」后落库具体数值。">佣金</FieldHint></th>
+                  <th className="text-right"><FieldHint hint="commission = validStake × rate(本顶代当日总佣金)。未结算时 = NULL 显示「—」;账房执行结算后落库具体数值(结算入口不在 S 端)。">佣金</FieldHint></th>
                   <th><FieldHint hint="跑批数据涵盖时段起点。YYYY-MM-DD 00:00:00(前一天起点)。">开工时间</FieldHint></th>
                   <th><FieldHint hint="跑批数据涵盖时段终点。YYYY-MM-DD 23:59:59(前一天终点)。">收工时间</FieldHint></th>
-                  <th><FieldHint hint="跑批生成后默认「未结算」+ commission=null。finance 角色在本页操作列点「结算」→ mock 计算 commission=validStake×rate → status='已结算'。V0.2 单向不可逆。">状态</FieldHint></th>
+                  <th><FieldHint hint="跑批生成后默认「未结算」+ commission=null。账房执行结算后 → status='已结算' + commission 落库 + settled_at / settled_by。本页只展示状态,结算入口不在 S 端,单向不可逆。">状态</FieldHint></th>
                   <th>操作</th>
                 </tr></thead>
                 <tbody>
@@ -1580,12 +1563,7 @@
                       <td className="text-muted" style={{fontSize:12}}>{s.workStartAt}</td>
                       <td className="text-muted" style={{fontSize:12}}>{s.workEndAt}</td>
                       <td><StatusChip status={s.status}/></td>
-                      <td>
-                        <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setDetailModal(s)}>游戏明细</button>
-                        {s.status === "未结算" && role === "finance" && (
-                          <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,color:"#F0B93A",fontWeight:600}} onClick={()=>setSettleModal(s)}>结算</button>
-                        )}
-                      </td>
+                      <td><button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setDetailModal(s)}>游戏明细</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1594,52 +1572,6 @@
             <Pagination total={list.length} pageNum={pageNum} setPageNum={setPageNum}/>
           </div>
           {detailModal && <SessionDetailModal session={detailModal} onClose={()=>setDetailModal(null)} appendSystemLog={appendSystemLog}/>}
-          {settleModal && <SettleSessionModal session={settleModal} onClose={()=>setSettleModal(null)} onConfirm={doSettle}/>}
-        </div>
-      );
-    }
-
-    // ============== 场次结算 弹窗 (Sammy 2026-05-11 拍 — finance 写动作) ==============
-    // 业务: 未结算 → 已结算 单向不可逆;mock 算 commission = validStake × rate;真实开发后端跑过算 + 入账
-    function SettleSessionModal({ session, onClose, onConfirm }) {
-      const [opPwd, setOpPwd] = useState("");
-      const [err, setErr] = useState("");
-      const preview = Math.round(session.validStake * session.rate * 100) / 100;
-      const submit = () => {
-        if (opPwd !== "123456") { setErr("操作密码错误"); return; }
-        onConfirm(session);
-      };
-      return (
-        <div className="modal-backdrop" onClick={onClose}>
-          <div className="modal" onClick={e=>e.stopPropagation()} style={{width:520}}>
-            <h3 className="text-base font-semibold mb-1">结算场次:{session.id}</h3>
-            <p className="text-xs text-faint mb-1">单向写动作 — 已结算不可回滚;V0.2 不支持「重新结算」</p>
-            <p className="text-xs mb-4" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):mock 本地算 commission = validStake × rate;真实开发后端跑算 + 入账 + 写 audit_log</p>
-            <div className="bg-card border border-line rounded p-3 text-xs mb-4">
-              <div className="grid grid-cols-2 gap-2">
-                <div><span className="text-muted">顶代:</span> <span className="mono text-cool">{session.user}</span> ({session.sysId})</div>
-                <div><span className="text-muted">币种:</span> <span className="chip chip-info">{session.currency}</span></div>
-                <div><span className="text-muted">业务日期:</span> {session.date}</div>
-                <div><span className="text-muted">佣金率:</span> {fmtPct(session.rate)}</div>
-                <div><span className="text-muted">有效投注:</span> <span className="num">{fmtAmount(session.validStake)}</span></div>
-                <div><span className="text-muted">输赢:</span> <span className="num" style={{color: session.totalWinLoss > 0 ? "#5BC97C" : (session.totalWinLoss < 0 ? "#FF6B6B" : "#9AA4B5")}}>{session.totalWinLoss > 0 ? "+" : ""}{fmtAmount(session.totalWinLoss)}</span></div>
-              </div>
-            </div>
-            <div className="rounded-lg p-3 mb-4" style={{background:"rgba(240,185,58,0.08)",border:"1px solid rgba(240,185,58,0.4)"}}>
-              <div className="text-xs text-muted mb-1">本次结算佣金</div>
-              <div className="num gold text-xl" style={{fontWeight:600}}>{fmtAmount(preview)} {session.currency}</div>
-              <div className="text-xs text-faint mt-1">= 有效投注 {fmtAmount(session.validStake)} × 佣金率 {fmtPct(session.rate)}</div>
-            </div>
-            <div className="mb-3">
-              <label className="block text-xs text-muted mb-1">操作密码 <span style={{color:"#FF6B6B"}}>*</span></label>
-              <input type="password" className="input" placeholder="当前登录员工的登录密码" value={opPwd} onChange={e=>{setOpPwd(e.target.value); setErr("");}} autoFocus/>
-              {err && <div className="text-xs mt-1" style={{color:"#FF6B6B"}}>{err}</div>}
-            </div>
-            <div className="flex justify-end gap-2">
-              <button className="btn btn-ghost" onClick={onClose}>取消</button>
-              <button className="btn btn-primary" onClick={submit}>确认结算</button>
-            </div>
-          </div>
         </div>
       );
     }
@@ -2656,7 +2588,7 @@
               {active === "dashboard" && <DashboardPage role={role} auditSystem={auditSystem} setActive={setActive} accounts={accounts}/>}
               {active === "agents" && <AgentsPage role={role} canWrite={r.canWrite} appendSystemLog={appendSystemLog} accounts={accounts} setAccounts={setAccounts} topKeys={topKeys} setTopKeys={setTopKeys}/>}
               {active === "reports.bets" && <BetsPage role={role} appendSystemLog={appendSystemLog}/>}
-              {active === "reports.sports" && <SportsSessionsPage role={role} appendSystemLog={appendSystemLog} currentUser={currentUser}/>}
+              {active === "reports.sports" && <SportsSessionsPage role={role} appendSystemLog={appendSystemLog}/>}
               {active === "reports.ledger" && <LedgerPage role={role} appendSystemLog={appendSystemLog}/>}
               {active === "perm.staff" && <StaffPage currentUser={currentUser} appendSystemLog={appendSystemLog} staff={staff} setStaff={setStaff}/>}
               {active === "sys.audit" && <AuditPage role={role} system={auditSystem} player={auditPlayer}/>}
