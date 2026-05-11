@@ -68,10 +68,10 @@
     .mono{font-family:"SF Mono",Monaco,Consolas,monospace}
     /* V0.x 新增: 字段 hover tooltip (紫色 PM 提示, 给开发对接, 正式环境删除) */
     .field-hint{position:relative;cursor:help;border-bottom:1px dotted rgba(155,127,232,0.5)}
-    .field-hint .field-hint-bubble{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);padding:10px 14px;background:#1A1428;border:2px solid #9B7FE8;border-radius:8px;color:#FFFFFF;font-size:12px;line-height:1.65;min-width:260px;max-width:360px;z-index:99999;text-align:left;white-space:normal;box-shadow:0 8px 32px rgba(0,0,0,0.85),0 0 0 4px rgba(155,127,232,0.15);pointer-events:none;font-weight:normal;backdrop-filter:none}
-    .field-hint .field-hint-bubble::before{content:"📝 业务规则";display:block;color:#C4A8FF;font-weight:700;margin-bottom:6px;font-size:11px;letter-spacing:.5px;padding-bottom:5px;border-bottom:1px solid rgba(155,127,232,0.4)}
-    .field-hint .field-hint-bubble::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:8px solid transparent;border-top-color:#9B7FE8}
-    .field-hint:hover .field-hint-bubble{display:block}
+    /* Portal 把 bubble 渲染到 body, 不在 .field-hint 内, 所以选择器不带父级 */
+    .field-hint-bubble{padding:10px 14px;background:#1A1428;border:2px solid #9B7FE8;border-radius:8px;color:#FFFFFF;font-size:12px;line-height:1.65;min-width:260px;max-width:360px;z-index:99999;text-align:left;white-space:normal;box-shadow:0 8px 32px rgba(0,0,0,0.85),0 0 0 4px rgba(155,127,232,0.15);pointer-events:none;font-weight:normal}
+    .field-hint-bubble::before{content:"📝 业务规则";display:block;color:#C4A8FF;font-weight:700;margin-bottom:6px;font-size:11px;letter-spacing:.5px;padding-bottom:5px;border-bottom:1px solid rgba(155,127,232,0.4)}
+    .field-hint-bubble::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:8px solid transparent;border-top-color:#9B7FE8}
   </style>
 </head>
 <body>
