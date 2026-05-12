@@ -158,7 +158,7 @@ const I18N = {
     invite_explainer:"把链接发给意向用户,用户点击后填写信息完成注册,新账号自动挂在您名下",
     reg_title_agent:"代理后台 · 自主注册", reg_title_player:"STAR VIP · 自主注册",
     reg_inviter_label:"邀请人(自动识别,不可修改)",
-    reg_account:"用户账号", reg_account_ph:"6-20 位英文 + 数字",
+    reg_account:"用户账号", reg_account_ph:"4 位以上字母开头 + 数字,总长 ≤ 20 位", reg_err_account:"用户账号需 4 位以上字母开头 + 含数字,总长 ≤ 20 位",
     reg_pwd:"登录密码", reg_pwd_ph:"6-20 位,首次登录后请尽快修改",
     reg_pwd_confirm:"确认密码", reg_nick:"账户昵称", reg_nick_ph:"选填",
     reg_phone:"电话号码", reg_phone_ph:"选填,异常登录通知",
@@ -201,7 +201,7 @@ const I18N = {
     invite_explainer:"Share the link with your prospects. They sign up via the link and the new account is auto-placed under you.",
     reg_title_agent:"Agent Backend · Sign Up", reg_title_player:"STAR VIP · Sign Up",
     reg_inviter_label:"Inviter (auto-detected)",
-    reg_account:"Username", reg_account_ph:"6-20 alphanumeric chars",
+    reg_account:"Username", reg_account_ph:"Start with 4+ letters, then digits, max 20 chars", reg_err_account:"Username must start with 4+ letters and contain digits, max 20 chars",
     reg_pwd:"Password", reg_pwd_ph:"6-20 chars; please change after first login",
     reg_pwd_confirm:"Confirm Password", reg_nick:"Nickname", reg_nick_ph:"Optional",
     reg_phone:"Phone", reg_phone_ph:"Optional, login alerts",
@@ -244,7 +244,7 @@ const I18N = {
     invite_explainer:"잠재 사용자에게 링크를 보내면, 사용자가 링크를 통해 가입 후 자동으로 귀하 아래에 등록됩니다.",
     reg_title_agent:"대리 백엔드 · 가입", reg_title_player:"STAR VIP · 가입",
     reg_inviter_label:"초대자 (자동 인식)",
-    reg_account:"사용자 계정", reg_account_ph:"6-20자 영문+숫자",
+    reg_account:"사용자 계정", reg_account_ph:"영문 4자 이상 + 숫자, 총 20자 이내", reg_err_account:"사용자 계정은 영문 4자 이상으로 시작하고 숫자를 포함, 총 20자 이내",
     reg_pwd:"로그인 비밀번호", reg_pwd_ph:"6-20자, 첫 로그인 후 변경 권장",
     reg_pwd_confirm:"비밀번호 확인", reg_nick:"계정 닉네임", reg_nick_ph:"선택",
     reg_phone:"전화번호", reg_phone_ph:"선택, 이상 로그인 알림",
@@ -499,7 +499,7 @@ function DownlineTable({accounts, expanded, toggle, openModal, searchHits}){
         <thead className="table-head">
           <tr>
             <th className="py-3 px-3 font-normal text-left" style={{width:"18%"}}><FieldHint hint="系统户口号 sysId(B 端字段名 id ↔ S 端 sysId, 跨端命名差异)。永不回收 / 永不复用 / 永不变更。是底层主键。">{t.col_sys_id}</FieldHint></th>
-            <th className="py-3 px-3 font-normal text-left" style={{width:"15%"}}><FieldHint hint="下线登录用账号(6-20 位英数, 大小写敏感)。代理本人可以改, 但 sysId 不变。1 user × N 币种 = N 行。">{t.col_username}</FieldHint></th>
+            <th className="py-3 px-3 font-normal text-left" style={{width:"15%"}}><FieldHint hint="下线登录用账号(4 位以上字母开头 + 含数字, 总长 ≤ 20, 大小写敏感)。代理本人可以改, 但 sysId 不变。1 user × N 币种 = N 行。">{t.col_username}</FieldHint></th>
             <th className="py-3 px-3 font-normal"><FieldHint hint="下线户口结算币种。1 user 多币种 = N 行(按币种拆 user::currency 复合 key)。">{t.col_currency}</FieldHint></th>
             <th className="py-3 px-3 font-normal"><FieldHint hint="该下线自己户口的可用余额(转账钱包)。代理上分 / 下分操作的是这个值。不含再下线。">{t.col_balance}</FieldHint></th>
             <th className="py-3 px-3 font-normal"><FieldHint hint="该下线的总线余额 = 自己余额 + 再下线余额(递归到玩家层)。便于代理快速看到「整条线」的资金。">{t.col_total_balance}</FieldHint></th>
@@ -604,7 +604,12 @@ function AddSubModal({parent, onClose, onSubmit, toast}){
 
   const validate = () => {
     const e = {};
-    if(!/^[A-Za-z0-9]{6,20}$/.test(form.user)) e.user = "用户账号仅支持英文及数字,长度 6~20 位";
+    // 用户账号规则 (Sammy 2026-05-11 拍): 4 位以上字母开头 + 含数字 + 总长 ≤ 20, 全英数
+    const u = form.user;
+    if(!/^[A-Za-z0-9]+$/.test(u)) e.user = "用户账号只支持英文字母和数字";
+    else if(u.length > 20) e.user = "用户账号总长不能超过 20 位";
+    else if(!/^[A-Za-z]{4,}/.test(u)) e.user = "用户账号需以 4 位以上英文字母开头";
+    else if(!/\d/.test(u)) e.user = "用户账号必须包含数字";
     if(!form.nick) e.nick = "请您输入账户昵称";
     if(!form.pwd) e.pwd = "请您输入登录密码";
     if(form.pwd !== form.pwdConfirm) e.pwdConfirm = "两次密码不一致,请您重新输入";
@@ -654,7 +659,7 @@ function AddSubModal({parent, onClose, onSubmit, toast}){
         <div className="grid grid-cols-2 gap-4">
           <div>
             <FieldLabel req>用户账号</FieldLabel>
-            <input className="input w-full" value={form.user} onChange={e=>set("user",e.target.value)} placeholder="6~20 位英文数字"/>
+            <input className="input w-full" value={form.user} onChange={e=>set("user",e.target.value)} placeholder="4 位以上字母开头 + 数字,总长 ≤ 20 位"/>
             {errors.user && <div className="danger text-xs mt-1">{errors.user}</div>}
           </div>
           <div>
@@ -1264,7 +1269,10 @@ function RegisterPage({refId, type, onDone}){
   const [phone2, setPhone2] = useState("");
   const [err, setErr] = useState("");
   const submit = ()=>{
-    if(!/^[A-Za-z0-9]{6,20}$/.test(user)){ setErr("用户账号需 6-20 位英文+数字"); return; }
+    // 用户账号规则 (Sammy 2026-05-11 拍): 4 位以上字母开头 + 含数字 + 总长 ≤ 20
+    if(!/^[A-Za-z0-9]+$/.test(user) || user.length > 20 || !/^[A-Za-z]{4,}/.test(user) || !/\d/.test(user)){
+      setErr(t.reg_err_account); return;
+    }
     if(!/^.{6,20}$/.test(pwd)){ setErr("密码需 6-20 位"); return; }
     if(pwd !== pwdC){ setErr("两次密码不一致"); return; }
     onDone({user, pwd, nick:nick.trim()||user, phone, phone2});

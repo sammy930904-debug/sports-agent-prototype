@@ -400,7 +400,7 @@ const I18N = {
     // V0.5 新增 — 自主注册
     reg_title:"加入 STAR VIP",
     reg_inviter_label:"邀请人(自动识别,不可修改)",
-    reg_account:"用户账号", reg_account_ph:"6-20 位英文 + 数字",
+    reg_account:"用户账号", reg_account_ph:"4 位以上字母开头 + 数字,总长 ≤ 20 位",
     reg_pwd:"登录密码", reg_pwd_ph:"6-20 位",
     reg_pwd_confirm:"确认密码",
     reg_nick:"账户昵称", reg_nick_ph:"选填",
@@ -409,7 +409,7 @@ const I18N = {
     reg_no_ref_title:"加入 STAR VIP 需要邀请",
     reg_no_ref_desc:"请联系您的专属客服或代理获取邀请链接",
     reg_success:"注册成功,正在为您登录",
-    reg_err_account:"用户账号需 6-20 位英文+数字",
+    reg_err_account:"用户账号需 4 位以上字母开头 + 含数字,总长 ≤ 20 位",
     reg_err_pwd:"密码需 6-20 位",
     reg_err_pwd_match:"两次密码不一致",
     login_to_register:"还没账号?"
@@ -502,7 +502,7 @@ const I18N = {
     btn_back_to_lobby:"Back to Lobby",
     reg_title:"Join STAR VIP",
     reg_inviter_label:"Inviter (auto-detected)",
-    reg_account:"Username", reg_account_ph:"6-20 alphanumeric chars",
+    reg_account:"Username", reg_account_ph:"Start with 4+ letters, then digits, max 20 chars",
     reg_pwd:"Password", reg_pwd_ph:"6-20 chars",
     reg_pwd_confirm:"Confirm Password",
     reg_nick:"Nickname", reg_nick_ph:"Optional",
@@ -511,7 +511,7 @@ const I18N = {
     reg_no_ref_title:"Joining STAR VIP requires an invite",
     reg_no_ref_desc:"Please contact your concierge or agent for an invite link",
     reg_success:"Sign-up successful, signing you in",
-    reg_err_account:"Username must be 6-20 alphanumeric chars",
+    reg_err_account:"Username must start with 4+ letters and contain digits, max 20 chars",
     reg_err_pwd:"Password must be 6-20 chars",
     reg_err_pwd_match:"Passwords do not match",
     login_to_register:"No account yet?"
@@ -604,7 +604,7 @@ const I18N = {
     btn_back_to_lobby:"로비로 돌아가기",
     reg_title:"STAR VIP 가입",
     reg_inviter_label:"초대자 (자동 인식)",
-    reg_account:"사용자 계정", reg_account_ph:"6-20자 영문+숫자",
+    reg_account:"사용자 계정", reg_account_ph:"영문 4자 이상 + 숫자, 총 20자 이내",
     reg_pwd:"로그인 비밀번호", reg_pwd_ph:"6-20자",
     reg_pwd_confirm:"비밀번호 확인",
     reg_nick:"계정 닉네임", reg_nick_ph:"선택",
@@ -613,7 +613,7 @@ const I18N = {
     reg_no_ref_title:"STAR VIP 가입은 초대가 필요합니다",
     reg_no_ref_desc:"전담 컨시어지 또는 대리에게 초대 링크를 요청하세요",
     reg_success:"가입 성공, 로그인 중입니다",
-    reg_err_account:"사용자 계정은 6-20자 영문+숫자",
+    reg_err_account:"사용자 계정은 영문 4자 이상으로 시작하고 숫자를 포함, 총 20자 이내",
     reg_err_pwd:"비밀번호는 6-20자",
     reg_err_pwd_match:"비밀번호가 일치하지 않습니다",
     login_to_register:"계정이 아직 없으신가요?"
@@ -855,7 +855,7 @@ function LoginPage({ lang, setLang, devRole, onLoggedIn, isMobile }){
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs muted mb-1"><FieldHint hint="账号 = 用户登录名 (6-20 位英数, 大小写敏感)。底层主键是 sysId(系统户口号), 用户看不到, 永不变更。1 user 多币种 = N 个 sysId,但 user 一样。">{t.account_label}</FieldHint></label>
+                <label className="block text-xs muted mb-1"><FieldHint hint="账号 = 用户登录名(4 位以上字母开头 + 含数字, 总长 ≤ 20, 大小写敏感)。底层主键是 sysId(系统户口号), 用户看不到, 永不变更。1 user 多币种 = N 个 sysId,但 user 一样。">{t.account_label}</FieldHint></label>
                 <AccountInput t={t} value={account}
                               onChange={v=>{setAccount(v); setErr("");}}
                               onEnter={submit}/>
@@ -1268,7 +1268,8 @@ function RegisterPage({ lang, setLang, refId, isMobile, onDone }){
   const [err, setErr] = useState("");
 
   const submit = ()=>{
-    if(!/^[A-Za-z0-9]{6,20}$/.test(account)){ setErr(t.reg_err_account); return; }
+    // 用户账号规则 (Sammy 2026-05-11 拍): 4 位以上字母开头 + 含数字 + 总长 ≤ 20
+    if(!/^[A-Za-z0-9]+$/.test(account) || account.length > 20 || !/^[A-Za-z]{4,}/.test(account) || !/\d/.test(account)){ setErr(t.reg_err_account); return; }
     if(!/^.{6,20}$/.test(pwd)){ setErr(t.reg_err_pwd); return; }
     if(pwd !== pwdC){ setErr(t.reg_err_pwd_match); return; }
     onDone({ account, pwd, nick: nick.trim() || account, phone });
@@ -1308,7 +1309,7 @@ function RegisterPage({ lang, setLang, refId, isMobile, onDone }){
             </div>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs muted mb-1"><FieldHint hint="用户账号 = 登录名 (6-20 位英数, 大小写敏感)。注册后底层会自动生成 sysId(系统户口号)作为永久主键, 用户看不到 sysId。账号本人后续可改, 但 sysId 不变。">{t.reg_account}</FieldHint></label>
+                <label className="block text-xs muted mb-1"><FieldHint hint="用户账号 = 登录名(4 位以上字母开头 + 含数字, 总长 ≤ 20, 大小写敏感)。注册后底层会自动生成 sysId(系统户口号)作为永久主键, 用户看不到 sysId。账号本人后续可改, 但 sysId 不变。">{t.reg_account}</FieldHint></label>
                 <input className="input" value={account} onChange={e=>{setAccount(e.target.value); setErr("");}} placeholder={t.reg_account_ph}/>
               </div>
               <div>
