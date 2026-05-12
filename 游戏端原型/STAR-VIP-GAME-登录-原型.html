@@ -410,6 +410,7 @@ const I18N = {
     reg_no_ref_desc:"请联系您的专属客服或代理获取邀请链接",
     reg_success:"注册成功,正在为您登录",
     reg_err_account:"用户账号需 4 位以上字母开头 + 含数字,总长 ≤ 20 位",
+    reg_check_ok:"格式正确",
     reg_err_pwd:"密码需 6-20 位",
     reg_err_pwd_match:"两次密码不一致",
     login_to_register:"还没账号?"
@@ -512,6 +513,7 @@ const I18N = {
     reg_no_ref_desc:"Please contact your concierge or agent for an invite link",
     reg_success:"Sign-up successful, signing you in",
     reg_err_account:"Username must start with 4+ letters and contain digits, max 20 chars",
+    reg_check_ok:"Format OK",
     reg_err_pwd:"Password must be 6-20 chars",
     reg_err_pwd_match:"Passwords do not match",
     login_to_register:"No account yet?"
@@ -614,6 +616,7 @@ const I18N = {
     reg_no_ref_desc:"전담 컨시어지 또는 대리에게 초대 링크를 요청하세요",
     reg_success:"가입 성공, 로그인 중입니다",
     reg_err_account:"사용자 계정은 영문 4자 이상으로 시작하고 숫자를 포함, 총 20자 이내",
+    reg_check_ok:"형식 정확",
     reg_err_pwd:"비밀번호는 6-20자",
     reg_err_pwd_match:"비밀번호가 일치하지 않습니다",
     login_to_register:"계정이 아직 없으신가요?"
@@ -1311,6 +1314,17 @@ function RegisterPage({ lang, setLang, refId, isMobile, onDone }){
               <div>
                 <label className="block text-xs muted mb-1"><FieldHint hint="用户账号 = 登录名(4 位以上字母开头 + 含数字, 总长 ≤ 20, 大小写敏感)。注册后底层会自动生成 sysId(系统户口号)作为永久主键, 用户看不到 sysId。账号本人后续可改, 但 sysId 不变。">{t.reg_account}</FieldHint></label>
                 <input className="input" value={account} onChange={e=>{setAccount(e.target.value); setErr("");}} placeholder={t.reg_account_ph}/>
+                {(() => {
+                  if (!account) return null;
+                  let bad = false;
+                  if (!/^[A-Za-z0-9]+$/.test(account)) bad = true;
+                  else if (account.length > 20) bad = true;
+                  else if (!/^[A-Za-z]{4,}/.test(account)) bad = true;
+                  else if (!/\d/.test(account)) bad = true;
+                  return bad
+                    ? <div style={{color:"#FF4D4F",fontSize:12,marginTop:4}}>✗ {t.reg_err_account}</div>
+                    : <div style={{color:"#34C759",fontSize:12,marginTop:4}}>✓ {t.reg_check_ok}</div>;
+                })()}
               </div>
               <div>
                 <label className="block text-xs muted mb-1"><FieldHint hint="登录密码 (6-20 位)。注册后立即生效, 首次登录无需修改。后续修改密码需要走「账户设置」(本原型 V0.4 暂未实现)。">{t.reg_pwd}</FieldHint></label>
