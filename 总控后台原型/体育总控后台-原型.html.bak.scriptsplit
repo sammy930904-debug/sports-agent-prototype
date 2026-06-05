@@ -1,0 +1,2610 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>三方游戏总控后台 · 原型</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- 局部破例: 仅开户时间用 antd 4 RangePicker (native datetime-local 体验不够) -->
+  <link rel="stylesheet" href="https://unpkg.com/antd@4.24.16/dist/antd.dark.min.css">
+  <script src="https://unpkg.com/moment@2.30.1/min/moment-with-locales.min.js"></script>
+  <script src="https://unpkg.com/antd@4.24.16/dist/antd-with-locales.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *{box-sizing:border-box}
+    /* 防止 Mac trackpad 横向 swipe 触发浏览器 history.back, 导致 modal 被无故关闭 */
+    html,body{overscroll-behavior-x:contain}
+    html,body,#root{margin:0;padding:0;background:#0B0F15;color:#E6EAF0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh}
+    .bg-app{background:#0B0F15}
+    .bg-panel{background:#11161E}
+    .bg-card{background:#1A2434}
+    .bg-row-hover:hover{background:#1A2434}
+    .border-line{border-color:#2A3648}
+    .text-muted{color:#9AA4B5}
+    .text-faint{color:#6B7280}
+    .text-cool{color:#4A9EFF}
+    .bg-cool{background:#4A9EFF}
+    .bg-cool-soft{background:#0F1B2A}
+    .border-cool{border-color:#4A9EFF}
+    .ring-cool:focus{outline:2px solid #4A9EFF;outline-offset:1px}
+    .btn{padding:8px 14px;border-radius:6px;font-size:13px;font-weight:500;transition:.15s;cursor:pointer;border:1px solid transparent}
+    .btn-primary{background:#4A9EFF;color:#fff}
+    .btn-primary:hover{background:#5FA8FF}
+    .btn-primary:disabled{background:#2A3648;color:#6B7280;cursor:not-allowed}
+    .btn-ghost{background:transparent;color:#E6EAF0;border-color:#2A3648}
+    .btn-ghost:hover{border-color:#4A9EFF;color:#4A9EFF}
+    .btn-danger{background:#3A1F23;color:#FF6B6B;border-color:#5A2D33}
+    .btn-danger:hover{background:#5A2D33}
+    .input{background:#0B0F15;border:1px solid #2A3648;border-radius:6px;padding:8px 12px;font-size:13px;color:#E6EAF0;width:100%}
+    .input:focus{border-color:#4A9EFF;outline:none}
+    .chip{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;font-weight:500}
+    .chip-active{background:#0F2A1A;color:#5BC97C}
+    .chip-frozen{background:#3A1F23;color:#FF6B6B}
+    .chip-pending{background:#2A2415;color:#F0B93A}
+    .chip-settled{background:#0F2A1A;color:#5BC97C}
+    .chip-void{background:#2A2A30;color:#9AA4B5}
+    .chip-cool{background:#0F1B2A;color:#4A9EFF}
+    .chip-warn{background:#2A2415;color:#F0B93A}
+    .chip-info{background:#1A2434;color:#9AA4B5}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{text-align:left;padding:10px 12px;background:#0F141C;color:#9AA4B5;font-weight:500;border-bottom:1px solid #2A3648;white-space:nowrap}
+    td{padding:10px 12px;border-bottom:1px solid #1F2733;white-space:nowrap}
+    tr:hover td{background:#141B25}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:50}
+    .modal{background:#11161E;border:1px solid #2A3648;border-radius:10px;padding:24px;width:480px;max-width:92vw;max-height:90vh;overflow:auto}
+    .modal-wide{width:720px}
+    .section-title{font-size:12px;color:#F0B93A;font-weight:600;margin:14px 0 8px 0}
+    .section-title:first-child{margin-top:0}
+    .menu-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;color:#9AA4B5;transition:.15s}
+    .menu-item:hover{background:#1A2434;color:#E6EAF0}
+    .menu-item.active{background:#0F1B2A;color:#4A9EFF}
+    .menu-group{font-size:11px;color:#6B7280;padding:14px 12px 6px;letter-spacing:1px;font-weight:500}
+    .tab{padding:8px 16px;font-size:13px;color:#9AA4B5;cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+    .tab.active{color:#4A9EFF;border-bottom-color:#4A9EFF}
+    .scroll-x{overflow-x:auto}
+    .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+    .mono{font-family:"SF Mono",Monaco,Consolas,monospace}
+    /* V0.x 新增: 字段 hover tooltip (紫色 PM 提示, 给开发对接, 正式环境删除) */
+    .field-hint{position:relative;cursor:help;border-bottom:1px dotted rgba(155,127,232,0.5)}
+    /* Portal 把 bubble 渲染到 body, 不在 .field-hint 内, 所以选择器不带父级 */
+    .field-hint-bubble{padding:10px 14px;background:#1A1428;border:2px solid #9B7FE8;border-radius:8px;color:#FFFFFF;font-size:12px;line-height:1.65;min-width:260px;max-width:360px;z-index:99999;text-align:left;white-space:normal;box-shadow:0 8px 32px rgba(0,0,0,0.85),0 0 0 4px rgba(155,127,232,0.15);pointer-events:none;font-weight:normal}
+    .field-hint-bubble::before{content:"📝 业务规则";display:block;color:#C4A8FF;font-weight:700;margin-bottom:6px;font-size:11px;letter-spacing:.5px;padding-bottom:5px;border-bottom:1px solid rgba(155,127,232,0.4)}
+    .field-hint-bubble::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:8px solid transparent;border-top-color:#9B7FE8}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo, useRef } = React;
+    // antd 4 RangePicker (仅开户时间用, 其他筛选/UI 仍用 Tailwind)
+    moment.locale("zh-cn"); // 月份 / 星期 / 今天 等内部文案中文化
+    const { DatePicker, ConfigProvider } = antd;
+    const { RangePicker } = DatePicker;
+    const zhCN = antd.locales && antd.locales.zh_CN;
+
+    // ============== 角色与权限 ==============
+    // agentCols 编号说明:
+    // 1=系统户口号 2=用户账号 3=下线数 4=账号状态 5=币种 6=占成
+    // 7=账户余额 8=下线余额 9=总线余额 10=账号类型 11=开户时间
+    // V0.2 收尾 (Sammy 2026-04-30 拍):
+    //   - 隐藏 dashboard + sys.ipwhite 菜单 (代码保留, 后期重启时直接 push 回 menus)
+    //   - 隐藏占成列 (id=6 从 agentCols 移除, colDefs 保留;后期重启加回)
+    const ROLES = {
+      operator: { name: "平台运营", desc: "operator", color: "#4A9EFF",
+        menus: ["agents","reports.bets","reports.sports","reports.ledger","perm.staff","sys.audit"],
+        agentCols: [1,2,3,4,5,7,8,9,10,11], canWrite: true },
+      risk: { name: "风控审计", desc: "risk", color: "#F0B93A",
+        menus: ["agents","reports.bets","reports.sports","sys.audit"],
+        agentCols: [1,2,3,4,5,10,11], canWrite: false },
+      finance: { name: "财务对账", desc: "finance", color: "#5BC97C",
+        menus: ["agents","reports.bets","reports.sports","reports.ledger","sys.audit"],
+        agentCols: [1,2,3,4,5,7,8,9,10,11], canWrite: false },
+    };
+
+    // 员工账号 mock (新增删除走 state) - V0.2 操作密码 = 登录密码 (Sammy 2026-04-30 拍)
+    const INITIAL_STAFF = [
+      { user:"admin",       role:"operator", phone:"+86 138-0000-0001", createdAt:"2026-01-15 10:00:00", lastLogin:"2026-04-29 09:08:22" },
+      { user:"risk-mei",    role:"risk",     phone:"+86 138-0000-0002", createdAt:"2026-02-01 14:00:00", lastLogin:"2026-04-29 09:02:18" },
+      { user:"finance-luo", role:"finance",  phone:"+86 138-0000-0003", createdAt:"2026-02-08 09:30:00", lastLogin:"2026-04-29 09:05:47" },
+      { user:"ops-chen",    role:"operator", phone:"+86 138-0000-0004", createdAt:"2026-03-20 11:15:00", lastLogin:"2026-04-28 17:30:00" },
+    ];
+
+    // IP 白名单 mock (V0.2 仅原型展示, 功能实现推迟)
+    const INITIAL_IPWHITE = [
+      { id:1, ip:"10.4.2.0/24",   label:"办公网段",       enabled:true,  createdAt:"2026-01-15 10:00:00" },
+      { id:2, ip:"118.139.32.18", label:"运营 admin 家用", enabled:true,  createdAt:"2026-02-20 16:30:00" },
+      { id:3, ip:"61.74.110.55",  label:"风控外勤备用",   enabled:false, createdAt:"2026-03-10 14:20:00" },
+    ];
+
+    // ============== Mock 数据 ==============
+    // 顶代户口 + 下线树 mock (Sammy 2026-04-29 拍)
+    // - 1 顶代多币种 = N 行 (按币种拆); 下线币种继承父级
+    // - 字段:系统户口号 sysId / 用户账号 user / 账号类型 accountType / 币种 currency
+    //        占成 shareRatio (下线层占位 = null, 显示 —) / 账户余额 balance / 下线余额 subBalance
+    //        总线余额 totalBalance (= balance + subBalance, 沿用 B 端递归算法)
+    //        下线数 subCount / 账号状态 status / 开户时间 createdAt / children 直属下线 keys
+    // B↔S 数据契约:subCount / subBalance / totalBalance / shareRatio 主信源在 B 端
+    // key 复合 = "user::currency",保证多币种顶代每行 key 唯一
+    // 系统户口号规则 (Sammy 2026-04-29):
+    //   顶代: sysId == user (账房侧创建时同名分配)
+    //   下线: sysId 用层级路径派生 (跟 B 端 V1.12 mock 的 id 字段完全对齐)
+    //         如 carry01 (顶代 qweqwe 直属) → sysId = "qweqwe-1"
+    //            alice88 (carry01 下) → sysId = "qweqwe-1-1"
+    //            bob_hi (alice88 下) → sysId = "qweqwe-1-1-1"
+    //   B↔S 命名分歧: B 端字段叫 id, S 端字段叫 sysId (Q-S15 议题待对齐)
+    // V0.2 (Sammy 2026-04-30): 全部 mock 顶代币种统一 PHP, 删 qweqwe USD 树 (frank_us/gina_us)
+    // 顶代多币种 N 行 业务规则保留 (代码 row key = user::currency 不变), 真实业务再扩其他币种
+    const ACCOUNTS = {
+      // === qweqwe 树 (4 层:顶代→代理→孙代理→玩家) ===
+      "qweqwe::PHP": { sysId:"qweqwe", user:"qweqwe", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.1875, balance:12_580_000, subBalance:90_820_000, totalBalance:103_400_000, subCount:6, status:"active", createdAt:"2025-11-12 09:14:33", children:["carry01::PHP","eva_ph::PHP"] },
+      "carry01::PHP": { sysId:"qweqwe-1", user:"carry01", accountType:"代理", currency:"PHP", shareRatio:0.16, balance:50_000_000, subBalance:32_820_000, totalBalance:82_820_000, subCount:4, status:"active", createdAt:"2026-02-10 14:30:22", children:["alice88::PHP","dave_y::PHP","zoe_ph::PHP"] },
+      "alice88::PHP": { sysId:"qweqwe-1-1", user:"alice88", accountType:"代理", currency:"PHP", shareRatio:0.125, balance:30_000_000, subBalance:1_500_000, totalBalance:31_500_000, subCount:1, status:"active", createdAt:"2026-02-28 11:08:55", children:["bob_hi::PHP"] },
+      "bob_hi::PHP": { sysId:"qweqwe-1-1-1", user:"bob_hi", accountType:"游戏", currency:"PHP", shareRatio:0.08, balance:1_500_000, subBalance:0, totalBalance:1_500_000, subCount:0, status:"active", createdAt:"2026-03-15 19:42:08", children:[] },
+      "dave_y::PHP": { sysId:"qweqwe-1-2", user:"dave_y", accountType:"游戏", currency:"PHP", shareRatio:0.075, balance:1_320_000, subBalance:0, totalBalance:1_320_000, subCount:0, status:"active", createdAt:"2026-03-02 16:25:14", children:[] },
+      "zoe_ph::PHP": { sysId:"qweqwe-1-3", user:"zoe_ph", accountType:"游戏", currency:"PHP", shareRatio:0.06, balance:0, subBalance:0, totalBalance:0, subCount:0, status:"frozen", createdAt:"2026-02-15 22:18:33", children:[] },
+      "eva_ph::PHP": { sysId:"qweqwe-2", user:"eva_ph", accountType:"游戏", currency:"PHP", shareRatio:0.10, balance:8_000_000, subBalance:0, totalBalance:8_000_000, subCount:0, status:"active", createdAt:"2026-02-20 09:55:42", children:[] },
+
+      // === lucky88 树 ===
+      "lucky88::PHP": { sysId:"lucky88", user:"lucky88", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.125, balance:894_320, subBalance:2_140_500, totalBalance:3_034_820, subCount:2, status:"active", createdAt:"2025-12-03 11:22:08", children:["luk-002::PHP","luk-005::PHP"] },
+      "luk-002::PHP": { sysId:"lucky88-1", user:"luk-002", accountType:"游戏", currency:"PHP", shareRatio:0.07, balance:1_500, subBalance:0, totalBalance:1_500, subCount:0, status:"active", createdAt:"2026-04-12 10:08:15", children:[] },
+      "luk-005::PHP": { sysId:"lucky88-2", user:"luk-005", accountType:"游戏", currency:"PHP", shareRatio:0.085, balance:2_139_000, subBalance:0, totalBalance:2_139_000, subCount:0, status:"active", createdAt:"2026-04-20 15:22:30", children:[] },
+
+      // === diamond 树 ===
+      "diamond::PHP": { sysId:"diamond", user:"diamond", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.225, balance:24_890.55, subBalance:38_120.20, totalBalance:63_010.75, subCount:2, status:"active", createdAt:"2025-09-25 15:48:19", children:["dia-014::PHP","dia-021::PHP"] },
+      "dia-014::PHP": { sysId:"diamond-1", user:"dia-014", accountType:"游戏", currency:"PHP", shareRatio:0.13, balance:1_200, subBalance:0, totalBalance:1_200, subCount:0, status:"active", createdAt:"2026-04-15 18:40:11", children:[] },
+      "dia-021::PHP": { sysId:"diamond-2", user:"dia-021", accountType:"游戏", currency:"PHP", shareRatio:0.15, balance:36_920.20, subBalance:0, totalBalance:36_920.20, subCount:0, status:"active", createdAt:"2026-04-22 12:18:45", children:[] },
+
+      // === emerald 树 (frozen, 无下线) ===
+      "emerald::PHP": { sysId:"emerald", user:"emerald", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.05, balance:0, subBalance:0, totalBalance:0, subCount:0, status:"frozen", createdAt:"2025-06-08 14:25:11", children:[] },
+
+      // === sapphire 树 ===
+      "sapphire::PHP": { sysId:"sapphire", user:"sapphire", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.165, balance:3_240_000, subBalance:11_840_000, totalBalance:15_080_000, subCount:2, status:"active", createdAt:"2026-02-14 16:32:55", children:["sap-014::PHP","sap-002::PHP"] },
+      "sap-014::PHP": { sysId:"sapphire-1", user:"sap-014", accountType:"游戏", currency:"PHP", shareRatio:0.11, balance:7_840_000, subBalance:0, totalBalance:7_840_000, subCount:0, status:"active", createdAt:"2026-03-30 09:30:08", children:[] },
+      "sap-002::PHP": { sysId:"sapphire-2", user:"sap-002", accountType:"游戏", currency:"PHP", shareRatio:0.095, balance:4_000_000, subBalance:0, totalBalance:4_000_000, subCount:0, status:"active", createdAt:"2026-04-05 14:50:22", children:[] },
+
+      // === goldenstar 树 (无下线) ===
+      "goldenstar::PHP": { sysId:"goldenstar", user:"goldenstar", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.30, balance:1_200_000, subBalance:0, totalBalance:1_200_000, subCount:0, status:"active", createdAt:"2026-04-25 10:14:22", children:[] },
+
+      // === bigwhale 大客户 (老顶代 / 低占成 / 大额) ===
+      "bigwhale::PHP": { sysId:"bigwhale", user:"bigwhale", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.08, balance:50_000_000, subBalance:72_400_000, totalBalance:122_400_000, subCount:138, status:"active", createdAt:"2024-08-15 10:20:30", children:[] },
+
+      // === rookie01 新开户 (高占成 / 余额 0) ===
+      "rookie01::PHP": { sysId:"rookie01", user:"rookie01", accountType:"普通(顶代)", currency:"PHP", shareRatio:0.33, balance:0, subBalance:0, totalBalance:0, subCount:0, status:"active", createdAt:"2026-04-28 18:42:11", children:[] },
+    };
+    // 顶代行 = 列表起点 (V0.2 全 PHP, 8 顶代)
+    const TOP_AGENT_KEYS = ["qweqwe::PHP","lucky88::PHP","diamond::PHP","emerald::PHP","sapphire::PHP","goldenstar::PHP","bigwhale::PHP","rookie01::PHP"];
+
+    // 注单 mock - 三方游戏商每笔回调 (Sammy 2026-04-30 截图对齐字段)
+    // 注单号统一 18 位数字 (三方真实流水号风格)
+    // 玩家维度:playerSysId (= ACCOUNTS 里玩家的 sysId, 如 "qweqwe-1-1-1") + playerUser (= 玩家 user, 如 "bob_hi")
+    // 加 settleTime (结算时间)
+    const MOCK_BETS = [
+      { id:"519346028101500970", playerSysId:"qweqwe-1-1-1", playerUser:"bob_hi", topAgent:"qweqwe", provider:"UUS 体育", providerCode:"UUS", gameType:"体育 ⚽", league:"足球 / 印度锡金甲组联赛", teamHome:"霹雳北联", teamAway:"红熊猫", score:"2-1", playMethod:"滚球 全场.独赢盘", selection:"霹雳北联", odds:1.34, bundleType:"1 单注", betTime:"2026-04-30 20:47:50", settleTime:"2026-04-30 22:38:14", stake:1_0000, payout:1_3400, winLoss:3_400, currency:"KRW", status:"已结算" },
+      { id:"519346028101500971", playerSysId:"qweqwe-1-1-1", playerUser:"bob_hi", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 韩国 K 联赛", teamHome:"全北现代", teamAway:"水原三星", score:"1-1", playMethod:"全场.让球", selection:"全北现代 -1.5", odds:2.10, bundleType:"1 单注", betTime:"2026-04-29 16:08:22", settleTime:"2026-04-29 17:55:08", stake:120_000, payout:0, winLoss:-120_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500972", playerSysId:"diamond-2", playerUser:"dia-021", topAgent:"diamond", provider:"PG SOFT", providerCode:"PG", gameType:"电子 🎰", league:"PG 老虎机", teamHome:"", teamAway:"", score:"", playMethod:"夜店女王 旋转", selection:"局次 #2891", odds:3.70, bundleType:"单局", betTime:"2026-04-29 16:05:11", settleTime:"2026-04-29 16:05:14", stake:50, payout:185, winLoss:135, currency:"USD", status:"已结算" },
+      { id:"519346028101500973", playerSysId:"qweqwe-1-1-1", playerUser:"bob_hi", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 西甲", teamHome:"皇家马德里", teamAway:"巴塞罗那", score:"3-2", playMethod:"全场.大小盘", selection:"大 4.5", odds:1.90, bundleType:"1 单注", betTime:"2026-04-29 15:58:03", settleTime:"2026-04-29 17:50:22", stake:200_000, payout:380_000, winLoss:180_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500974", playerSysId:"sapphire-1", playerUser:"sap-014", topAgent:"sapphire", provider:"VR 六合彩", providerCode:"VR", gameType:"六合彩 🎱", league:"VR 六合彩 第 240430 期", teamHome:"", teamAway:"", score:"", playMethod:"特码 单选", selection:"号码 38", odds:48.00, bundleType:"单选", betTime:"2026-04-29 15:30:00", settleTime:"2026-04-29 16:00:00", stake:500_000, payout:0, winLoss:-500_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500975", playerSysId:"lucky88-2", playerUser:"luk-005", topAgent:"lucky88", provider:"PG SOFT", providerCode:"PG", gameType:"电子 🎰", league:"PG 捕鱼达人", teamHome:"", teamAway:"", score:"", playMethod:"金鲨炮 ×3", selection:"局次 #18247", odds:0, bundleType:"单局", betTime:"2026-04-29 15:22:47", settleTime:"2026-04-29 15:22:50", stake:200, payout:0, winLoss:-200, currency:"PHP", status:"已结算" },
+      { id:"519346028101500976", playerSysId:"qweqwe-1-2", playerUser:"dave_y", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 英超", teamHome:"曼联", teamAway:"利物浦", score:"2-1", playMethod:"全场.独赢盘 串 2", selection:"曼联 / 阿森纳", odds:1.90, bundleType:"2 串 1", betTime:"2026-04-29 14:50:18", settleTime:"2026-04-29 16:42:33", stake:80_000, payout:152_000, winLoss:72_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500977", playerSysId:"diamond-1", playerUser:"dia-014", topAgent:"diamond", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"篮球 / NBA", teamHome:"湖人", teamAway:"勇士", score:"112-108", playMethod:"全场.让分", selection:"湖人 +3.5", odds:1.80, bundleType:"1 单注", betTime:"2026-04-29 14:30:00", settleTime:"2026-04-29 16:55:11", stake:1500, payout:2700, winLoss:1200, currency:"USD", status:"已结算" },
+      { id:"519346028101500978", playerSysId:"qweqwe-2", playerUser:"eva_ph", topAgent:"qweqwe", provider:"VR 六合彩", providerCode:"VR", gameType:"六合彩 🎱", league:"VR 六合彩 第 240429 期", teamHome:"", teamAway:"", score:"", playMethod:"两面.大小", selection:"大", odds:1.95, bundleType:"单选", betTime:"2026-04-29 14:00:05", settleTime:"2026-04-29 14:30:00", stake:50_000, payout:0, winLoss:-50_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500979", playerSysId:"sapphire-2", playerUser:"sap-002", topAgent:"sapphire", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 意甲", teamHome:"AC 米兰", teamAway:"国际米兰", score:"0-2", playMethod:"全场.波胆", selection:"1-1", odds:7.50, bundleType:"1 单注", betTime:"2026-04-29 13:42:30", settleTime:"2026-04-29 15:30:18", stake:300_000, payout:0, winLoss:-300_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500980", playerSysId:"lucky88-1", playerUser:"luk-002", topAgent:"lucky88", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 菲律宾联赛", teamHome:"马尼拉雄狮", teamAway:"宿务 FC", score:"2-0", playMethod:"全场.独赢盘", selection:"马尼拉雄狮", odds:1.85, bundleType:"1 单注", betTime:"2026-04-29 13:20:11", settleTime:"2026-04-29 15:08:42", stake:1000, payout:1850, winLoss:850, currency:"PHP", status:"已结算" },
+      { id:"519346028101500981", playerSysId:"qweqwe-1-3", playerUser:"zoe_ph", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 德甲", teamHome:"拜仁慕尼黑", teamAway:"多特蒙德", score:"1-3", playMethod:"全场.让球", selection:"拜仁 -1.5", odds:1.70, bundleType:"1 单注", betTime:"2026-04-29 12:55:00", settleTime:"2026-04-29 14:48:33", stake:150_000, payout:0, winLoss:-150_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500982", playerSysId:"diamond-1", playerUser:"dia-014", topAgent:"diamond", provider:"PG SOFT", providerCode:"PG", gameType:"电子 🎰", league:"PG 麻将胡了", teamHome:"", teamAway:"", score:"", playMethod:"赏金 ×5", selection:"局次 #99012", odds:0, bundleType:"单局", betTime:"2026-04-29 12:30:42", settleTime:"2026-04-29 12:30:45", stake:200, payout:0, winLoss:-200, currency:"USD", status:"已结算" },
+      // === 加压 mock: qweqwe 树下 15 条体育已结算 (覆盖 4 玩家, 让弹窗分页 2 页) ===
+      { id:"519346028101500983", playerSysId:"qweqwe-1-1-1", playerUser:"bob_hi", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 法甲", teamHome:"巴黎圣日尔曼", teamAway:"马赛", score:"3-0", playMethod:"全场.独赢盘", selection:"巴黎圣日尔曼", odds:1.45, bundleType:"1 单注", betTime:"2026-04-28 19:30:00", settleTime:"2026-04-28 21:25:14", stake:50_000, payout:72_500, winLoss:22_500, currency:"KRW", status:"已结算" },
+      { id:"519346028101500984", playerSysId:"qweqwe-1-2", playerUser:"dave_y", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 法甲", teamHome:"里昂", teamAway:"摩纳哥", score:"1-2", playMethod:"全场.让球", selection:"摩纳哥 -0.5", odds:2.05, bundleType:"1 单注", betTime:"2026-04-28 19:45:00", settleTime:"2026-04-28 21:42:08", stake:80_000, payout:164_000, winLoss:84_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500985", playerSysId:"qweqwe-2", playerUser:"eva_ph", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 西甲", teamHome:"马德里竞技", teamAway:"塞维利亚", score:"2-2", playMethod:"全场.大小盘", selection:"小 2.5", odds:1.95, bundleType:"1 单注", betTime:"2026-04-28 03:00:00", settleTime:"2026-04-28 04:55:33", stake:120_000, payout:0, winLoss:-120_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500986", playerSysId:"qweqwe-1-3", playerUser:"zoe_ph", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"篮球 / KBL", teamHome:"首尔 SK", teamAway:"釜山 KT", score:"95-88", playMethod:"全场.让分", selection:"首尔 SK -3.5", odds:1.85, bundleType:"1 单注", betTime:"2026-04-28 11:30:00", settleTime:"2026-04-28 13:42:18", stake:200_000, payout:370_000, winLoss:170_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500987", playerSysId:"qweqwe-1-1-1", playerUser:"bob_hi", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 韩国 K 联赛", teamHome:"蔚山现代", teamAway:"济州联", score:"0-1", playMethod:"全场.独赢盘", selection:"济州联", odds:3.20, bundleType:"1 单注", betTime:"2026-04-28 14:00:00", settleTime:"2026-04-28 15:55:11", stake:30_000, payout:96_000, winLoss:66_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500988", playerSysId:"qweqwe-1-2", playerUser:"dave_y", topAgent:"qweqwe", provider:"UUS 体育", providerCode:"UUS", gameType:"体育 ⚽", league:"足球 / 印度锡金甲组联赛", teamHome:"东孟加拉", teamAway:"莫亨巴根", score:"1-3", playMethod:"滚球 全场.让球", selection:"莫亨巴根 -1", odds:1.75, bundleType:"1 单注", betTime:"2026-04-28 16:30:00", settleTime:"2026-04-28 18:25:42", stake:60_000, payout:105_000, winLoss:45_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500989", playerSysId:"qweqwe-2", playerUser:"eva_ph", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"网球 / ATP 1000", teamHome:"德约科维奇", teamAway:"阿尔卡拉斯", score:"2-1", playMethod:"全场.独赢盘", selection:"德约科维奇", odds:2.40, bundleType:"1 单注", betTime:"2026-04-28 21:00:00", settleTime:"2026-04-29 00:18:55", stake:90_000, payout:216_000, winLoss:126_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500990", playerSysId:"qweqwe-1-1-1", playerUser:"bob_hi", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 英冠", teamHome:"利兹联", teamAway:"南安普顿", score:"2-0", playMethod:"全场.波胆", selection:"2-1", odds:8.50, bundleType:"1 单注", betTime:"2026-04-28 22:00:00", settleTime:"2026-04-29 00:08:33", stake:40_000, payout:0, winLoss:-40_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500991", playerSysId:"qweqwe-1-3", playerUser:"zoe_ph", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 英超", teamHome:"切尔西", teamAway:"热刺", score:"3-1", playMethod:"半场.独赢盘", selection:"切尔西", odds:2.20, bundleType:"1 单注", betTime:"2026-04-27 23:30:00", settleTime:"2026-04-28 00:25:18", stake:75_000, payout:165_000, winLoss:90_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500992", playerSysId:"qweqwe-1-2", playerUser:"dave_y", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 法甲", teamHome:"尼斯", teamAway:"雷恩", score:"1-1", playMethod:"全场.大小盘", selection:"大 2.5", odds:2.00, bundleType:"1 单注", betTime:"2026-04-27 19:30:00", settleTime:"2026-04-27 21:30:00", stake:100_000, payout:0, winLoss:-100_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500993", playerSysId:"qweqwe-1-1-1", playerUser:"bob_hi", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"棒球 / KBO", teamHome:"LG 双子", teamAway:"斗山熊", score:"7-4", playMethod:"全场.让分", selection:"LG 双子 -1.5", odds:1.90, bundleType:"1 单注", betTime:"2026-04-27 11:30:00", settleTime:"2026-04-27 14:48:44", stake:150_000, payout:285_000, winLoss:135_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500994", playerSysId:"qweqwe-2", playerUser:"eva_ph", topAgent:"qweqwe", provider:"UUS 体育", providerCode:"UUS", gameType:"体育 ⚽", league:"足球 / 印度锡金甲组联赛", teamHome:"阿瓦迪 FC", teamAway:"DSK 邦加罗尔", score:"0-0", playMethod:"全场.大小盘", selection:"小 1.5", odds:2.40, bundleType:"1 单注", betTime:"2026-04-27 17:00:00", settleTime:"2026-04-27 18:55:00", stake:50_000, payout:120_000, winLoss:70_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500995", playerSysId:"qweqwe-1-3", playerUser:"zoe_ph", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / J 联赛", teamHome:"川崎前锋", teamAway:"横滨水手", score:"2-1", playMethod:"全场.独赢盘", selection:"川崎前锋", odds:1.80, bundleType:"1 单注", betTime:"2026-04-27 13:00:00", settleTime:"2026-04-27 14:55:18", stake:65_000, payout:117_000, winLoss:52_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500996", playerSysId:"qweqwe-1-2", playerUser:"dave_y", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 葡超", teamHome:"本菲卡", teamAway:"波尔图", score:"3-3", playMethod:"全场.独赢盘 串 2", selection:"本菲卡 / 里斯本竞技", odds:3.40, bundleType:"2 串 1", betTime:"2026-04-27 03:30:00", settleTime:"2026-04-27 06:08:12", stake:200_000, payout:0, winLoss:-200_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500997", playerSysId:"qweqwe-1-1-1", playerUser:"bob_hi", topAgent:"qweqwe", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / MLS", teamHome:"洛杉矶 FC", teamAway:"迈阿密国际", score:"1-2", playMethod:"全场.独赢盘", selection:"迈阿密国际", odds:2.80, bundleType:"1 单注", betTime:"2026-04-27 08:30:00", settleTime:"2026-04-27 10:25:33", stake:55_000, payout:154_000, winLoss:99_000, currency:"KRW", status:"已结算" },
+      // === sapphire 树下 8 条 ===
+      { id:"519346028101500998", playerSysId:"sapphire-1", playerUser:"sap-014", topAgent:"sapphire", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 沙特联赛", teamHome:"利雅得新月", teamAway:"利雅得胜利", score:"2-1", playMethod:"全场.独赢盘", selection:"利雅得新月", odds:2.00, bundleType:"1 单注", betTime:"2026-04-28 22:00:00", settleTime:"2026-04-28 23:55:08", stake:300_000, payout:600_000, winLoss:300_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101500999", playerSysId:"sapphire-2", playerUser:"sap-002", topAgent:"sapphire", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 阿联酋联赛", teamHome:"半岛酋长", teamAway:"阿尔艾因", score:"0-3", playMethod:"全场.让球", selection:"阿尔艾因 -1.5", odds:1.95, bundleType:"1 单注", betTime:"2026-04-28 23:00:00", settleTime:"2026-04-29 01:08:42", stake:200_000, payout:390_000, winLoss:190_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101501000", playerSysId:"sapphire-1", playerUser:"sap-014", topAgent:"sapphire", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 卡塔尔联赛", teamHome:"杜海勒", teamAway:"萨德", score:"1-1", playMethod:"全场.大小盘", selection:"小 2.5", odds:1.80, bundleType:"1 单注", betTime:"2026-04-27 22:00:00", settleTime:"2026-04-28 00:00:00", stake:180_000, payout:324_000, winLoss:144_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101501001", playerSysId:"sapphire-2", playerUser:"sap-002", topAgent:"sapphire", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"篮球 / NBA", teamHome:"凯尔特人", teamAway:"勇士", score:"118-110", playMethod:"全场.让分", selection:"凯尔特人 -5.5", odds:1.85, bundleType:"1 单注", betTime:"2026-04-27 11:00:00", settleTime:"2026-04-27 13:55:00", stake:250_000, payout:0, winLoss:-250_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101501002", playerSysId:"sapphire-1", playerUser:"sap-014", topAgent:"sapphire", provider:"UUS 体育", providerCode:"UUS", gameType:"体育 ⚽", league:"足球 / 印度锡金甲组联赛", teamHome:"古瓦哈蒂", teamAway:"加尔各答", score:"2-2", playMethod:"滚球 全场.独赢盘", selection:"古瓦哈蒂", odds:2.50, bundleType:"1 单注", betTime:"2026-04-27 18:00:00", settleTime:"2026-04-27 20:00:00", stake:400_000, payout:1_000_000, winLoss:600_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101501003", playerSysId:"sapphire-2", playerUser:"sap-002", topAgent:"sapphire", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"网球 / WTA 1000", teamHome:"斯瓦泰克", teamAway:"萨巴伦卡", score:"2-0", playMethod:"全场.独赢盘", selection:"斯瓦泰克", odds:1.65, bundleType:"1 单注", betTime:"2026-04-28 18:00:00", settleTime:"2026-04-28 20:25:18", stake:120_000, payout:198_000, winLoss:78_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101501004", playerSysId:"sapphire-1", playerUser:"sap-014", topAgent:"sapphire", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 澳超", teamHome:"墨尔本城", teamAway:"悉尼 FC", score:"1-0", playMethod:"全场.独赢盘", selection:"墨尔本城", odds:2.10, bundleType:"1 单注", betTime:"2026-04-27 14:30:00", settleTime:"2026-04-27 16:25:42", stake:160_000, payout:336_000, winLoss:176_000, currency:"KRW", status:"已结算" },
+      { id:"519346028101501005", playerSysId:"sapphire-2", playerUser:"sap-002", topAgent:"sapphire", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 中超", teamHome:"上海海港", teamAway:"山东泰山", score:"2-2", playMethod:"全场.波胆", selection:"2-2", odds:11.00, bundleType:"1 单注", betTime:"2026-04-28 17:00:00", settleTime:"2026-04-28 19:00:00", stake:50_000, payout:550_000, winLoss:500_000, currency:"KRW", status:"已结算" },
+      // === diamond 树下 4 条 ===
+      { id:"519346028101501006", playerSysId:"diamond-1", playerUser:"dia-014", topAgent:"diamond", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 巴西甲", teamHome:"弗拉门戈", teamAway:"科林蒂安", score:"2-0", playMethod:"全场.让球", selection:"弗拉门戈 -0.5", odds:1.65, bundleType:"1 单注", betTime:"2026-04-28 08:00:00", settleTime:"2026-04-28 10:00:00", stake:5000, payout:8250, winLoss:3250, currency:"USD", status:"已结算" },
+      { id:"519346028101501007", playerSysId:"diamond-2", playerUser:"dia-021", topAgent:"diamond", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"棒球 / MLB", teamHome:"道奇", teamAway:"巨人", score:"6-4", playMethod:"全场.独赢盘", selection:"道奇", odds:1.55, bundleType:"1 单注", betTime:"2026-04-28 11:00:00", settleTime:"2026-04-28 13:42:18", stake:3000, payout:4650, winLoss:1650, currency:"USD", status:"已结算" },
+      { id:"519346028101501008", playerSysId:"diamond-1", playerUser:"dia-014", topAgent:"diamond", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"网球 / ATP 500", teamHome:"梅德韦杰夫", teamAway:"鲁内", score:"2-1", playMethod:"全场.独赢盘", selection:"梅德韦杰夫", odds:1.40, bundleType:"1 单注", betTime:"2026-04-27 19:00:00", settleTime:"2026-04-27 22:18:55", stake:8000, payout:11200, winLoss:3200, currency:"USD", status:"已结算" },
+      { id:"519346028101501009", playerSysId:"diamond-2", playerUser:"dia-021", topAgent:"diamond", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"篮球 / EuroLeague", teamHome:"皇马篮球", teamAway:"巴塞罗那篮球", score:"82-79", playMethod:"全场.让分", selection:"皇马篮球 -3.5", odds:1.88, bundleType:"1 单注", betTime:"2026-04-27 22:00:00", settleTime:"2026-04-28 00:08:42", stake:2500, payout:0, winLoss:-2500, currency:"USD", status:"已结算" },
+      // === lucky88 树下 4 条 ===
+      { id:"519346028101501010", playerSysId:"lucky88-1", playerUser:"luk-002", topAgent:"lucky88", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 菲律宾联赛", teamHome:"卡韦特 FC", teamAway:"贝瑟斯达", score:"3-1", playMethod:"全场.独赢盘", selection:"卡韦特 FC", odds:1.75, bundleType:"1 单注", betTime:"2026-04-28 17:00:00", settleTime:"2026-04-28 19:00:00", stake:500, payout:875, winLoss:375, currency:"PHP", status:"已结算" },
+      { id:"519346028101501011", playerSysId:"lucky88-2", playerUser:"luk-005", topAgent:"lucky88", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"篮球 / PBA", teamHome:"圣米格尔", teamAway:"芭兰咏麦芽", score:"105-99", playMethod:"全场.让分", selection:"圣米格尔 -4.5", odds:1.90, bundleType:"1 单注", betTime:"2026-04-28 13:00:00", settleTime:"2026-04-28 15:55:18", stake:1500, payout:2850, winLoss:1350, currency:"PHP", status:"已结算" },
+      { id:"519346028101501012", playerSysId:"lucky88-1", playerUser:"luk-002", topAgent:"lucky88", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 菲律宾联赛", teamHome:"马尼拉雄狮", teamAway:"达瓦奥东方", score:"1-2", playMethod:"全场.大小盘", selection:"小 2.5", odds:2.00, bundleType:"1 单注", betTime:"2026-04-27 17:00:00", settleTime:"2026-04-27 19:00:00", stake:800, payout:0, winLoss:-800, currency:"PHP", status:"已结算" },
+      { id:"519346028101501013", playerSysId:"lucky88-2", playerUser:"luk-005", topAgent:"lucky88", provider:"BBIN 体育", providerCode:"BBIN", gameType:"体育 ⚽", league:"足球 / 越南联赛", teamHome:"河内 FC", teamAway:"胡志明市", score:"2-1", playMethod:"全场.独赢盘", selection:"河内 FC", odds:1.65, bundleType:"1 单注", betTime:"2026-04-27 13:30:00", settleTime:"2026-04-27 15:25:00", stake:2500, payout:4125, winLoss:1625, currency:"PHP", status:"已结算" },
+    ];
+
+    // 场次明细弹窗 (Sammy 2026-04-30): 显示某场次下的注单, 含分页 + 小计 + 总计
+    function SessionDetailModal({ session, onClose, appendSystemLog }) {
+      // 匹配条件: 体育 + 已结算 + 同一顶代 (PM 简化: 不严格按 date 匹配, 真实按场次 batchId)
+      const matched = MOCK_BETS.filter(b => b.gameType.includes("体育") && b.status === "已结算" && b.topAgent === session.topAgent);
+      const [pageNum, setPageNum] = useState(0);
+      const pageSize = 10;
+      const totalPages = Math.max(1, Math.ceil(matched.length / pageSize));
+      const pageData = matched.slice(pageNum * pageSize, (pageNum + 1) * pageSize);
+      const sumOf = (arr, key) => arr.reduce((s, b) => s + (b[key] !== undefined ? b[key] : 0), 0);
+      const sumValid = (arr) => arr.reduce((s, b) => s + (b.validStake !== undefined ? b.validStake : b.stake), 0);
+      const sub = { stake: sumOf(pageData,"stake"), payout: sumOf(pageData,"payout"), winLoss: sumOf(pageData,"winLoss"), validStake: sumValid(pageData) };
+      const total = { stake: sumOf(matched,"stake"), payout: sumOf(matched,"payout"), winLoss: sumOf(matched,"winLoss"), validStake: sumValid(matched) };
+      return (
+        <div className="modal-backdrop">
+          <div className="modal modal-wide" onClick={e=>e.stopPropagation()} style={{width:1100,maxWidth:"96vw",position:"relative"}}>
+            {/* 右上角关闭 */}
+            <button onClick={onClose} aria-label="关闭" style={{position:"absolute",top:12,right:12,width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",background:"transparent",border:"1px solid #2A3648",borderRadius:6,color:"#9AA4B5",cursor:"pointer",fontSize:14,lineHeight:1}}>✕</button>
+            <h3 className="text-base font-semibold mb-1" style={{paddingRight:36}}>游戏明细 · <span className="mono text-cool">{session.id}</span></h3>
+            <p className="text-xs text-faint mb-1">{session.date} · 顶代 <span className="mono">{session.user}</span> · 币种 {session.currency} · 共 {matched.length} 条注单</p>
+            <p className="text-xs mb-3" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):V0.2 mock 简化按 topAgent 过滤;真实场景应按 场次 batchId 关联</p>
+            <div className="bg-panel border border-line rounded-lg overflow-hidden mb-3">
+              <div className="scroll-x">
+                <table style={{fontSize:12}}>
+                  <thead><tr>
+                    <th>注单号</th><th>系统户口号</th><th>用户账号</th><th>币种</th><th>投注时间</th><th>结算时间</th>
+                    <th className="text-right">投注金额</th><th className="text-right">派彩金额</th><th className="text-right">输赢</th><th className="text-right">有效投注</th>
+                  </tr></thead>
+                  <tbody>
+                    {pageData.map(b => (
+                      <tr key={b.id}>
+                        <td className="mono" style={{fontSize:11}}>{b.id}</td>
+                        <td className="mono text-muted">{b.playerSysId}</td>
+                        <td className="mono">{b.playerUser}</td>
+                        <td><span className="chip chip-info">{b.currency}</span></td>
+                        <td className="text-muted" style={{fontSize:11}}>{b.betTime}</td>
+                        <td className="text-muted" style={{fontSize:11}}>{b.settleTime}</td>
+                        <td className="num text-right">{fmtAmount(b.stake)}</td>
+                        <td className="num text-right">{fmtAmount(b.payout)}</td>
+                        <td className="num text-right" style={{color: b.winLoss > 0 ? "#5BC97C" : (b.winLoss < 0 ? "#FF6B6B" : "#9AA4B5")}}>{(b.winLoss > 0 ? "+" : "") + fmtAmount(b.winLoss)}</td>
+                        <td className="num text-right">{fmtAmount(b.validStake !== undefined ? b.validStake : b.stake)}</td>
+                      </tr>
+                    ))}
+                    {pageData.length === 0 && <tr><td colSpan="10" style={{textAlign:"center",padding:"20px",color:"#6B7280"}}>暂无数据</td></tr>}
+                  </tbody>
+                  {pageData.length > 0 && (
+                    <tfoot>
+                      <tr style={{background:"#0F141C",borderTop:"1px solid #2A3648"}}>
+                        <td colSpan="6" className="text-faint" style={{fontSize:11,padding:"8px"}}>本页小计({pageData.length} 条)</td>
+                        <td className="num text-right">{fmtAmount(sub.stake)}</td>
+                        <td className="num text-right">{fmtAmount(sub.payout)}</td>
+                        <td className="num text-right" style={{color: sub.winLoss > 0 ? "#5BC97C" : (sub.winLoss < 0 ? "#FF6B6B" : "#9AA4B5")}}>{(sub.winLoss > 0 ? "+" : "") + fmtAmount(sub.winLoss)}</td>
+                        <td className="num text-right">{fmtAmount(sub.validStake)}</td>
+                      </tr>
+                      <tr style={{background:"#11161E"}}>
+                        <td colSpan="6" className="text-cool font-semibold" style={{fontSize:11,padding:"8px"}}>总计({matched.length} 条)</td>
+                        <td className="num text-right text-cool">{fmtAmount(total.stake)}</td>
+                        <td className="num text-right text-cool">{fmtAmount(total.payout)}</td>
+                        <td className="num text-right" style={{color: total.winLoss > 0 ? "#5BC97C" : (total.winLoss < 0 ? "#FF6B6B" : "#9AA4B5"),fontWeight:600}}>{(total.winLoss > 0 ? "+" : "") + fmtAmount(total.winLoss)}</td>
+                        <td className="num text-right text-cool">{fmtAmount(total.validStake)}</td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+            </div>
+            {/* 左下: 导出 Excel  右下: 翻页 */}
+            <div className="flex items-center gap-2" style={{justifyContent:"space-between"}}>
+              <button className="btn btn-ghost" disabled={matched.length===0} style={{padding:"4px 14px",fontSize:12}} onClick={()=>doExport("游戏明细_"+session.id, matched.length, appendSystemLog)}>导出 Excel</button>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-faint" style={{marginRight:4}}>每页 {pageSize} 条 · 共 {matched.length} 条</span>
+                <button className="btn btn-ghost" onClick={()=>setPageNum(p=>Math.max(0,p-1))} disabled={pageNum===0} style={{padding:"4px 12px",fontSize:12}}>← 上一页</button>
+                <span className="text-xs text-muted">第 {pageNum+1} / {totalPages} 页</span>
+                <button className="btn btn-ghost" onClick={()=>setPageNum(p=>Math.min(totalPages-1,p+1))} disabled={pageNum>=totalPages-1} style={{padding:"4px 12px",fontSize:12}}>下一页 →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 体育场次记录 mock - 每顶代每天一行 (Sammy 2026-04-30 拍 15 列)
+    // submitRate 数组: 上缴给多个上级顶代的佣金率 [{ sysId, rate }, ...]
+    // 状态:跑批生成后默认「未结算」+ commission=null (Sammy 2026-05-11 拍);finance 角色结算后 → status='已结算' + commission 算好
+    const MOCK_SPORTS_SESSIONS = [
+      // 编号规则: SP-年月日时分-自然数 (每日 00:10 跑前一天的数据)
+      { id:"SP-202604290010-001", date:"2026-04-28", topAgent:"qweqwe",  sysId:"qweqwe",  user:"qweqwe",  currency:"KRW", shareRatio:0.1875, validStake:118_000_000, shareAmount:22_125_000, totalWinLoss:8_320_000, rate:0.0750, commission:8_850_000,  submitRate:[{sysId:"lucky88",rate:0.02},{sysId:"sapphire",rate:0.015},{sysId:"bigwhale",rate:0.005}], workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算", settledAt:"2026-04-29 09:30:12", settledBy:"finance-luo" },
+      { id:"SP-202604290010-002", date:"2026-04-28", topAgent:"diamond", sysId:"diamond", user:"diamond", currency:"USD", shareRatio:0.225,  validStake:210_500,     shareAmount:47_362.50,  totalWinLoss:18_300,    rate:0.0800, commission:null,        submitRate:[{sysId:"qweqwe",rate:0.018},{sysId:"lucky88",rate:0.012}],                                 workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"未结算", settledAt:null, settledBy:null },
+      { id:"SP-202604290010-003", date:"2026-04-28", topAgent:"lucky88", sysId:"lucky88", user:"lucky88", currency:"PHP", shareRatio:0.125,  validStake:2_980_000,   shareAmount:372_500,    totalWinLoss:-184_000,  rate:0.0600, commission:178_800,    submitRate:[{sysId:"qweqwe",rate:0.02},{sysId:"sapphire",rate:0.015}],                                  workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"已结算", settledAt:"2026-04-29 09:32:08", settledBy:"finance-luo" },
+      { id:"SP-202604290010-004", date:"2026-04-28", topAgent:"sapphire",sysId:"sapphire",user:"sapphire",currency:"KRW", shareRatio:0.165,  validStake:52_300_000,  shareAmount:8_629_500,  totalWinLoss:3_140_000, rate:0.0750, commission:null,        submitRate:[{sysId:"qweqwe",rate:0.02},{sysId:"lucky88",rate:0.015},{sysId:"diamond",rate:0.005}],     workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"未结算", settledAt:null, settledBy:null },
+      { id:"SP-202604290010-005", date:"2026-04-28", topAgent:"emerald", sysId:"emerald", user:"emerald", currency:"USD", shareRatio:0.05,   validStake:0,           shareAmount:0,          totalWinLoss:0,         rate:0.0700, commission:null,        submitRate:[{sysId:"qweqwe",rate:0.02},{sysId:"lucky88",rate:0.015}],                                   workStartAt:"2026-04-28 00:00:00", workEndAt:"2026-04-28 23:59:59", status:"未结算", settledAt:null, settledBy:null },
+      { id:"SP-202604280010-001", date:"2026-04-27", topAgent:"qweqwe",  sysId:"qweqwe",  user:"qweqwe",  currency:"KRW", shareRatio:0.1875, validStake:135_800_000, shareAmount:25_462_500, totalWinLoss:-4_180_000,rate:0.0750, commission:10_185_000, submitRate:[{sysId:"lucky88",rate:0.02},{sysId:"sapphire",rate:0.015},{sysId:"bigwhale",rate:0.005}], workStartAt:"2026-04-27 00:00:00", workEndAt:"2026-04-27 23:59:59", status:"已结算", settledAt:"2026-04-28 09:28:55", settledBy:"finance-luo" },
+      { id:"SP-202604280010-002", date:"2026-04-27", topAgent:"diamond", sysId:"diamond", user:"diamond", currency:"USD", shareRatio:0.225,  validStake:241_200,     shareAmount:54_270,     totalWinLoss:-12_400,   rate:0.0800, commission:null,        submitRate:[{sysId:"qweqwe",rate:0.018},{sysId:"lucky88",rate:0.012}],                                 workStartAt:"2026-04-27 00:00:00", workEndAt:"2026-04-27 23:59:59", status:"未结算", settledAt:null, settledBy:null },
+    ];
+
+    // 主体 = 这条流水的"被影响账号" (非账房非三方平台);sysId 用层级派生 (顶代=user, 下线=父-N, 玩家=父-N-M)
+    const MOCK_LEDGER = [
+      { id:"TX-20260429-3201", time:"2026-04-29 16:08:30", type:"transfer_in",  typeLabel:"三方体育上分", mainSysId:"sapphire",     mainUser:"sapphire", from:"sapphire (顶代)",     to:"BBIN 体育 (三方平台)",  amount:500_000,   currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3200", time:"2026-04-29 15:58:18", type:"transfer_out", typeLabel:"三方体育下分", mainSysId:"qweqwe",       mainUser:"qweqwe",   from:"BBIN 体育 (三方平台)", to:"qweqwe (顶代)",       amount:380_000,   currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3199", time:"2026-04-29 15:30:42", type:"agent_credit", typeLabel:"上分",         mainSysId:"qweqwe-1",     mainUser:"qw-008",   from:"qweqwe (顶代)",       to:"qw-008 (下线)",       amount:200_000,   currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3198", time:"2026-04-29 14:55:00", type:"house_credit", typeLabel:"上分",         mainSysId:"qweqwe",       mainUser:"qweqwe",   from:"AH-001 (账房)",       to:"qweqwe (顶代)",       amount:5_000_000, currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3197", time:"2026-04-29 14:30:00", type:"transfer_in",  typeLabel:"三方体育上分", mainSysId:"diamond-1-1",  mainUser:"dia-014",  from:"P-dia-014 (玩家)",     to:"BBIN 体育 (三方平台)",  amount:1500,      currency:"USD", status:"成功" },
+      { id:"TX-20260429-3196", time:"2026-04-29 13:45:22", type:"agent_debit",  typeLabel:"下分",         mainSysId:"lucky88-1",    mainUser:"luk-002",  from:"lucky88 (顶代)",      to:"luk-002 (下线)",      amount:1000,      currency:"PHP", status:"成功" },
+      { id:"TX-20260429-3195", time:"2026-04-29 13:20:11", type:"transfer_out", typeLabel:"三方体育下分", mainSysId:"lucky88-1-1",  mainUser:"luk-002",  from:"BBIN 体育 (三方平台)", to:"P-luk-002 (玩家)",     amount:1850,      currency:"PHP", status:"成功" },
+      { id:"TX-20260429-3194", time:"2026-04-29 12:08:45", type:"house_debit",  typeLabel:"下分",         mainSysId:"diamond",      mainUser:"diamond",  from:"diamond (顶代)",       to:"AH-003 (账房)",        amount:8_500,     currency:"USD", status:"成功" },
+      { id:"TX-20260429-3193", time:"2026-04-29 11:42:30", type:"transfer_in",  typeLabel:"三方体育上分", mainSysId:"qweqwe-1-1",   mainUser:"qw-008",   from:"P-qw-008 (玩家)",     to:"BBIN 体育 (三方平台)",  amount:50_000,    currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3192", time:"2026-04-29 11:15:00", type:"agent_credit", typeLabel:"上分",         mainSysId:"qweqwe-2",     mainUser:"qw-003",   from:"qweqwe (顶代)",       to:"qw-003 (下线)",       amount:80_000,    currency:"KRW", status:"成功" },
+      { id:"TX-20260429-3191", time:"2026-04-29 10:30:18", type:"transfer_out", typeLabel:"三方体育下分", mainSysId:"lucky88-2-1",  mainUser:"luk-005",  from:"BBIN 体育 (三方平台)", to:"P-luk-005 (玩家)",     amount:0,         currency:"PHP", status:"成功" },
+      { id:"TX-20260429-3190", time:"2026-04-29 09:50:44", type:"house_credit", typeLabel:"上分",         mainSysId:"lucky88",      mainUser:"lucky88",  from:"AH-002 (账房)",       to:"lucky88 (顶代)",      amount:200_000,   currency:"PHP", status:"成功" },
+      { id:"TX-20260429-3189", time:"2026-04-29 09:08:33", type:"transfer_in",  typeLabel:"三方体育上分", mainSysId:"diamond-2-1",  mainUser:"dia-021",  from:"P-dia-021 (玩家)",     to:"BBIN 体育 (三方平台)",  amount:50,        currency:"USD", status:"成功" },
+      { id:"TX-20260428-3188", time:"2026-04-28 22:14:09", type:"transfer_out", typeLabel:"三方体育下分", mainSysId:"sapphire-1-1", mainUser:"sap-014",  from:"BBIN 体育 (三方平台)", to:"P-sap-014 (玩家)",     amount:0,         currency:"KRW", status:"超时重试" },
+    ];
+
+    // 系统操作日志 = 平台员工 (operator/risk/finance) 在 S 端的写动作
+    // V0.2 合法动作面: 登录/登出 + 顶代户口写动作 4 类 (修改资料 / 新增下级 / 上分 / 下分) + 三大报表「导出 Excel」
+    const INITIAL_AUDIT_SYSTEM = [
+      // 报表导出 (operator/risk/finance 都能做)
+      { time:"2026-04-29 16:30:11", actorType:"员工", actor:"admin (operator)",      action:"导出 Excel", target:"体育注单记录  2026-04-28 ~ 2026-04-29", ip:"10.4.2.18", reason:"月底核对" },
+      { time:"2026-04-29 15:45:02", actorType:"员工", actor:"finance-luo (finance)", action:"导出 Excel", target:"交易流水记录  2026-04-27 ~ 2026-04-28", ip:"10.4.2.42", reason:"月底对账" },
+      { time:"2026-04-29 15:30:42", actorType:"员工", actor:"admin (operator)",      action:"上分",       target:"下线 qw-008 (qweqwe-1)  +200,000 KRW", ip:"10.4.2.18", reason:"代客户上分" },
+      { time:"2026-04-29 14:55:00", actorType:"员工", actor:"admin (operator)",      action:"修改资料",   target:"顶代 emerald  状态: active → frozen", ip:"10.4.2.18", reason:"对账多次失败 风控建议暂停" },
+      { time:"2026-04-29 14:22:18", actorType:"员工", actor:"admin (operator)",      action:"新增下级",   target:"顶代 qweqwe (KRW) 下新增代理 carry01 (qweqwe-3)", ip:"10.4.2.18", reason:"新合作下线开户" },
+      { time:"2026-04-29 13:45:22", actorType:"员工", actor:"admin (operator)",      action:"下分",       target:"下线 luk-002 (lucky88-1)  -1,000 PHP", ip:"10.4.2.18", reason:"代客户下分" },
+      { time:"2026-04-29 11:30:45", actorType:"员工", actor:"risk-mei (risk)",       action:"导出 Excel", target:"体育场次记录  2026-04-28", ip:"10.4.2.31", reason:"风控周报采集" },
+      { time:"2026-04-29 09:08:22", actorType:"员工", actor:"admin (operator)",      action:"登录",       target:"S 端 / 角色: operator", ip:"10.4.2.18", reason:"-" },
+      { time:"2026-04-29 09:05:47", actorType:"员工", actor:"finance-luo (finance)", action:"登录",       target:"S 端 / 角色: finance",  ip:"10.4.2.42", reason:"-" },
+      { time:"2026-04-29 09:02:18", actorType:"员工", actor:"risk-mei (risk)",       action:"登录",       target:"S 端 / 角色: risk",     ip:"10.4.2.31", reason:"-" },
+      { time:"2026-04-28 18:15:08", actorType:"员工", actor:"admin (operator)",      action:"登出",       target:"S 端 / 角色: operator", ip:"10.4.2.18", reason:"-" },
+      { time:"2026-04-28 17:42:33", actorType:"员工", actor:"finance-luo (finance)", action:"导出 Excel", target:"交易流水记录  2026-04-27", ip:"10.4.2.42", reason:"日对账" },
+    ];
+
+    // 玩家操作日志 = "被管对象"在 B/C 端的写动作 (S 端视角下,代理也是被管对象)
+    // 真实动作面 (扫 B 端 + C 端原型 onClick / onSubmit 摘出):
+    //   B 端 (代理): 登录 / 登出 / 新增下线 / 修改资料 / 上分 / 下分 / 禁用 / 启用 / 修改交收方案 (顶代独有) / 修改密码 / 切换语言
+    //   C 端 (玩家): 登录 / 登出 / 选交收方案 / 选游戏分类 / 进入游戏 / 返回大厅 / 切换语言
+    // 砍掉旧 mock 里:
+    //   - "投注 BET-XXX": 投注是三方回调流水, 不是用户主动审计动作
+    //   - "AH-001 (账房) 账房上分": 账房不是被管对象, 走流水即可
+    //   - "隐藏佣金率列": UI 本地偏好, 不进审计
+    const INITIAL_AUDIT_PLAYER = [
+      // C 端玩家动作
+      { time:"2026-04-29 16:30:11", actorType:"玩家", actor:"P-qw-008",        action:"返回大厅",     target:"BBIN 体育 → 大厅 (回收余额)",                                       ip:"175.213.x.x", reason:"-" },
+      { time:"2026-04-29 16:08:22", actorType:"玩家", actor:"P-qw-008",        action:"进入游戏",     target:"BBIN 体育",                                                         ip:"175.213.x.x", reason:"-" },
+      { time:"2026-04-29 16:08:10", actorType:"玩家", actor:"P-qw-008",        action:"选游戏分类",   target:"体育",                                                              ip:"175.213.x.x", reason:"-" },
+      { time:"2026-04-29 16:08:00", actorType:"玩家", actor:"P-qw-008",        action:"选交收方案",   target:"KRW-80% (qweqwe-1-1)",                                              ip:"175.213.x.x", reason:"-" },
+      { time:"2026-04-29 16:05:11", actorType:"玩家", actor:"P-qw-008",        action:"登录",         target:"C 端 STAR VIP GAME",                                                 ip:"175.213.x.x", reason:"-" },
+      { time:"2026-04-29 14:30:00", actorType:"玩家", actor:"P-dia-014",       action:"选交收方案",   target:"USD-30% (diamond-1-1)",                                             ip:"172.58.x.x",  reason:"-" },
+      { time:"2026-04-29 13:25:30", actorType:"玩家", actor:"P-dia-014",       action:"切换语言",     target:"zh → en (C 端)",                                                    ip:"172.58.x.x",  reason:"-" },
+      { time:"2026-04-29 13:20:00", actorType:"玩家", actor:"P-luk-002",       action:"登录",         target:"C 端 STAR VIP GAME",                                                 ip:"180.190.x.x", reason:"-" },
+      { time:"2026-04-29 12:00:18", actorType:"玩家", actor:"P-luk-005",       action:"登出",         target:"C 端 STAR VIP GAME",                                                 ip:"180.190.x.x", reason:"-" },
+      // B 端代理动作
+      { time:"2026-04-29 15:30:42", actorType:"代理", actor:"qweqwe (顶代)",   action:"上分",         target:"下线 qw-008 (qweqwe-1)  +200,000 KRW",                              ip:"118.139.x.x", reason:"-" },
+      { time:"2026-04-29 14:22:18", actorType:"代理", actor:"qweqwe (顶代)",   action:"新增下线",     target:"代理 carry01 (qweqwe-3)  KRW",                                       ip:"118.139.x.x", reason:"-" },
+      { time:"2026-04-29 13:45:22", actorType:"代理", actor:"lucky88 (顶代)",  action:"下分",         target:"下线 luk-002 (lucky88-1)  -1,000 PHP",                              ip:"203.177.x.x", reason:"-" },
+      { time:"2026-04-29 11:00:08", actorType:"代理", actor:"qweqwe (顶代)",   action:"修改交收方案", target:"下线子树 ≥5 条  KRW-100% → KRW-80%",                                ip:"118.139.x.x", reason:"-" },
+      { time:"2026-04-29 10:45:14", actorType:"代理", actor:"qweqwe (顶代)",   action:"修改资料",     target:"下线 qw-003 (qweqwe-2)  昵称 三号 → 三号哥 / 佣金率 5.0% → 6.0%", ip:"118.139.x.x", reason:"-" },
+      { time:"2026-04-29 10:12:33", actorType:"代理", actor:"lucky88 (顶代)",  action:"禁用账号",     target:"下线 luk-005 (lucky88-2) + 子树级联",                                ip:"203.177.x.x", reason:"-" },
+      { time:"2026-04-29 09:48:02", actorType:"代理", actor:"sapphire (顶代)", action:"修改密码",     target:"自身账号 sapphire (强制重登)",                                       ip:"61.74.x.x",   reason:"-" },
+      { time:"2026-04-29 09:30:55", actorType:"代理", actor:"qweqwe (顶代)",   action:"启用账号",     target:"下线 qw-005 (qweqwe-5)",                                             ip:"118.139.x.x", reason:"-" },
+      { time:"2026-04-29 09:20:14", actorType:"代理", actor:"lucky88 (顶代)",  action:"切换语言",     target:"zh → ko (B 端)",                                                    ip:"203.177.x.x", reason:"-" },
+      { time:"2026-04-29 09:15:00", actorType:"代理", actor:"qweqwe (顶代)",   action:"登录",         target:"B 端代理后台",                                                       ip:"118.139.x.x", reason:"-" },
+      { time:"2026-04-28 19:08:44", actorType:"代理", actor:"qweqwe (顶代)",   action:"登出",         target:"B 端代理后台",                                                       ip:"118.139.x.x", reason:"-" },
+    ];
+
+    // ============== 工具函数 ==============
+    // fmtNum: 纯数字 (下线数 / 注单数 / 玩家数), 千分位
+    const fmtNum = (n, dec=0) => {
+      if (n === 0) return "0";
+      if (typeof n !== "number") return n;
+      return n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    };
+    // fmtAmount: 金额走「万」单位 (B 端 V1.12 line 189-198 同款规则)
+    //   全量, 无下限阈值, 最多 4 位小数; 8,000 → 0.8 万 / 300 → 0.03 万 / 0 → 0 万 / -1,200 → -0.12 万
+    //   2026-04-29 Sammy 拍: 金额不带币种后缀, 币种走独立列
+    const fmtAmount = (n) => {
+      if (n === undefined || n === null || isNaN(n)) return "-";
+      const v = n / 10000;
+      return v.toLocaleString("zh-CN", { maximumFractionDigits: 4 }) + " 万";
+    };
+    const fmtPct = (n) => (n * 100).toFixed(2) + "%";
+
+    // IP 白名单校验工具 (V0.2 支持 IPv4 单 IP + CIDR /N 段)
+    // 真实开发可换成 ip-cidr / netmask 库; mock 用纯 JS 实现
+    const ipToInt = (ip) => {
+      const parts = ip.split(".");
+      if (parts.length !== 4) return null;
+      let n = 0;
+      for (const p of parts) {
+        const v = parseInt(p, 10);
+        if (!Number.isFinite(v) || v < 0 || v > 255) return null;
+        n = (n * 256) + v;
+      }
+      return n;
+    };
+    const isValidIPv4 = (ip) => ipToInt(ip) !== null;
+    const isValidCIDR = (cidr) => {
+      const m = cidr.match(/^(\d{1,3}(?:\.\d{1,3}){3})\/(\d{1,2})$/);
+      if (!m) return false;
+      if (!isValidIPv4(m[1])) return false;
+      const n = parseInt(m[2], 10);
+      return n >= 0 && n <= 32;
+    };
+    const isValidIPOrCIDR = (s) => isValidIPv4(s) || isValidCIDR(s);
+    // 检查 ip 是否命中 entry (单 IP 完全匹配 OR CIDR 段包含)
+    const ipMatches = (ip, entry) => {
+      if (!entry.includes("/")) return ip === entry;
+      const m = entry.match(/^(\d{1,3}(?:\.\d{1,3}){3})\/(\d{1,2})$/);
+      if (!m) return false;
+      const baseInt = ipToInt(m[1]);
+      const ipInt = ipToInt(ip);
+      if (baseInt === null || ipInt === null) return false;
+      const prefix = parseInt(m[2], 10);
+      if (prefix === 0) return true;
+      const mask = (~((1 << (32 - prefix)) - 1)) >>> 0;
+      return (baseInt & mask) === (ipInt & mask);
+    };
+    // 白名单准入校验: 启用条目为空 = 不限制 (放行); 否则 ip 必须命中至少 1 条启用项
+    const checkIPAllowed = (ip, whitelist) => {
+      const enabled = whitelist.filter(w => w.enabled);
+      if (enabled.length === 0) return true; // 无启用项 = 不限制
+      return enabled.some(w => ipMatches(ip, w.ip));
+    };
+
+    // 导出 Excel 工具 (V0.2 仅原型 alert, 真实开发用 xlsx 库)
+    // 命名规则 (Sammy 2026-04-30 拍): YYYY-MM-DD_菜单名.xlsx, 全量导出 (不按筛选)
+    const doExport = (menuName, totalCount, appendSystemLog) => {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2,"0");
+      const dateStr = now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate());
+      const filename = dateStr+"_"+menuName+".xlsx";
+      alert("导出 Excel\n\n文件名: "+filename+"\n范围: 全量数据 (不按当前筛选)\n总条数: "+totalCount+" 条");
+      appendSystemLog && appendSystemLog("导出 Excel", menuName+" / 全量 "+totalCount+" 条 → "+filename);
+    };
+
+    // ============== 通用 hover tooltip (V0.x 新增: 字段说明, 给开发对接) ==============
+    // 修复 (Sammy 2026-05-11): bubble 用 ReactDOM.createPortal 渲染到 body, 脱离 .scroll-x / .bg-panel
+    // 的 overflow:hidden 裁切; hover 时计算锚点坐标用 fixed 定位 + z-index:99999 避免被遮
+    function FieldHint({ hint, children }) {
+      const anchorRef = useRef(null);
+      const [show, setShow] = useState(false);
+      const [pos, setPos] = useState({ left: 0, top: 0 });
+      const handleEnter = () => {
+        const el = anchorRef.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        setPos({ left: r.left + r.width / 2, top: r.top });
+        setShow(true);
+      };
+      const handleLeave = () => setShow(false);
+      return (
+        <span ref={anchorRef} className="field-hint" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
+          {children}
+          {show && ReactDOM.createPortal(
+            <span className="field-hint-bubble" style={{position:"fixed",left:pos.left,top:pos.top,transform:"translate(-50%,calc(-100% - 6px))",display:"block"}}>{hint}</span>,
+            document.body
+          )}
+        </span>
+      );
+    }
+
+    // ============== 通用分页组件 (列表页统一 20 条/页) ==============
+    const PAGE_SIZE = 20;
+    function Pagination({ total, pageNum, setPageNum, pageSize = PAGE_SIZE }) {
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const safePage = Math.min(Math.max(0, pageNum), totalPages - 1);
+      const [jumpVal, setJumpVal] = useState("");
+      const doJump = () => {
+        const n = parseInt(jumpVal, 10);
+        if (Number.isFinite(n) && n >= 1 && n <= totalPages) { setPageNum(n - 1); setJumpVal(""); }
+      };
+      return (
+        <div className="flex items-center gap-2" style={{justifyContent:"flex-end", padding:"10px 12px", borderTop:"1px solid #2A3648", background:"#0F141C"}}>
+          <span className="text-xs text-faint" style={{marginRight:6}}>共 {total} 条 · 每页 {pageSize} 条</span>
+          <button className="btn btn-ghost" onClick={()=>setPageNum(p=>Math.max(0,p-1))} disabled={safePage===0} style={{padding:"4px 12px",fontSize:12}}>← 上一页</button>
+          <span className="text-xs text-muted">第 {safePage+1} / {totalPages} 页</span>
+          <button className="btn btn-ghost" onClick={()=>setPageNum(p=>Math.min(totalPages-1,p+1))} disabled={safePage>=totalPages-1} style={{padding:"4px 12px",fontSize:12}}>下一页 →</button>
+          <span className="text-xs text-faint" style={{marginLeft:8}}>跳至</span>
+          <input className="input" type="number" min="1" max={totalPages} value={jumpVal} onChange={e=>setJumpVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doJump();}} style={{width:60,padding:"4px 8px",fontSize:12,textAlign:"center"}} placeholder={String(safePage+1)}/>
+          <span className="text-xs text-faint">页</span>
+          <button className="btn btn-ghost" onClick={doJump} disabled={!jumpVal} style={{padding:"4px 10px",fontSize:12}}>确定</button>
+        </div>
+      );
+    }
+
+    const StatusChip = ({ status }) => {
+      const map = { active:"chip-active", frozen:"chip-frozen", settled:"chip-settled", void:"chip-void", "未结算":"chip-warn", "已结算":"chip-settled" };
+      // V0.2 状态文案统一 (Sammy 2026-04-30 拍): 账号 frozen → "禁用" (跟修改资料弹窗 radio 对齐)
+      const txt = { active:"启用", frozen:"禁用", settled:"已结算", void:"作废" };
+      return <span className={"chip " + (map[status] || "chip-info")}>{txt[status] || status}</span>;
+    };
+
+    // ============== 操作密码 + 审计原因 弹窗 (V0.1 沿用) ==============
+    function PasswordModal({ title, fields, onConfirm, onClose, wide }) {
+      const [pwd, setPwd] = useState("");
+      const [err, setErr] = useState("");
+      const submit = () => {
+        if (pwd !== "123456") { setErr("操作密码错误"); return; }
+        onConfirm({ pwd });
+      };
+      return (
+        <div className="modal-backdrop">
+          <div className={"modal" + (wide ? " modal-wide" : "")} onClick={e=>e.stopPropagation()}>
+            <h3 className="text-base font-semibold mb-1">{title}</h3>
+            <p className="text-xs text-faint mb-4">高风险操作 · 操作密码二次确认</p>
+            <div className="space-y-3">
+              {fields}
+              <div>
+                <label className="block text-xs text-muted mb-1">操作密码 <span style={{color:"#FF6B6B"}}>*</span></label>
+                <input type="password" className="input" placeholder="当前登录员工的登录密码" value={pwd} onChange={e=>setPwd(e.target.value)}/>
+              </div>
+              {err && <div className="text-xs" style={{color:"#FF6B6B"}}>{err}</div>}
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <button className="btn btn-ghost" onClick={onClose}>取消</button>
+              <button className="btn btn-primary" onClick={submit}>确认提交</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============== 顶代户口页 ==============
+    function AgentsPage({ role, canWrite, appendSystemLog, accounts, setAccounts, topKeys, setTopKeys }) {
+      const [modal, setModal] = useState(null);
+      const [expanded, setExpanded] = useState(new Set());
+      // accounts / topKeys 由 App 层 lift (V0.2 修 bug, Sammy 2026-04-30): 切菜单不丢 state
+      const cols = ROLES[role].agentCols;
+      // 修改资料: 把 form 字段 merge 到节点上 (mock 内存中改, 不持久化)
+      // 级联冻结 (Sammy 2026-04-30 拍): status 改成 frozen 时递归把所有 children 也置 frozen, 跟 B 端 V1.12 setStatus 'off' 级联对齐
+      // 解冻不级联: status 从 frozen → active 时只改自己, 子代保持原状 (避免误操作让独立冻结的下线被误激活)
+      const handleEditProfile = (account, data) => {
+        const next = {...accounts};
+        const k = account.key;
+        if (!next[k]) return;
+        const wasFrozen = next[k].status === "frozen";
+        // 重置密码: V0.2 mock 仅 alert 演示, 真实开发对接后端写库 + 强制 next-login-must-change
+        if (data.resetPwd) {
+          alert("已重置 " + account.user + " 的登录密码;该下线下次登录将强制修改密码");
+          appendSystemLog && appendSystemLog("重置下线密码", account.user+" ("+account.sysId+") 强制下次登录改密");
+        }
+        // 操作日志: 记录关键 diff (status / nick / shareRatio / refRate)
+        // status 翻译成中文跟 StatusChip 文案对齐 (Sammy 2026-04-30 二扫)
+        const statusTxt = { active:"启用", frozen:"禁用" };
+        const diffs = [];
+        if (data.status !== next[k].status) diffs.push("状态: "+(statusTxt[next[k].status]||next[k].status)+" → "+(statusTxt[data.status]||data.status));
+        if (data.nick !== next[k].nick) diffs.push("昵称: "+(next[k].nick||"-")+" → "+data.nick);
+        if (data.shareRatio != null && data.shareRatio !== next[k].shareRatio) diffs.push("占成: "+(next[k].shareRatio==null?"-":(next[k].shareRatio*100).toFixed(2)+"%")+" → "+(data.shareRatio*100).toFixed(2)+"%");
+        if (data.refRate != null && data.refRate !== next[k].refRate) diffs.push("佣金率: "+(next[k].refRate==null?"-":(next[k].refRate*100).toFixed(2)+"%")+" → "+(data.refRate*100).toFixed(2)+"%");
+        if (diffs.length) appendSystemLog && appendSystemLog("修改资料", account.user+" ("+account.sysId+") "+diffs.join(" / "));
+        next[k] = { ...next[k], nick: data.nick, phone: data.phone, phone2: data.phone2, accountType: data.accountType || next[k].accountType, shareRatio: data.shareRatio == null ? next[k].shareRatio : data.shareRatio, refRate: data.refRate == null ? next[k].refRate : data.refRate, status: data.status };
+        // 级联冻结子树
+        if (data.status === "frozen" && !wasFrozen) {
+          const cascade = (key) => {
+            const node = next[key]; if (!node) return;
+            (node.children || []).forEach(c => {
+              if (next[c]) {
+                next[c] = { ...next[c], status: "frozen" };
+                cascade(c);
+              }
+            });
+          };
+          cascade(k);
+        }
+        setAccounts(next);
+        setModal(null);
+      };
+      // 上下分: 资金在树内部转移 (该账号 ↔ 直属上级), 整棵树总余额不变; amount 单位"万"
+      // 上分 +X: 该账号 balance +X, 上级 balance -X (上级出钱), 上级 subBalance +X (子树涨), 上级 totalBalance 不变
+      // 下分 -X: 该账号 balance -X, 上级 balance +X (上级收钱), 上级 subBalance -X, 上级 totalBalance 不变
+      const handleCreditDebit = (account, dir, amountWan) => {
+        const realAmount = amountWan * 10000;
+        const next = {...accounts};
+        const k = account.key;
+        if (!next[k]) return;
+        // 找直属上级
+        let parentKey = null;
+        for (const [pk, pn] of Object.entries(next)) {
+          if (pk !== k && pn.children && pn.children.includes(k)) { parentKey = pk; break; }
+        }
+        if (!parentKey) { alert("⚠ 找不到直属上级\n无法执行上下分,请联系技术支持"); return; }
+        if (dir === "credit") {
+          if ((next[parentKey].balance || 0) < realAmount) { alert("⚠ 上级账户余额不足\n上级 "+next[parentKey].user+" 当前余额 "+fmtAmount(next[parentKey].balance)+" "+next[parentKey].currency+",无法上分 "+fmtAmount(realAmount)+"。\n建议先让账房给上级补充余额"); return; }
+          next[k] = { ...next[k], balance: next[k].balance + realAmount, totalBalance: next[k].totalBalance + realAmount };
+          next[parentKey] = { ...next[parentKey], balance: next[parentKey].balance - realAmount, subBalance: next[parentKey].subBalance + realAmount };
+          // totalBalance 不变 (balance -X, subBalance +X 抵消)
+          appendSystemLog && appendSystemLog("上分", "下线 "+account.user+" ("+account.sysId+") +"+fmtAmount(realAmount)+" "+account.currency);
+        } else { // debit
+          if ((next[k].balance || 0) < realAmount) { alert("⚠ 账户余额不足\n下线 "+account.user+" 当前余额 "+fmtAmount(next[k].balance)+" "+account.currency+",无法下分 "+fmtAmount(realAmount)); return; }
+          next[k] = { ...next[k], balance: next[k].balance - realAmount, totalBalance: next[k].totalBalance - realAmount };
+          next[parentKey] = { ...next[parentKey], balance: next[parentKey].balance + realAmount, subBalance: next[parentKey].subBalance - realAmount };
+          appendSystemLog && appendSystemLog("下分", "下线 "+account.user+" ("+account.sysId+") -"+fmtAmount(realAmount)+" "+account.currency);
+        }
+        setAccounts(next);
+        setModal(null);
+      };
+      // 新增下线: 派生 sysId / 加节点 / 更新父级 children / 沿祖先链 +subCount
+      const handleNewSub = (parent, data) => {
+        const next = {...accounts};
+        const parentKey = parent.key;
+        const parentNode = next[parentKey];
+        if (!parentNode) return;
+        const childSeq = (parentNode.children || []).length + 1;
+        const newSysId = parentNode.sysId + "-" + childSeq;
+        const newKey = data.user + "::" + data.currency;
+        if (next[newKey]) { alert("⚠ 用户账号已存在\n该用户名在 "+data.currency+" 币种线下已被占用,请换一个用户账号"); return; }
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, "0");
+        const createdAt = now.getFullYear() + "-" + pad(now.getMonth()+1) + "-" + pad(now.getDate()) + " " + pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds());
+        next[newKey] = {
+          sysId: newSysId, user: data.user, nick: data.nick, accountType: data.type, currency: data.currency,
+          shareRatio: data.shareRatio, refRate: data.refRate, balance: 0, subBalance: 0, totalBalance: 0,
+          subCount: 0, status: data.status, createdAt, children: [],
+        };
+        next[parentKey] = { ...parentNode, children: [...(parentNode.children || []), newKey], subCount: (parentNode.subCount || 0) + 1 };
+        // 沿祖先链 +1 subCount (穿透口径)
+        let cursor = parentKey;
+        while (true) {
+          let found = null;
+          for (const [k, n] of Object.entries(next)) {
+            if (k !== cursor && n.children && n.children.includes(cursor)) { found = k; break; }
+          }
+          if (!found) break;
+          next[found] = { ...next[found], subCount: (next[found].subCount || 0) + 1 };
+          cursor = found;
+        }
+        setAccounts(next);
+        // 自动展开父级让用户看到新行
+        const ne = new Set(expanded); ne.add(parentKey); setExpanded(ne);
+        setModal(null);
+        appendSystemLog && appendSystemLog("新增下级", "顶代 "+parentNode.user+" ("+parentNode.currency+") 下新增"+data.type+" "+data.user+" ("+newSysId+")");
+      };
+      // 所有筛选走"输入态 + 提交后生效"双状态 (跟搜索按钮一起触发, ProComponents QueryFilter 模式)
+      // V0.2 (Sammy 2026-04-30): 系统户口号 / 用户账号 拆 2 个独立筛选框
+      const [inSysIdQ, setInSysIdQ] = useState(""), [sysIdQ, setSysIdQ] = useState("");
+      const [inUserQ, setInUserQ] = useState(""), [userQ, setUserQ] = useState("");
+      const [inStatus, setInStatus] = useState("all"), [statusFilter, setStatusFilter] = useState("all");
+      const [inCurrency, setInCurrency] = useState("PHP"), [currencyFilter, setCurrencyFilter] = useState("PHP");  // V0.2 (Sammy 2026-04-30): 默认 PHP
+      const [inShareRatio, setInShareRatio] = useState("all"), [shareRatioFilter, setShareRatioFilter] = useState("all");
+      const [inDateFrom, setInDateFrom] = useState(""), [dateFrom, setDateFrom] = useState("");
+      const [inDateTo, setInDateTo] = useState(""), [dateTo, setDateTo] = useState("");
+      const [pageNum, setPageNum] = useState(0);
+      const doSearch = () => {
+        setSysIdQ(inSysIdQ.trim()); setUserQ(inUserQ.trim()); setStatusFilter(inStatus); setCurrencyFilter(inCurrency);
+        setShareRatioFilter(inShareRatio); setDateFrom(inDateFrom); setDateTo(inDateTo); setPageNum(0);
+      };
+      const resetSearch = () => {
+        // V0.2 重置时币种默认 PHP (Sammy 2026-04-30)
+        setInSysIdQ(""); setInUserQ(""); setInStatus("all"); setInCurrency("PHP"); setInShareRatio("all"); setInDateFrom(""); setInDateTo("");
+        setSysIdQ(""); setUserQ(""); setStatusFilter("all"); setCurrencyFilter("PHP"); setShareRatioFilter("all"); setDateFrom(""); setDateTo(""); setPageNum(0);
+      };
+
+      // Tree 扁平化: 顶代行先过筛选; 下线行只在父级展开时才出现 (V0.1 同款懒加载)
+      // 搜索逻辑: 树状穿透 - 任何后代匹配, 整条祖先链都显示并自动展开 (大小写不敏感)
+      // V0.2 (Sammy 2026-04-30): sysId / user 拆 2 个独立条件 (AND 关系)
+      const rows = useMemo(() => {
+        const out = [];
+        const sysQ = (sysIdQ || "").toLowerCase().trim();
+        const userQ_ = (userQ || "").toLowerCase().trim();
+        const hasQ = sysQ || userQ_;
+        const matches = (node) => {
+          if (sysQ && !node.sysId.toLowerCase().includes(sysQ)) return false;
+          if (userQ_ && !node.user.toLowerCase().includes(userQ_)) return false;
+          return true;
+        };
+
+        // V0.2 (Sammy 2026-04-30): 搜索时不显示祖先链, 平铺命中节点(任意层级)作为 depth=0 显示, 可展开看下级
+        // 默认模式 (无搜索): 顶代行按 createdAt DESC + Tree Table 展开下线
+        if (hasQ) {
+          // 搜索模式: 平铺命中
+          const matchedKeys = Object.keys(accounts).filter(k => matches(accounts[k]));
+          // 命中节点也按 createdAt DESC 排
+          matchedKeys.sort((a,b) => (accounts[b].createdAt || "").localeCompare(accounts[a].createdAt || ""));
+          function walkSearch(key, depth) {
+            const node = accounts[key]; if (!node) return;
+            out.push({ ...node, key, depth });
+            // 搜索模式下展开仍受 expanded 控制 (用户主动展开看下级)
+            if (expanded.has(key)) {
+              (node.children || []).forEach(c => walkSearch(c, depth + 1));
+            }
+          }
+          matchedKeys.forEach(k => walkSearch(k, 0));
+          return out;
+        }
+
+        // 默认模式: 顶代行 + 展开下线 + 顶代行筛选
+        // V0.2 (Sammy 2026-04-30): 顶代行按 createdAt DESC 排序 (最新开户在前)
+        const sortedTopKeys = [...topKeys].sort((a,b) => (accounts[b]?.createdAt || "").localeCompare(accounts[a]?.createdAt || ""));
+        function walk(key, depth) {
+          const node = accounts[key];
+          if (!node) return;
+          if (depth === 0) {
+            if (statusFilter !== "all" && node.status !== statusFilter) return;
+            if (currencyFilter !== "all" && node.currency !== currencyFilter) return;
+            if (shareRatioFilter !== "all") {
+              const r = node.shareRatio;
+              if (r == null) return;
+              if (shareRatioFilter === "lt10" && r >= 0.10) return;
+              if (shareRatioFilter === "10to20" && (r < 0.10 || r >= 0.20)) return;
+              if (shareRatioFilter === "20to30" && (r < 0.20 || r >= 0.30)) return;
+              if (shareRatioFilter === "gte30" && r < 0.30) return;
+            }
+            // datetime-local step=1 时返回 YYYY-MM-DDTHH:mm:ss (19 字符), 否则 YYYY-MM-DDTHH:mm (16 字符)
+            // createdAt 是 "YYYY-MM-DD HH:mm:ss", 比较前 normalize: replace T + 必要时补秒
+            if (dateFrom) {
+              let fromCmp = dateFrom.replace("T", " ");
+              if (fromCmp.length === 16) fromCmp += ":00";
+              if (node.createdAt < fromCmp) return;
+            }
+            if (dateTo) {
+              let toCmp = dateTo.replace("T", " ");
+              if (toCmp.length === 16) toCmp += ":59";
+              if (node.createdAt > toCmp) return;
+            }
+          }
+          out.push({ ...node, key, depth });
+          if (expanded.has(key)) {
+            (node.children || []).forEach(child => walk(child, depth + 1));
+          }
+        }
+        sortedTopKeys.forEach(k => walk(k, 0));
+        return out;
+      }, [accounts, topKeys, sysIdQ, userQ, statusFilter, currencyFilter, shareRatioFilter, dateFrom, dateTo, expanded]);
+
+      // 按顶代行分组 (顶代 + 该顶代展开的所有下线 = 1 组), 分页以"组"为单位 (PAGE_SIZE 个顶代/页, 展开下线随父级一起出现)
+      const groups = useMemo(() => {
+        const out = []; let cur = null;
+        for (const r of rows) {
+          if (r.depth === 0) { cur = { top: r, descs: [] }; out.push(cur); }
+          else if (cur) cur.descs.push(r);
+        }
+        return out;
+      }, [rows]);
+      const totalTop = groups.length;
+      const pagedRows = groups.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).flatMap(g => [g.top, ...g.descs]);
+
+      const toggle = (key) => {
+        const next = new Set(expanded);
+        if (next.has(key)) next.delete(key); else next.add(key);
+        setExpanded(next);
+      };
+
+      // 字段集 (Sammy 2026-04-29 拍 13 列, 砍昵称/佣金率上限/本月投注/本月佣金/最近登录入详情)
+      // 占成对下线层占位显 — (Sammy 2026-04-29 「下线层暂未支持占成」)
+      const colDefs = [
+        { id:1, label:<FieldHint hint="顶代户口的系统户口号 sysId(B 端字段名 id ↔ S 端字段名 sysId,跨端命名差异)。永不回收、永不复用、永不变更。下线层 sysId 派生:parent.sysId-seq。">系统户口号</FieldHint>, render:a => (
+          <span className="inline-flex items-center" style={{paddingLeft: a.depth * 16}}>
+            {(a.children && a.children.length > 0) ? (
+              <span className="cursor-pointer text-cool" onClick={()=>toggle(a.key)} style={{marginRight:6,userSelect:"none",width:14,display:"inline-block"}}>
+                {expanded.has(a.key) ? "▾" : "▸"}
+              </span>
+            ) : <span style={{display:"inline-block",width:20}}></span>}
+            <span className="mono text-muted">{a.sysId}</span>
+          </span>
+        ) },
+        { id:2, label:<FieldHint hint="顶代登录用户账号(6-20 位英数)。1 顶代多币种 = N 行(按 currency 拆),所以同一 user 可能出现多次(不同 currency 行)。">用户账号</FieldHint>, render:a => <span className="mono">{a.user}</span> },
+        { id:3, label:<FieldHint hint="该顶代或代理的穿透总下线数(整棵子树,V0.2 跟 S 端对齐)。仅在该 sysId::currency 树内统计,不跨币种。">下线数</FieldHint>, render:a => <span className="num">{a.subCount}</span> },
+        { id:4, label:<FieldHint hint="账号状态枚举:启用 / 禁用。禁用级联(整棵子树一起禁);启用仅自己(不级联,避免误激活独立冻结的下线)。risk 角色仍可见。">账号状态</FieldHint>, render:a => <StatusChip status={a.status}/> },
+        { id:5, label:<FieldHint hint="顶代户口的结算币种。1 顶代多币种 = N 行(qweqwe::PHP / qweqwe::USD 是同一顶代不同币种户口,独立管理)。">币种</FieldHint>, render:a => <span className="chip chip-info">{a.currency}</span> },
+        { id:6, label:<FieldHint hint="占成 shareRatio = 上级让利给下线的比例(0-100%)。顶代层由账房侧设置,下线层每行有自己的参考占成。risk 角色不返回。V0.2 列隐藏(代码保留)。">占成</FieldHint>, render:a => {
+          if (a.shareRatio == null) return <span className="text-faint">—</span>;
+          if (a.depth === 0) return <span className="num">{fmtPct(a.shareRatio)}</span>;
+          // 下线层每行有自己的参考占成 (mock 演示: 上级让利后传递, 真实字段后端尚未支持独立调整 - Q-S11)
+          return <span className="num text-faint" title="参考占成,下线尚未支持独立调整">{fmtPct(a.shareRatio)} <span style={{fontSize:9,marginLeft:2}}>(参考)</span></span>;
+        }},
+        { id:7, label:<FieldHint hint="账户余额 = 该账号自己可用余额(不含下线)。risk 角色不返回。上下分动该字段(整树总线余额不变)。">账户余额</FieldHint>, render:a => <span className="num">{fmtAmount(a.balance)}</span> },
+        { id:8, label:<FieldHint hint="下线余额 = 子树所有下线的账户余额累加(不含自己)。risk 角色不返回。主信源在 B 端代理后台,S 端用于核查。">下线余额</FieldHint>, render:a => <span className="num text-muted">{fmtAmount(a.subBalance)}</span> },
+        { id:9, label:<FieldHint hint="总线余额 totalBalance = 自己 balance + 下线余额(递归)。即整棵子树可用资金。risk 角色不返回。">总线余额</FieldHint>, render:a => <span className="num" style={{fontWeight:600}}>{fmtAmount(a.totalBalance)}</span> },
+        { id:10, label:<FieldHint hint="账号类型枚举:普通(顶代) / 代理 / 游戏(玩家)。顶代由账房侧创建;代理和游戏由 B 端代理后台或自主注册落地。">账号类型</FieldHint>, render:a => {
+          // V0.2 (Sammy 2026-04-30): 顶代蓝改紫 (#9B7FE8 中性强调色), 代理保留黄, 游戏保留灰
+          if (a.accountType === "普通(顶代)") return <span className="chip" style={{background:"#2A1F3D",color:"#9B7FE8"}}>{a.accountType}</span>;
+          if (a.accountType === "代理")     return <span className="chip chip-warn">{a.accountType}</span>;
+          return <span className="chip chip-info">{a.accountType}</span>;
+        } },
+        { id:11, label:<FieldHint hint="账号创建时间 YYYY-MM-DD HH:mm:ss。顶代由账房侧下发户口时记录,下线由新增下线动作 / 邀请链接注册时记录。永不变更。">开户时间</FieldHint>, render:a => <span className="text-muted" style={{fontSize:12}}>{a.createdAt}</span> },
+      ].filter(c => cols.includes(c.id));
+
+      return (
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-xl font-semibold">顶代户口</h2>
+              <p className="text-xs text-muted mt-1">{ROLES[role].name} 视角可见 {cols.length} 列</p>
+              <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):账号管理 · 平台直辖顶代 · 1 顶代多币种 = N 行(按币种拆)</p>
+            </div>
+          </div>
+          <div className="rounded-lg p-3 mb-4 text-xs flex items-start gap-2" style={{background:"rgba(155,127,232,0.08)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <span style={{marginTop:1}}>📝</span>
+            <span><b>PM 说明(非产品文案):</b>顶代账号由账房侧创建并下发户口(系统户口号 + 初始币种 + 初始占成),本页仅查看与管理,不负责创建。下线数 / 下线余额 / 总线余额 主信源在 B 端代理后台。</span>
+          </div>
+          <details className="rounded-lg p-3 mb-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(给开发对接,正式环境删除)</summary>
+            <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
+              <div><b>① 数据契约:</b></div>
+              <div>· 系统户口号 <code>sysId</code> 永不回收、永不复用、永不变更(B 端字段名 <code>id</code> ↔ S 端字段名 <code>sysId</code>,跨端命名差异)</div>
+              <div>· 1 顶代多币种 = N 行(按币种拆,如 qweqwe::PHP / qweqwe::USD 是同一顶代不同币种户口)</div>
+              <div>· 顶代账号由账房侧创建,S 端不负责创建,本页只读 + 修改资料 + 上下分 + 启停</div>
+              <div className="mt-2"><b>② 三角色字段权限(后端按 token role 过滤):</b></div>
+              <div>· <code>admin / finance</code>:可见全字段(10 列)</div>
+              <div>· <code>risk</code>:不返回 <code>shareRatio / shareAmount / balance / subBalance / totalBalance</code> 5 个字段(占成 + 余额相关全屏蔽)</div>
+              <div className="mt-2"><b>③ 写动作(改资料 / 上下分 / 启停 / 改方案):</b></div>
+              <div>· <code>修改资料</code>:高敏感字段(占成 / 佣金率 / 状态 / 类型 / 重置密码)任一改动触发操作密码二次确认</div>
+              <div>· <code>上分 / 下分</code>:资金内部转移,整树总余额不变,触发操作密码二次确认 + 写 audit_log</div>
+              <div>· <code>禁用账号</code>:级联禁用整棵子树;<code>启用账号</code>:仅启用自己(不级联)</div>
+              <div>· 所有写动作回写 <code>audit_log</code>(actor = 当前员工,target = 顶代 sysId,diffs = 字段变更明细)</div>
+              <div className="mt-2"><b>④ Tree Table 懒加载:</b></div>
+              <div>· 顶代行默认展开;下线行懒加载(点击 ▶ 展开)</div>
+              <div>· 搜索模式:扁平显示命中节点(任意层级,不显示祖先链),命中节点可独立展开看下级</div>
+              <div className="mt-2"><b>⑤ V0.2 隐藏字段(代码保留,后期重启加回):</b></div>
+              <div>· <code>占成</code> 列从 colDefs 移除,后端 <code>shareRatio</code> 字段仍 mock 保留</div>
+              <div>· <code>显示佣金率</code> 列已隐藏,数据 / i18n / 弹窗保留</div>
+              <div className="mt-2"><b>⑥ 导出 Excel:</b></div>
+              <div>· 文件名:<code>{"{"}YYYY-MM-DD{"}"}_顶代户口.xlsx</code> · 范围:全量(不按筛选)· 写 audit_log</div>
+            </div>
+          </details>
+          <div className="bg-panel border border-line rounded-lg p-3 mb-4">
+            <div className="flex flex-wrap gap-2 items-center">
+              <input className="input" style={{width:200}} placeholder="搜索系统户口号" value={inSysIdQ} onChange={e=>setInSysIdQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:200}} placeholder="搜索用户账号" value={inUserQ} onChange={e=>setInUserQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <select className="input" style={{width:130}} value={inStatus} onChange={e=>setInStatus(e.target.value)}>
+                <option value="all">全部状态</option>
+                <option value="active">启用</option>
+                <option value="frozen">禁用</option>
+              </select>
+              {/* V0.2 (Sammy 2026-04-30): 顶代户口 币种 select 即时触发 + 砍「全部币种」(业务规则: 一次只能筛选 1 个币种, 默认 PHP) */}
+              <select className="input" style={{width:120}} value={inCurrency} onChange={e=>{
+                setInCurrency(e.target.value);
+                setCurrencyFilter(e.target.value);
+                setPageNum(0);
+              }}>
+                <option value="PHP">PHP</option>
+                <option value="KRW">KRW</option>
+                <option value="USD">USD</option>
+                <option value="CNY">CNY</option>
+                <option value="THB">THB</option>
+              </select>
+              {/* V0.2 隐藏占成筛选 (Sammy 2026-04-30): 后期重启把这块加回 */}
+              <ConfigProvider locale={zhCN}>
+                <RangePicker
+                  showTime={{ format: "HH:mm:ss" }}
+                  format="YYYY-MM-DD HH:mm:ss"
+                  placeholder={["开户开始时间","结束时间"]}
+                  allowEmpty={[true, true]}
+                  value={[inDateFrom ? moment(inDateFrom.replace("T"," ")) : null, inDateTo ? moment(inDateTo.replace("T"," ")) : null]}
+                  onChange={(vals) => {
+                    if (!vals) { setInDateFrom(""); setInDateTo(""); return; }
+                    setInDateFrom(vals[0] ? vals[0].format("YYYY-MM-DDTHH:mm:ss") : "");
+                    setInDateTo(vals[1] ? vals[1].format("YYYY-MM-DDTHH:mm:ss") : "");
+                  }}
+                  style={{ height: 36, width: 380 }}
+                />
+              </ConfigProvider>
+              <button className="btn btn-primary" style={{padding:"8px 18px"}} onClick={doSearch}>搜索</button>
+              <button className="btn btn-ghost" style={{padding:"8px 14px"}} onClick={resetSearch}>重置</button>
+            </div>
+            <div className="flex items-center mt-2 text-xs text-faint">
+              <span>共 {totalTop} 顶代行  ·  当前页渲染 {pagedRows.length} 行(含展开下线)</span>
+              <button className="btn btn-ghost ml-auto" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setExpanded(new Set())} disabled={expanded.size===0}>全部收起</button>
+            </div>
+          </div>
+          <div className="bg-panel border border-line rounded-lg overflow-hidden">
+            <div className="scroll-x">
+              <table>
+                <thead>
+                  <tr>
+                    {colDefs.map(c => <th key={c.id}>{c.label}</th>)}
+                    {canWrite && <th>操作</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {pagedRows.map(a => {
+                    const isTop = a.accountType === "普通(顶代)";
+                    const isAgent = a.accountType === "代理";
+                    const isPlayer = a.accountType === "游戏";
+                    return (
+                    <tr key={a.key} style={a.depth > 0 ? {background:"rgba(74,158,255,0.04)"} : {}}>
+                      {colDefs.map(c => <td key={c.id}>{c.render(a)}</td>)}
+                      {canWrite && <td>
+                        <div style={{display:"flex",gap:"4px"}}>
+                          {(isTop || isAgent) ? <button className="btn btn-ghost" style={{padding:"4px 0",fontSize:11,width:70,textAlign:"center"}} onClick={()=>setModal({type:"newSub",agent:a})}>新增下级</button> : <div style={{width:70}}/>}
+                          <button className="btn btn-ghost" style={{padding:"4px 0",fontSize:11,width:70,textAlign:"center"}} onClick={()=>setModal({type:"editProfile",agent:a})}>修改资料</button>
+                          {(isAgent || isPlayer) ? <button className="btn btn-ghost" style={{padding:"4px 0",fontSize:11,width:54,textAlign:"center",color:"#5BC97C",borderColor:"#2A4534"}} onClick={()=>setModal({type:"credit",agent:a})}>上分</button> : <div style={{width:54}}/>}
+                          {(isAgent || isPlayer) ? <button className="btn btn-ghost" style={{padding:"4px 0",fontSize:11,width:54,textAlign:"center",color:"#FF8B6B",borderColor:"#5A2D33"}} onClick={()=>setModal({type:"debit",agent:a})}>下分</button> : <div style={{width:54}}/>}
+                        </div>
+                      </td>}
+                    </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <Pagination total={totalTop} pageNum={pageNum} setPageNum={setPageNum}/>
+          </div>
+          {modal && modal.type === "newSub" && <NewSubModal parent={modal.agent} accounts={accounts} onClose={()=>setModal(null)} onSubmit={(data)=>handleNewSub(modal.agent, data)}/>}
+          {modal && modal.type === "editProfile" && <EditProfileModal account={modal.agent} accounts={accounts} onClose={()=>setModal(null)} onSubmit={(data)=>handleEditProfile(modal.agent, data)}/>}
+          {modal && (modal.type === "credit" || modal.type === "debit") && <CreditDebitModal dir={modal.type} account={modal.agent} accounts={accounts} onClose={()=>setModal(null)} onSubmit={(amountWan)=>handleCreditDebit(modal.agent, modal.type, amountWan)}/>}
+        </div>
+      );
+    }
+
+    // 新增下线弹窗 (独立组件 / 内部 state / 提交时回传完整数据)
+    // 注意: S 端列表是 1 顶代多币种 = N 行, 每行已经是具体币种行
+    //       从哪行点「新增下级」就在哪个币种线下创建, 不再让用户选币种 / 方案
+    //       业务硬规则: 单个币种发展下线整条线币种一致 (Sammy 2026-04-29 拍)
+    function NewSubModal({ parent, accounts, onClose, onSubmit }) {
+      const [user, setUser] = useState("");
+      const [nick, setNick] = useState("");
+      const [pwd, setPwd] = useState("");
+      const [pwdC, setPwdC] = useState("");
+      const [phone, setPhone] = useState("");
+      const [phone2, setPhone2] = useState("");
+      const [accType, setAccType] = useState("代理");
+      const [accStatus, setAccStatus] = useState("active");
+      const [refShareRatio, setRefShareRatio] = useState(""); // 参考占成
+      const [refRate, setRefRate] = useState(""); // 参考佣金率
+      const [opPwd, setOpPwd] = useState("");
+      const [err, setErr] = useState("");
+
+      // 参考占成上限 = 父级 shareRatio (无论父级是顶代还是代理, 同一币种线整条继承)
+      const shareUpper = parent.shareRatio || 0;
+      const shareUpperPct = (shareUpper * 100).toFixed(2);
+
+      const submit = () => {
+        if (!/^[A-Za-z0-9]{6,20}$/.test(user)) { setErr("用户账号需 6-20 位英文+数字"); return; }
+        if (!pwd) { setErr("请输入登录密码"); return; }
+        if (pwd !== pwdC) { setErr("两次密码不一致"); return; }
+        // V0.2 隐藏参考占成 (Sammy 2026-04-30): 提交时不再校验, 后端用父级占成兜底 (后期重启把这两行加回)
+        if (refRate === "" || isNaN(+refRate)) { setErr("请输入参考佣金率"); return; }
+        if (opPwd !== "123456") { setErr("操作密码错误"); return; }
+        onSubmit({
+          user, nick: nick.trim() || user, type: accType, status: accStatus,
+          currency: parent.currency, // 直接继承父级币种, 不让用户选
+          shareRatio: parent.shareRatio || null, // V0.2 隐藏参考占成: 直接继承父级占成
+          refRate: +refRate / 100,
+        });
+      };
+
+      return (
+        <div className="modal-backdrop">
+          <div className="modal modal-wide" onClick={e=>e.stopPropagation()}>
+            <h3 className="text-base font-semibold mb-1">新增下线:{parent.user} 下挂</h3>
+            <p className="text-xs text-faint mb-1">提交时需操作密码二次确认</p>
+            <p className="text-xs mb-4" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):字段集与 B 端 AddSubModal 对齐</p>
+            <div className="space-y-3">
+              <div className="section-title">① 关联信息</div>
+              <div className="bg-card border border-line rounded p-3 text-xs">
+                <div>上级:<span className="mono text-cool">{parent.user}</span> ({parent.accountType}) · 系统户口号 <span className="mono">{parent.sysId}</span></div>
+                <div className="mt-1">系统户口号(自动生成):<span className="mono text-cool">{parent.sysId}-{(parent.children||[]).length+1}</span></div>
+                <div className="mt-1" style={{fontSize:11,color:"#9B7FE8"}}>📝 PM 说明(非产品文案):系统户口号永不回收、永不复用、永不变更(数据契约)</div>
+              </div>
+
+              <div className="section-title">② 基本信息</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs text-muted mb-1">用户账号 <span style={{color:"#FF6B6B"}}>*</span></label><input className="input" placeholder="6-20 位英数" value={user} onChange={e=>setUser(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">账户昵称</label><input className="input" placeholder="选填" value={nick} onChange={e=>setNick(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">密码 <span style={{color:"#FF6B6B"}}>*</span></label><input type="password" className="input" value={pwd} onChange={e=>setPwd(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">确认密码 <span style={{color:"#FF6B6B"}}>*</span></label><input type="password" className="input" value={pwdC} onChange={e=>setPwdC(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">电话号码</label><input className="input" placeholder="选填" value={phone} onChange={e=>setPhone(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">备用电话</label><input className="input" placeholder="选填" value={phone2} onChange={e=>setPhone2(e.target.value)}/></div>
+              </div>
+
+              <div className="section-title">③ 账号属性</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-muted mb-1">账号类型 <span style={{color:"#FF6B6B"}}>*</span></label>
+                  <div className="flex gap-4 text-sm" style={{paddingTop:6}}>
+                    <label><input type="radio" checked={accType==="代理"} onChange={()=>setAccType("代理")}/> <span className="ml-1">代理</span></label>
+                    <label><input type="radio" checked={accType==="游戏"} onChange={()=>setAccType("游戏")}/> <span className="ml-1">游戏(玩家)</span></label>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-muted mb-1">账号状态 <span style={{color:"#FF6B6B"}}>*</span></label>
+                  <div className="flex gap-4 text-sm" style={{paddingTop:6}}>
+                    <label><input type="radio" checked={accStatus==="active"} onChange={()=>setAccStatus("active")}/> <span className="ml-1">启用</span></label>
+                    <label><input type="radio" checked={accStatus==="frozen"} onChange={()=>setAccStatus("frozen")}/> <span className="ml-1">禁用</span></label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="section-title">④ 交收方案(继承上级,不可改)</div>
+              <div className="bg-card border border-line rounded p-3 text-xs">
+                <div>下线账号<b>整条线</b>继承上级币种 + 方案,不可更换</div>
+                <div className="text-muted mt-1">币种:<span className="chip chip-cool">{parent.currency}</span></div>
+                <div className="mt-1" style={{fontSize:11,color:"#9B7FE8"}}>📝 PM 说明(非产品文案):mock 简化「1 顶代多币种 = N 行」,如需另外币种回到顶代户口列表在该顶代的其他币种行点新增下级</div>
+              </div>
+
+              <div className="section-title">⑤ 游戏条件</div>
+              {/* V0.2 隐藏「参考占成」(Sammy 2026-04-30): 直接继承父级 shareRatio,后期重启把 grid-cols-1 改回 grid-cols-2 + 参考占成 input 加回 */}
+              <div>
+                <label className="block text-xs text-muted mb-1">参考佣金率 <span style={{color:"#FF6B6B"}}>*</span></label>
+                <div className="flex items-center gap-2" style={{maxWidth:280}}>
+                  <input type="number" step="0.01" className="input flex-1" value={refRate} onChange={e=>setRefRate(e.target.value)} placeholder="例: 0.30"/>
+                  <span className="text-muted">%</span>
+                </div>
+                <div className="text-faint mt-1" style={{fontSize:11}}>上限 {shareUpperPct}%</div>
+                <div className="mt-1" style={{fontSize:11,color:"#9B7FE8"}}>📝 PM 说明(非产品文案):字段对齐 B 端 rate</div>
+              </div>
+
+              <div className="section-title">⑥ 安全校验</div>
+              <div>
+                <label className="block text-xs text-muted mb-1">操作密码 <span style={{color:"#FF6B6B"}}>*</span></label>
+                <input type="password" className="input" placeholder="当前登录员工的登录密码" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
+              </div>
+              {err && <div className="text-xs" style={{color:"#FF6B6B"}}>{err}</div>}
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <button className="btn btn-ghost" onClick={onClose}>取消</button>
+              <button className="btn btn-primary" onClick={submit}>确认提交</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 修改资料弹窗 (独立组件, 对齐 B 端 V1.12 EditProfileModal / FN-ACC-05)
+    // 3 段:只读信息 / 低敏感字段(无需密码) / 高敏感字段(动态触发操作密码)
+    function EditProfileModal({ account, accounts, onClose, onSubmit }) {
+      const isTop = account.accountType === "普通(顶代)";
+      // 反向找直属父级 (非顶代用)
+      const parentNode = isTop ? null : Object.values(accounts).find(n => n.children && n.children.includes(account.key));
+      const rateUpper = isTop ? null : (parentNode ? parentNode.shareRatio : 0);
+      const rateUpperPct = rateUpper == null ? null : (rateUpper * 100).toFixed(2);
+
+      const initShareRatio = account.shareRatio == null ? "" : (account.shareRatio * 100).toFixed(2);
+      const initRefRate = account.refRate == null ? "" : (account.refRate * 100).toFixed(2);
+      const [nick, setNick] = useState(account.nick || account.user);
+      const [phone, setPhone] = useState(account.phone || "");
+      const [phone2, setPhone2] = useState(account.phone2 || "");
+      const [refShareRatio, setRefShareRatio] = useState(initShareRatio);
+      const [refRate, setRefRate] = useState(initRefRate);
+      const [resetPwd, setResetPwd] = useState("");
+      const [accStatus, setAccStatus] = useState(account.status);
+      const [accType, setAccType] = useState(account.accountType);
+      const [opPwd, setOpPwd] = useState("");
+      const [err, setErr] = useState("");
+
+      // 账号类型升降级规则: 游戏 → 代理 (升级 OK) / 代理 → 游戏 (禁止) / 顶代 不可改
+      const canChangeType = account.accountType === "游戏";
+
+      // 高敏感字段是否被改动 (顶代不算占成/佣金率, 因为该字段不显示)
+      const highSensitive = (!isTop && refShareRatio !== initShareRatio) || (!isTop && refRate !== initRefRate) || resetPwd !== "" || accStatus !== account.status || accType !== account.accountType;
+
+      const submit = () => {
+        if (!nick.trim()) { setErr("请输入账户昵称"); return; }
+        if (!isTop) {
+          if (refShareRatio !== "" && isNaN(+refShareRatio)) { setErr("参考占成必须是数字"); return; }
+          if (refShareRatio !== "" && rateUpperPct != null && +refShareRatio > +rateUpperPct) { setErr("参考占成不能超过上限 " + rateUpperPct + "%"); return; }
+          if (refRate !== "" && isNaN(+refRate)) { setErr("参考佣金率必须是数字"); return; }
+        }
+        if (highSensitive && !opPwd) { setErr("修改了高敏感字段,请输入操作密码"); return; }
+        if (highSensitive && opPwd !== "123456") { setErr("操作密码错误"); return; }
+        onSubmit({
+          nick, phone, phone2,
+          accountType: accType,
+          shareRatio: isTop ? account.shareRatio : (refShareRatio === "" ? null : (+refShareRatio / 100)),
+          refRate: isTop ? account.refRate : (refRate === "" ? null : (+refRate / 100)),
+          status: accStatus,
+          resetPwd: resetPwd || null,  // 修 bug (Sammy 2026-04-30 challenge): 之前 onSubmit 没回传 resetPwd, 重置密码字段相当于无效
+        });
+      };
+
+      return (
+        <div className="modal-backdrop">
+          <div className="modal modal-wide" onClick={e=>e.stopPropagation()}>
+            <h3 className="text-base font-semibold mb-1">修改资料:{account.user}</h3>
+            <p className="text-xs text-faint mb-1">仅高敏感字段被修改时才触发操作密码二次确认</p>
+            <p className="text-xs mb-4" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):字段集与 B 端 EditProfileModal 对齐</p>
+            <div className="space-y-3">
+              <div className="section-title">只读信息</div>
+              <div className="bg-card border border-line rounded p-3 text-xs grid grid-cols-3 gap-2">
+                <div><span className="text-muted">系统户口号:</span> <span className="mono text-cool">{account.sysId}</span></div>
+                <div><span className="text-muted">用户账号:</span> <span className="mono">{account.user}</span></div>
+                <div><span className="text-muted">币种:</span> <span className="chip chip-cool">{account.currency}</span></div>
+                <div><span className="text-muted">账号类型:</span> {account.accountType}</div>
+                <div><span className="text-muted">创建时间:</span> {account.createdAt}</div>
+                <div><span className="text-muted">余额:</span> <span className="num">{fmtAmount(account.balance)}</span></div>
+              </div>
+
+              <div className="section-title">低敏感字段(无需操作密码)</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs text-muted mb-1">账户昵称</label><input className="input" value={nick} onChange={e=>setNick(e.target.value)}/></div>
+                <div><label className="block text-xs text-muted mb-1">电话号码</label><input className="input" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="选填"/></div>
+                <div><label className="block text-xs text-muted mb-1">备用电话</label><input className="input" value={phone2} onChange={e=>setPhone2(e.target.value)} placeholder="选填"/></div>
+              </div>
+
+              <div className="section-title">高敏感字段(修改时触发操作密码)</div>
+              {/* V0.2 隐藏「参考占成」(Sammy 2026-04-30): 顶代提示文案也隐藏。后期重启把这块加回 */}
+              {!isTop && (
+                <div className="mb-2" style={{padding:"8px",background:"#0F141C",borderRadius:6}}>
+                  <div>
+                    <label className="block text-xs text-muted mb-1">参考佣金率</label>
+                    <div className="flex items-center gap-2" style={{maxWidth:280}}>
+                      <input type="number" step="0.01" className="input flex-1" value={refRate} onChange={e=>setRefRate(e.target.value)} placeholder="例: 0.30"/>
+                      <span className="text-muted">%</span>
+                    </div>
+                    <div className="text-faint mt-1" style={{fontSize:11}}>上限 {rateUpperPct}%</div>
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-muted mb-1">重置登录密码(选填)</label>
+                  <input type="password" className="input" value={resetPwd} onChange={e=>setResetPwd(e.target.value)} placeholder="留空=不重置"/>
+                  <div className="text-faint mt-1" style={{fontSize:11}}>填写则强制下线下次登录修改</div>
+                </div>
+                <div>
+                  <label className="block text-xs text-muted mb-1">账号状态</label>
+                  <div className="flex gap-4 text-sm" style={{paddingTop:6}}>
+                    <label><input type="radio" checked={accStatus==="active"} onChange={()=>setAccStatus("active")}/> <span className="ml-1">启用</span></label>
+                    <label><input type="radio" checked={accStatus==="frozen"} onChange={()=>setAccStatus("frozen")}/> <span className="ml-1">禁用</span></label>
+                  </div>
+                </div>
+                {!isTop && <div style={{gridColumn:"span 2"}}>
+                  <label className="block text-xs text-muted mb-1">账号类型 {canChangeType && <span className="text-cool" style={{fontSize:10}}>(可升级)</span>}</label>
+                  <div className="flex gap-4 text-sm" style={{paddingTop:6}}>
+                    <label style={canChangeType ? {} : {opacity:0.5}}><input type="radio" checked={accType==="游戏"} disabled={!canChangeType} onChange={()=>setAccType("游戏")}/> <span className="ml-1">游戏(玩家)</span></label>
+                    <label style={canChangeType || account.accountType === "代理" ? {} : {opacity:0.5}}><input type="radio" checked={accType==="代理"} disabled={!canChangeType && account.accountType !== "代理"} onChange={()=>setAccType("代理")}/> <span className="ml-1">代理</span></label>
+                  </div>
+                  {account.accountType === "游戏" && <div className="text-faint mt-1" style={{fontSize:11}}>游戏(玩家)可升级为代理 → 开通发展下线能力</div>}
+                  {account.accountType === "代理" && <div className="text-faint mt-1" style={{fontSize:11}}>代理无法降级为游戏(可能已有下线 / 历史数据复杂)</div>}
+                </div>}
+              </div>
+
+              {highSensitive && (
+                <>
+                  <div className="section-title">安全校验(因高敏感字段被修改而出现)</div>
+                  <div>
+                    <label className="block text-xs text-muted mb-1">操作密码 <span style={{color:"#FF6B6B"}}>*</span></label>
+                    <input type="password" className="input" value={opPwd} onChange={e=>setOpPwd(e.target.value)} placeholder="当前登录员工的登录密码"/>
+                  </div>
+                </>
+              )}
+              {err && <div className="text-xs" style={{color:"#FF6B6B"}}>{err}</div>}
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <button className="btn btn-ghost" onClick={onClose}>取消</button>
+              <button className="btn btn-primary" onClick={submit}>确认提交</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 上下分弹窗 (独立组件 / 内部 state / 金额单位"万" / 提交回传 amountWan)
+    function CreditDebitModal({ dir, account, accounts, onClose, onSubmit }) {
+      const isCredit = dir === "credit";
+      // 找直属上级 (从 accounts 反查)
+      const parentNode = Object.values(accounts).find(n => n.children && n.children.includes(account.key));
+      const [amount, setAmount] = useState("");
+      const [opPwd, setOpPwd] = useState("");
+      const [err, setErr] = useState("");
+      const balanceWan = (account.balance || 0) / 10000;
+      const parentBalanceWan = parentNode ? (parentNode.balance || 0) / 10000 : 0;
+      const submit = () => {
+        if (!parentNode) { setErr("找不到直属上级,无法上下分"); return; }
+        const a = parseFloat(amount);
+        if (!a || a <= 0 || isNaN(a)) { setErr("请输入正确金额(单位 万)"); return; }
+        if (isCredit && a > parentBalanceWan) { setErr("上分金额不能超过直属上级当前余额 " + fmtAmount(parentNode.balance) + " " + account.currency); return; }
+        if (!isCredit && a > balanceWan) { setErr("下分金额不能超过当前余额 " + fmtAmount(account.balance) + " " + account.currency); return; }
+        if (opPwd !== "123456") { setErr("操作密码错误"); return; }
+        onSubmit(a);
+      };
+      return (
+        <div className="modal-backdrop">
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <h3 className="text-base font-semibold mb-1">{isCredit ? "上分" : "下分"}:{account.user} · {account.currency}</h3>
+            <p className="text-xs text-faint mb-4">{isCredit ? "上级 → 当前账号" : "当前账号 → 上级"} · 操作密码二次确认</p>
+            <div className="space-y-3">
+              {/* 资金流方向: 直属上级 ↔ 当前账号 */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-card border border-line rounded p-3" style={isCredit ? {borderColor:"#5BC97C"} : {}}>
+                  <div className="text-faint" style={{fontSize:10,marginBottom:4}}>{isCredit ? "▶ 资金来源(直属上级)" : "◀ 资金去向(直属上级)"}</div>
+                  {parentNode ? <>
+                    <div>{parentNode.accountType}:<span className="mono text-cool">{parentNode.user}</span></div>
+                    <div className="mt-1 text-muted">系统户口号:<span className="mono">{parentNode.sysId}</span></div>
+                    <div className="mt-1 text-muted">当前余额:<span className="num">{fmtAmount(parentNode.balance) + " " + parentNode.currency}</span></div>
+                  </> : <div className="text-faint">(无直属上级,无法上下分)</div>}
+                </div>
+                <div className="bg-card border border-line rounded p-3" style={!isCredit ? {borderColor:"#FF8B6B"} : {}}>
+                  <div className="text-faint" style={{fontSize:10,marginBottom:4}}>{isCredit ? "◀ 资金去向(当前账号)" : "▶ 资金来源(当前账号)"}</div>
+                  <div>{account.accountType}:<span className="mono text-cool">{account.user}</span></div>
+                  <div className="mt-1 text-muted">系统户口号:<span className="mono">{account.sysId}</span></div>
+                  <div className="mt-1 text-muted">当前余额:<span className="num">{fmtAmount(account.balance) + " " + account.currency}</span></div>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-muted mb-1">{isCredit ? "上分金额" : "下分金额"} <span style={{color:"#FF6B6B"}}>*</span></label>
+                <div className="flex items-center gap-2">
+                  <input type="number" step="0.0001" className="input flex-1" value={amount} onChange={e=>setAmount(e.target.value)} placeholder={isCredit ? "上限 " + parentBalanceWan.toLocaleString("zh-CN",{maximumFractionDigits:4}) + " (上级余额)" : "上限 " + balanceWan.toLocaleString("zh-CN",{maximumFractionDigits:4}) + " (当前余额)"}/>
+                  <span className="text-muted">万 {account.currency}</span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-muted mb-1">操作密码 <span style={{color:"#FF6B6B"}}>*</span></label>
+                <input type="password" className="input" placeholder="当前登录员工的登录密码" value={opPwd} onChange={e=>setOpPwd(e.target.value)}/>
+              </div>
+              {err && <div className="text-xs" style={{color:"#FF6B6B"}}>{err}</div>}
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <button className="btn btn-ghost" onClick={onClose}>取消</button>
+              <button className="btn btn-primary" onClick={submit} disabled={!parentNode}>确认提交</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ActionModal({ modal, onClose, onConfirm }) {
+      const { type, agent } = modal;
+      // 2026-04-29 重做:操作集 = 新增下级 / 修改资料 / 上分 / 下分
+      // 旧 type (create / freeze / unfreeze / shareRatio / currency) 全部移除
+      // 冻结/解冻并入「修改资料」状态切换;调占成 / 调币种 删除 (后端真支持时再加)
+
+      const InfoCard = () => (
+        <div className="bg-card border border-line rounded p-3 text-xs">
+          <div>{agent.accountType}:<span className="mono text-cool">{agent.user}</span>  ·  系统户口号 <span className="mono">{agent.sysId}</span></div>
+          <div className="mt-1 text-muted">币种:{agent.currency}  ·  占成 {agent.shareRatio == null ? "—" : fmtPct(agent.shareRatio) + (agent.accountType !== "普通(顶代)" ? " (参考)" : "")}</div>
+          <div className="mt-1 text-muted">账户余额:<span className="num">{fmtAmount(agent.balance) + " " + agent.currency}</span></div>
+        </div>
+      );
+
+      if (type === "newSub") return null; // 由 AgentsPage 直接渲染 NewSubModal
+
+      if (type === "editProfile") return null; // 由 AgentsPage 直接渲染 EditProfileModal
+      if (type === "credit" || type === "debit") return null; // 由 AgentsPage 直接渲染 CreditDebitModal
+      return null;
+    }
+
+    // ============== 注单记录页 ==============
+    function BetsPage({ role, appendSystemLog }) {
+      // 提交触发模式 (跟顶代户口筛选区一致)
+      // V0.2 (Sammy 2026-04-30): 系统户口号 / 用户账号 拆 2 个独立筛选框
+      const [inBetId, setInBetId] = useState(""), [betId, setBetId] = useState("");
+      const [inSysIdQ, setInSysIdQ] = useState(""), [sysIdQ, setSysIdQ] = useState("");
+      const [inUserQ, setInUserQ] = useState(""), [userQ, setUserQ] = useState("");
+      const [inCurrency, setInCurrency] = useState("all"), [currency, setCurrency] = useState("all");
+      const [inDateFrom, setInDateFrom] = useState(""), [dateFrom, setDateFrom] = useState("");
+      const [inDateTo, setInDateTo] = useState(""), [dateTo, setDateTo] = useState("");
+      const [pageNum, setPageNum] = useState(0);
+      const doSearch = () => {
+        setBetId(inBetId.trim()); setSysIdQ(inSysIdQ.trim()); setUserQ(inUserQ.trim()); setCurrency(inCurrency);
+        setDateFrom(inDateFrom); setDateTo(inDateTo); setPageNum(0);
+      };
+      const resetSearch = () => {
+        setInBetId(""); setInSysIdQ(""); setInUserQ(""); setInCurrency("all"); setInDateFrom(""); setInDateTo("");
+        setBetId(""); setSysIdQ(""); setUserQ(""); setCurrency("all"); setDateFrom(""); setDateTo(""); setPageNum(0);
+      };
+
+      // 硬过滤: 只显示体育注单 + 只显示已结算 (Sammy 2026-04-30 拍, 跟体育场次记录数据源对齐)
+      const list = MOCK_BETS.filter(b => {
+        if (!b.gameType.includes("体育")) return false;
+        if (b.status !== "已结算") return false;
+        if (betId && !b.id.includes(betId)) return false;
+        if (sysIdQ && !((b.playerSysId || "").includes(sysIdQ))) return false;
+        if (userQ && !((b.playerUser || "").includes(userQ))) return false;
+        if (currency !== "all" && b.currency !== currency) return false;
+        // 时间过滤 betTime (投注时间)
+        if (dateFrom) {
+          let fromCmp = dateFrom.replace("T", " ");
+          if (fromCmp.length === 16) fromCmp += ":00";
+          if (b.betTime < fromCmp) return false;
+        }
+        if (dateTo) {
+          let toCmp = dateTo.replace("T", " ");
+          if (toCmp.length === 16) toCmp += ":59";
+          if (b.betTime > toCmp) return false;
+        }
+        return true;
+      });
+
+      const showFinanceCols = role !== "risk";
+
+      return (
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-xl font-semibold">体育注单记录</h2>
+              <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):只保存已结算的体育注单(跟体育场次记录数据源一致);电子 / 六合彩 暂不在 S 端展示</p>
+            </div>
+            <button className="btn btn-ghost" onClick={()=>doExport("体育注单记录", MOCK_BETS.filter(b=>b.gameType.includes("体育")&&b.status==="已结算").length, appendSystemLog)}>导出 Excel</button>
+          </div>
+          <details className="rounded-lg p-3 mb-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(给开发对接,正式环境删除)</summary>
+            <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
+              <div><b>① 硬过滤(后端必加,不可关闭):</b></div>
+              <div>· <code>game_type = '体育'</code> AND <code>status = '已结算'</code> — 跟体育场次记录数据源对齐</div>
+              <div>· 电子 / 六合彩 / 未结算 注单 V0.2 不在 S 端展示</div>
+              <div className="mt-2"><b>② 数据来源:</b></div>
+              <div>· 三方平台每笔投注/结算回调 → 入 <code>bets</code> 表(准实时)</div>
+              <div>· 注单 → 体育场次记录:每日 00:10 跑批聚合(按顶代 + 币种)写入 <code>sports_sessions</code> 表</div>
+              <div className="mt-2"><b>③ 字段计算:</b></div>
+              <div>· <code>winLoss</code> = 派彩(payout) − 投注金额(stake);后端写入注单结算时即算好</div>
+              <div>· <code>validStake</code>(有效投注):部分游戏类型需扣除特定盘口,默认 = stake</div>
+              <div className="mt-2"><b>④ 三角色字段权限(后端按 token role 过滤):</b></div>
+              <div>· <code>admin / finance</code>:可见全字段(stake / payout / winLoss)</div>
+              <div>· <code>risk</code>:不返回 <code>payout / winLoss</code> 字段(只看投注情况,不看资金流水)</div>
+              <div className="mt-2"><b>⑤ 筛选区(提交触发,跟顶代户口 / 体育场次记录 一致):</b></div>
+              <div>· 注单号 / 系统户口号 / 用户账号 / 币种 / 投注时间范围 5 项</div>
+              <div>· 默认按 <code>betTime DESC</code> 排序;时间格式 <code>YYYY-MM-DD HH:mm:ss</code></div>
+              <div className="mt-2"><b>⑥ 导出 Excel:</b></div>
+              <div>· 文件名:<code>{"{"}YYYY-MM-DD{"}"}_体育注单记录.xlsx</code> · 范围:全量已结算体育注单(不按筛选)· 写 audit_log</div>
+            </div>
+          </details>
+          <div className="bg-panel border border-line rounded-lg p-3 mb-4">
+            <div className="flex flex-wrap gap-2 items-center">
+              <input className="input" style={{width:200}} placeholder="搜索注单号" value={inBetId} onChange={e=>setInBetId(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:180}} placeholder="搜索系统户口号" value={inSysIdQ} onChange={e=>setInSysIdQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:180}} placeholder="搜索用户账号" value={inUserQ} onChange={e=>setInUserQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <select className="input" style={{width:120}} value={inCurrency} onChange={e=>setInCurrency(e.target.value)}>
+                <option value="all">全部币种</option>
+                <option value="KRW">KRW</option><option value="USD">USD</option><option value="PHP">PHP</option><option value="CNY">CNY</option><option value="THB">THB</option>
+              </select>
+              <ConfigProvider locale={zhCN}>
+                <RangePicker
+                  showTime={{ format: "HH:mm:ss" }}
+                  format="YYYY-MM-DD HH:mm:ss"
+                  placeholder={["投注开始时间","结束时间"]}
+                  allowEmpty={[true, true]}
+                  value={[inDateFrom ? moment(inDateFrom.replace("T"," ")) : null, inDateTo ? moment(inDateTo.replace("T"," ")) : null]}
+                  onChange={(vals) => {
+                    if (!vals) { setInDateFrom(""); setInDateTo(""); return; }
+                    setInDateFrom(vals[0] ? vals[0].format("YYYY-MM-DDTHH:mm:ss") : "");
+                    setInDateTo(vals[1] ? vals[1].format("YYYY-MM-DDTHH:mm:ss") : "");
+                  }}
+                  style={{ height: 36, width: 380 }}
+                />
+              </ConfigProvider>
+              <button className="btn btn-primary" style={{padding:"8px 18px"}} onClick={doSearch}>搜索</button>
+              <button className="btn btn-ghost" style={{padding:"8px 14px"}} onClick={resetSearch}>重置</button>
+            </div>
+            <div className="flex items-center mt-2 text-xs text-faint">
+              <span>共 {list.length} 条已结算注单(投注时间过滤)</span>
+            </div>
+          </div>
+          <div className="bg-panel border border-line rounded-lg overflow-hidden">
+            <div className="scroll-x">
+              <table>
+                <thead><tr>
+                  <th><FieldHint hint="注单唯一编号(由三方游戏商生成),回调时落库。用于跨平台对账。永不变更。">注单号</FieldHint></th>
+                  <th><FieldHint hint="该笔注单归属的玩家系统户口号 playerSysId(B 端字段名 id ↔ S 端 sysId)。永不回收。">系统户口号</FieldHint></th>
+                  <th><FieldHint hint="玩家登录用户账号 playerUser。同一玩家多币种 = 多个独立户口(currency 不同时 user 也可能一样)。">用户账号</FieldHint></th>
+                  <th><FieldHint hint="注单结算币种。跟玩家所属顶代户口的币种一致(同一币种线)。">币种</FieldHint></th>
+                  <th><FieldHint hint="玩家下注时间 betTime,YYYY-MM-DD HH:mm:ss。默认按此字段 DESC 排序。">投注时间</FieldHint></th>
+                  <th><FieldHint hint="三方游戏商结算回调时间 settleTime,YYYY-MM-DD HH:mm:ss。已结算的注单才入 S 端展示。">结算时间</FieldHint></th>
+                  <th className="text-right"><FieldHint hint="玩家本笔投注金额 stake。risk 角色可见(只看投注情况)。">投注金额</FieldHint></th>{showFinanceCols && <th className="text-right"><FieldHint hint="三方游戏商结算后返给玩家的金额 payout。risk 角色不返回(只看投注情况,不看资金流水)。">派彩金额</FieldHint></th>}{showFinanceCols && <th className="text-right"><FieldHint hint="winLoss = payout − stake(平台视角)。正数 = 玩家赢 / 平台输;负数 = 玩家输 / 平台赢。risk 角色不返回。">输赢</FieldHint></th>}<th><FieldHint hint="注单状态:已结算 / 未结算。本表硬过滤只展示「已结算」(跟体育场次记录数据源对齐),未结算不展示。">状态</FieldHint></th>
+                </tr></thead>
+                <tbody>
+                  {list.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).map(b => (
+                    <tr key={b.id}>
+                      <td className="mono" style={{fontSize:11}}>{b.id}</td>
+                      <td className="mono text-muted">{b.playerSysId}</td>
+                      <td className="mono">{b.playerUser}</td>
+                      <td><span className="chip chip-info">{b.currency}</span></td>
+                      <td className="text-muted" style={{fontSize:12}}>{b.betTime}</td>
+                      <td className="text-muted" style={{fontSize:12}}>{b.settleTime}</td>
+                      <td className="num text-right">{fmtAmount(b.stake)}</td>
+                      {showFinanceCols && <td className="num text-right">{fmtAmount(b.payout)}</td>}
+                      {showFinanceCols && <td className="num text-right" style={{color: b.winLoss > 0 ? "#5BC97C" : (b.winLoss < 0 ? "#FF6B6B" : "#9AA4B5")}}>
+                        {(b.winLoss > 0 ? "+" : "") + fmtAmount(b.winLoss)}
+                      </td>}
+                      <td><StatusChip status={b.status}/></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination total={list.length} pageNum={pageNum} setPageNum={setPageNum}/>
+          </div>
+        </div>
+      );
+    }
+
+    // ============== 体育场次记录页 ==============
+    function SportsSessionsPage({ role, appendSystemLog }) {
+      // 提交触发模式 (跟体育注单 / 顶代户口筛选区一致)
+      // V0.2 (Sammy 2026-04-30): 系统户口号 / 用户账号 拆 2 个独立筛选框
+      // V0.x (Sammy 2026-05-11): 场次跑批生成后默认未结算 (commission=null);本页只展示状态, 不管账房怎么结算
+      const [inSessionId, setInSessionId] = useState(""), [sessionId, setSessionId] = useState("");
+      const [inSysIdQ, setInSysIdQ] = useState(""), [sysIdQ, setSysIdQ] = useState("");
+      const [inUserQ, setInUserQ] = useState(""), [userQ, setUserQ] = useState("");
+      const [inCurrency, setInCurrency] = useState("all"), [currency, setCurrency] = useState("all");
+      const [inShareRatio, setInShareRatio] = useState("all"), [shareRatioQ, setShareRatioQ] = useState("all");
+      const [inDateFrom, setInDateFrom] = useState(""), [dateFrom, setDateFrom] = useState("");
+      const [inDateTo, setInDateTo] = useState(""), [dateTo, setDateTo] = useState("");
+      const [inStatus, setInStatus] = useState("all"), [statusQ, setStatusQ] = useState("all");
+      const [detailModal, setDetailModal] = useState(null);
+      const [pageNum, setPageNum] = useState(0);
+
+      const doSearch = () => {
+        setSessionId(inSessionId.trim()); setSysIdQ(inSysIdQ.trim()); setUserQ(inUserQ.trim()); setCurrency(inCurrency);
+        setShareRatioQ(inShareRatio); setDateFrom(inDateFrom); setDateTo(inDateTo); setStatusQ(inStatus); setPageNum(0);
+      };
+      const resetSearch = () => {
+        setInSessionId(""); setInSysIdQ(""); setInUserQ(""); setInCurrency("all"); setInShareRatio("all"); setInDateFrom(""); setInDateTo(""); setInStatus("all");
+        setSessionId(""); setSysIdQ(""); setUserQ(""); setCurrency("all"); setShareRatioQ("all"); setDateFrom(""); setDateTo(""); setStatusQ("all"); setPageNum(0);
+      };
+
+      // 占成下拉的所有可选值 (从 mock 数据 distinct)
+      const shareRatioOptions = Array.from(new Set(MOCK_SPORTS_SESSIONS.map(s => s.shareRatio))).sort((a,b)=>a-b);
+
+      const list = MOCK_SPORTS_SESSIONS.filter(s => {
+        if ((s.validStake || 0) === 0) return false; // 过滤无有效投注的场次 (空跑批不展示)
+        if (sessionId && !s.id.includes(sessionId)) return false;
+        if (sysIdQ && !((s.sysId || "").includes(sysIdQ))) return false;
+        if (userQ && !((s.user || "").includes(userQ))) return false;
+        if (currency !== "all" && s.currency !== currency) return false;
+        if (shareRatioQ !== "all" && String(s.shareRatio) !== shareRatioQ) return false;
+        if (statusQ !== "all" && s.status !== statusQ) return false;
+        // 时间过滤: 按业务日期 s.date (YYYY-MM-DD) 与所选日期范围比较
+        if (dateFrom) {
+          const fromDate = dateFrom.length >= 10 ? dateFrom.slice(0,10) : dateFrom;
+          if (s.date < fromDate) return false;
+        }
+        if (dateTo) {
+          const toDate = dateTo.length >= 10 ? dateTo.slice(0,10) : dateTo;
+          if (s.date > toDate) return false;
+        }
+        return true;
+      });
+
+      return (
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-xl font-semibold">体育场次记录</h2>
+              <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):每日 00:10 跑批 1 次,生成前一天的体育场次(默认未结算);本页只展示状态,结算动作由账房执行,不在 S 端做</p>
+            </div>
+            <button className="btn btn-ghost" onClick={()=>doExport("体育场次记录", MOCK_SPORTS_SESSIONS.filter(s=>(s.validStake||0)>0).length, appendSystemLog)}>导出 Excel</button>
+          </div>
+          <div className="bg-cool-soft border border-cool rounded-lg p-3 mb-4 text-xs flex items-center gap-2">
+            <span className="text-cool">ℹ</span>
+            <span>电子 / 六合彩 的代理佣金结算暂未实现,本页仅体育数据</span>
+          </div>
+          {/* V0.x 新增:📝 业务规则 折叠面板 (跨字段规则;字段说明走表头 hover tooltip) */}
+          <details className="rounded-lg p-3 mb-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(跨字段;字段说明 hover 表头查看)</summary>
+            <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
+              <div><b>① 默认过滤(硬过滤,不可关闭):</b></div>
+              <div>· <code>validStake &gt; 0</code> — 空跑批不展示(后端跑批层就不入库,前端再加一道兜底)</div>
+              <div>· 当前 <code>rate = 0</code> 仍展示(commission 列显示 0);如需补过滤,改 SportsSessionsPage.list filter</div>
+              <div className="mt-2"><b>② 跑批口径(后端跑批 cron):</b></div>
+              <div>· <code>每日 00:10</code> 跑前一天体育注单 → 按 (顶代, 币种) 聚合 → 写入 <code>sports_sessions</code> 表</div>
+              <div>· 跑批落库时 <code>status='未结算'</code> + <code>commission=null</code> + <code>settled_at=null</code> + <code>settled_by=null</code>(Sammy 2026-05-11 拍:跑批不算佣金,留给账房算)</div>
+              <div>· 来源 SQL:<code>bets WHERE game_type='体育' AND DATE(bet_time)=yesterday</code>(不限注单状态;跑批聚合时 valid_stake 已经把未结算 / 撤单 / 无效注单剔除)</div>
+              <div className="mt-2"><b>③ 字段说明(鼠标 hover 表头查看):</b></div>
+              <div>· 鼠标 hover 表头任一字段(场次编号 / 输赢 / 有效投注 / 佣金率 / 佣金 等)即出该字段的紫色说明气泡</div>
+              <div>· 说明含字段含义 / 计算公式 / 三角色可见性 / 跨端命名差异</div>
+              <div className="mt-2"><b>④ 三角色字段权限(后端按 token role 过滤,risk 字段不返回):</b></div>
+              <div>· <code>admin / finance</code>:可见全字段</div>
+              <div>· <code>risk</code>:不返回 <code>shareRatio / shareAmount</code>(占成相关)+ <code>balance / subBalance / totalBalance</code>(顶代户口页同步过滤)</div>
+              <div className="mt-2"><b>⑤ V0.2 隐藏字段(代码保留,后期重启加回):</b></div>
+              <div>· <code>占成 / 占成金额 / 上缴佣金率</code> 3 列已从表头 + td 砍掉 — Sammy 2026-04-30 拍</div>
+              <div>· 后端 <code>submit_rate</code> 字段仍 mock 保留,V0.2 不算/不展示</div>
+              <div className="mt-2"><b>⑥ 导出 Excel:</b></div>
+              <div>· 文件名规则:<code>{"{"}YYYY-MM-DD{"}"}_体育场次记录.xlsx</code>(导出日期前缀)</div>
+              <div>· 范围:跟列表过滤后一致(全量 <code>validStake &gt; 0</code> 数据,不按当前筛选)</div>
+              <div>· 写动作回写 auditSystem(actor=当前员工,action=导出 Excel)</div>
+              <div className="mt-2"><b>⑦ 结算动作不在本页:</b></div>
+              <div>· 本页只展示场次状态(已结算 / 未结算)+ 佣金值,<b>不提供结算入口</b></div>
+              <div>· 结算属于账房写动作,由账房模块 / 真实账房系统执行(S 端 V0.x 原型不模拟)</div>
+              <div>· 结算后状态会同步刷新到本页:<code>status='已结算'</code> + <code>commission</code> 落库 + <code>settled_at</code> + <code>settled_by</code></div>
+            </div>
+          </details>
+          <div className="bg-panel border border-line rounded-lg p-3 mb-4">
+            <div className="flex flex-wrap gap-2 items-center">
+              <input className="input" style={{width:200}} placeholder="搜索场次编号" value={inSessionId} onChange={e=>setInSessionId(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:180}} placeholder="搜索系统户口号" value={inSysIdQ} onChange={e=>setInSysIdQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:180}} placeholder="搜索用户账号" value={inUserQ} onChange={e=>setInUserQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <select className="input" style={{width:120}} value={inCurrency} onChange={e=>setInCurrency(e.target.value)}>
+                <option value="all">全部币种</option>
+                <option value="KRW">KRW</option><option value="USD">USD</option><option value="PHP">PHP</option><option value="CNY">CNY</option><option value="THB">THB</option>
+              </select>
+              {/* V0.2 隐藏占成筛选 (Sammy 2026-04-30): 后期重启把这块加回 */}
+              <ConfigProvider locale={zhCN}>
+                <RangePicker
+                  format="YYYY-MM-DD"
+                  placeholder={["业务日期 起","业务日期 止"]}
+                  allowEmpty={[true, true]}
+                  value={[inDateFrom ? moment(inDateFrom) : null, inDateTo ? moment(inDateTo) : null]}
+                  onChange={(vals) => {
+                    if (!vals) { setInDateFrom(""); setInDateTo(""); return; }
+                    setInDateFrom(vals[0] ? vals[0].format("YYYY-MM-DD") : "");
+                    setInDateTo(vals[1] ? vals[1].format("YYYY-MM-DD") : "");
+                  }}
+                  style={{ height: 36, width: 280 }}
+                />
+              </ConfigProvider>
+              <select className="input" style={{width:120}} value={inStatus} onChange={e=>setInStatus(e.target.value)}>
+                <option value="all">全部状态</option>
+                <option value="已结算">已结算</option>
+                <option value="未结算">未结算</option>
+              </select>
+              <button className="btn btn-primary" style={{padding:"8px 18px"}} onClick={doSearch}>搜索</button>
+              <button className="btn btn-ghost" style={{padding:"8px 14px"}} onClick={resetSearch}>重置</button>
+            </div>
+            <div className="flex items-center mt-2 text-xs text-faint">
+              <span>共 {list.length} 条  ·  各币种佣金独立合计</span>
+            </div>
+          </div>
+          <div className="bg-panel border border-line rounded-lg overflow-hidden">
+            <div className="scroll-x">
+              <table>
+                <thead><tr>
+                  {/* V0.2 隐藏「占成 / 占成金额 / 上缴佣金率」3 列 (Sammy 2026-04-30): 后期重启把这 3 个 th + 对应 td 加回 */}
+                  <th><FieldHint hint="格式 SP-YYYYMMDDHHMM-NNN(年月日时分=跑批生成时间,NNN 按 batch 内重置)。每日 00:10 跑批生成前一天数据。">场次编号</FieldHint></th>
+                  <th><FieldHint hint="顶代户口的系统户口号 sysId(B 端字段名 id ↔ S 端字段名 sysId,跨端命名差异)。永不回收、永不复用、永不变更。">系统户口号</FieldHint></th>
+                  <th><FieldHint hint="顶代登录用户账号(6-20 位英数)。1 顶代多币种 = N 行,所以同一 user 可能出现多次(不同 currency)。">用户账号</FieldHint></th>
+                  <th className="text-right"><FieldHint hint="totalWinLoss = Σ bet.winLoss(本顶代当日所有玩家输赢汇总,平台视角)。正数 = 玩家赢 / 平台输;负数 = 玩家输 / 平台赢。risk 角色 V0.2 仍可见。">输赢</FieldHint></th>
+                  <th className="text-right"><FieldHint hint="validStake = 该顶代当日所有 bets 的 valid_stake 累加(NULL 时取 stake)。默认硬过滤 validStake > 0(空跑批不展示,后端跑批层就不入库)。">有效投注</FieldHint></th>
+                  <th><FieldHint hint="顶代户口的结算币种。1 顶代多币种 = N 行(按 currency 拆 sysId::currency 复合 key)。">币种</FieldHint></th>
+                  <th className="text-right"><FieldHint hint="顶代级别的佣金费率(0-100%)。代表本顶代当日整体的提成费率。rate=0 当前仍展示 commission=0(未过滤)。">佣金率</FieldHint></th>
+                  <th className="text-right"><FieldHint hint="commission = validStake × rate(本顶代当日总佣金)。未结算时 = NULL 显示「—」;账房执行结算后落库具体数值(结算入口不在 S 端)。">佣金</FieldHint></th>
+                  <th><FieldHint hint="跑批数据涵盖时段起点。YYYY-MM-DD 00:00:00(前一天起点)。">开工时间</FieldHint></th>
+                  <th><FieldHint hint="跑批数据涵盖时段终点。YYYY-MM-DD 23:59:59(前一天终点)。">收工时间</FieldHint></th>
+                  <th><FieldHint hint="跑批生成后默认「未结算」+ commission=null。账房执行结算后 → status='已结算' + commission 落库 + settled_at / settled_by。本页只展示状态,结算入口不在 S 端,单向不可逆。">状态</FieldHint></th>
+                  <th>操作</th>
+                </tr></thead>
+                <tbody>
+                  {list.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).map(s => (
+                    <tr key={s.id}>
+                      <td className="mono" style={{fontSize:11}}>{s.id}</td>
+                      <td className="mono text-muted">{s.sysId}</td>
+                      <td className="mono">{s.user}</td>
+                      <td className="num text-right" style={{color: s.totalWinLoss > 0 ? "#5BC97C" : (s.totalWinLoss < 0 ? "#FF6B6B" : "#9AA4B5")}}>
+                        {s.totalWinLoss > 0 ? "+" : ""}{fmtAmount(s.totalWinLoss)}
+                      </td>
+                      <td className="num text-right">{fmtAmount(s.validStake)}</td>
+                      <td><span className="chip chip-info">{s.currency}</span></td>
+                      <td className="num text-right">{fmtPct(s.rate)}</td>
+                      <td className="num text-right" style={{fontWeight:600}}>{s.commission == null ? <span className="text-faint">—</span> : fmtAmount(s.commission)}</td>
+                      <td className="text-muted" style={{fontSize:12}}>{s.workStartAt}</td>
+                      <td className="text-muted" style={{fontSize:12}}>{s.workEndAt}</td>
+                      <td><StatusChip status={s.status}/></td>
+                      <td><button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11}} onClick={()=>setDetailModal(s)}>游戏明细</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination total={list.length} pageNum={pageNum} setPageNum={setPageNum}/>
+          </div>
+          {detailModal && <SessionDetailModal session={detailModal} onClose={()=>setDetailModal(null)} appendSystemLog={appendSystemLog}/>}
+        </div>
+      );
+    }
+
+    // ============== 交易流水记录页 ==============
+    function LedgerPage({ role, appendSystemLog }) {
+      // 提交触发模式 (跟体育注单 / 体育场次 / 顶代户口 一致)
+      // V0.2 (Sammy 2026-04-30): 系统户口号 / 用户账号 拆 2 个独立筛选框
+      const [inTxId, setInTxId] = useState(""), [txId, setTxId] = useState("");
+      const [inSysIdQ, setInSysIdQ] = useState(""), [sysIdQ, setSysIdQ] = useState("");
+      const [inUserQ, setInUserQ] = useState(""), [userQ, setUserQ] = useState("");
+      const [inTxType, setInTxType] = useState("all"), [txType, setTxType] = useState("all");
+      const [inFlow, setInFlow] = useState("all"), [flow, setFlow] = useState("all"); // 转入/转出
+      const [inCurrency, setInCurrency] = useState("all"), [currency, setCurrency] = useState("all");
+      const [inDateFrom, setInDateFrom] = useState(""), [dateFrom, setDateFrom] = useState("");
+      const [inDateTo, setInDateTo] = useState(""), [dateTo, setDateTo] = useState("");
+      const [inStatus, setInStatus] = useState("all"), [statusQ, setStatusQ] = useState("all");
+      const [pageNum, setPageNum] = useState(0);
+
+      const doSearch = () => {
+        setTxId(inTxId.trim()); setSysIdQ(inSysIdQ.trim()); setUserQ(inUserQ.trim()); setTxType(inTxType);
+        setFlow(inFlow); setCurrency(inCurrency); setDateFrom(inDateFrom); setDateTo(inDateTo); setStatusQ(inStatus); setPageNum(0);
+      };
+      const resetSearch = () => {
+        setInTxId(""); setInSysIdQ(""); setInUserQ(""); setInTxType("all"); setInFlow("all"); setInCurrency("all"); setInDateFrom(""); setInDateTo(""); setInStatus("all");
+        setTxId(""); setSysIdQ(""); setUserQ(""); setTxType("all"); setFlow("all"); setCurrency("all"); setDateFrom(""); setDateTo(""); setStatusQ("all"); setPageNum(0);
+      };
+
+      const isCredit = (t) => t === "house_credit" || t === "agent_credit";
+      const isDebit  = (t) => t === "house_debit"  || t === "agent_debit";
+
+      const list = MOCK_LEDGER.filter(l => {
+        if (txId && !l.id.includes(txId)) return false;
+        if (sysIdQ && !((l.mainSysId || "").includes(sysIdQ))) return false;
+        if (userQ && !((l.mainUser || "").includes(userQ))) return false;
+        if (txType !== "all") {
+          if (txType === "credit" && !isCredit(l.type)) return false;
+          if (txType === "debit"  && !isDebit(l.type))  return false;
+          if (txType === "transfer_in"  && l.type !== "transfer_in")  return false;
+          if (txType === "transfer_out" && l.type !== "transfer_out") return false;
+        }
+        if (flow !== "all") {
+          const isIn = isCredit(l.type) || l.type === "transfer_in";
+          if (flow === "in"  && !isIn) return false;
+          if (flow === "out" &&  isIn) return false;
+        }
+        if (currency !== "all" && l.currency !== currency) return false;
+        if (statusQ !== "all" && l.status !== statusQ) return false;
+        if (dateFrom) {
+          let fromCmp = dateFrom.replace("T", " ");
+          if (fromCmp.length === 16) fromCmp += ":00";
+          if (l.time < fromCmp) return false;
+        }
+        if (dateTo) {
+          let toCmp = dateTo.replace("T", " ");
+          if (toCmp.length === 16) toCmp += ":59";
+          if (l.time > toCmp) return false;
+        }
+        return true;
+      });
+
+      return (
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-xl font-semibold">交易流水记录</h2>
+              <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):三层资金动作合一 · 账房 ↔ 顶代 / 顶代 ↔ 下线 / 玩家 ↔ 三方体育平台</p>
+            </div>
+            <button className="btn btn-ghost" onClick={()=>doExport("交易流水记录", MOCK_LEDGER.length, appendSystemLog)}>导出 Excel</button>
+          </div>
+          <details className="rounded-lg p-3 mb-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(给开发对接,正式环境删除)</summary>
+            <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
+              <div><b>① 三层资金动作合一(本表囊括 3 层流水):</b></div>
+              <div>· 第 1 层 <code>账房 ↔ 顶代</code>:credit / debit(账房给顶代上分 / 下分)</div>
+              <div>· 第 2 层 <code>顶代 ↔ 下线</code>(代理↔代理 / 代理↔玩家):credit / debit</div>
+              <div>· 第 3 层 <code>玩家 ↔ 三方体育平台</code>:transfer_in(平台→玩家钱包) / transfer_out(玩家钱包→平台)</div>
+              <div className="mt-2"><b>② 交易类型枚举:</b></div>
+              <div>· <code>credit</code>(上分,资金从上级转下来)/ <code>debit</code>(下分,资金回到上级)</div>
+              <div>· <code>transfer_in</code>(三方→玩家)/ <code>transfer_out</code>(玩家→三方)</div>
+              <div>· <code>flow=in</code> = credit + transfer_in;<code>flow=out</code> = debit + transfer_out</div>
+              <div className="mt-2"><b>③ 资金守恒(整树总余额不变):</b></div>
+              <div>· 上下分是内部转移:A.balance −X,B.balance +X(同一币种线内,跨币种禁止)</div>
+              <div>· 三方上下分:玩家钱包 ↔ 三方钱包之间转账,玩家整体可用资金不变(只是分布变了)</div>
+              <div className="mt-2"><b>④ 状态(V0.2 列隐藏,字段保留):</b></div>
+              <div>· <code>已成功</code> / <code>处理中</code> / <code>已失败</code> — V0.2 默认全展示「已成功」,后端 status 字段保留 mock</div>
+              <div className="mt-2"><b>⑤ 三角色字段权限(后端按 token role 过滤):</b></div>
+              <div>· <code>admin / finance</code>:可见全字段(包括金额)</div>
+              <div>· <code>risk</code>:可见全字段(流水类风控查账必看)</div>
+              <div className="mt-2"><b>⑥ V0.2 隐藏字段(代码保留):</b></div>
+              <div>· <code>流水号 ledgerId</code> 列已砍 + 搜索框已砍(Sammy 2026-04-30 拍)— 后端字段仍存</div>
+              <div className="mt-2"><b>⑦ 导出 Excel:</b></div>
+              <div>· 文件名:<code>{"{"}YYYY-MM-DD{"}"}_交易流水记录.xlsx</code> · 范围:全量(不按筛选)· 写 audit_log</div>
+            </div>
+          </details>
+          <div className="bg-panel border border-line rounded-lg p-3 mb-4">
+            <div className="flex flex-wrap gap-2 items-center">
+              {/* V0.2 隐藏「流水号」搜索 (Sammy 2026-04-30) */}
+              <input className="input" style={{width:200}} placeholder="搜索系统户口号" value={inSysIdQ} onChange={e=>setInSysIdQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <input className="input" style={{width:180}} placeholder="搜索用户账号" value={inUserQ} onChange={e=>setInUserQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <select className="input" style={{width:160}} value={inTxType} onChange={e=>setInTxType(e.target.value)}>
+                <option value="all">全部交易类型</option>
+                <option value="credit">上分</option>
+                <option value="debit">下分</option>
+                <option value="transfer_in">三方体育上分</option>
+                <option value="transfer_out">三方体育下分</option>
+              </select>
+              <select className="input" style={{width:120}} value={inFlow} onChange={e=>setInFlow(e.target.value)}>
+                <option value="all">全部方向</option>
+                <option value="in">转入</option>
+                <option value="out">转出</option>
+              </select>
+              <select className="input" style={{width:120}} value={inCurrency} onChange={e=>setInCurrency(e.target.value)}>
+                <option value="all">全部币种</option>
+                <option value="KRW">KRW</option><option value="USD">USD</option><option value="PHP">PHP</option><option value="CNY">CNY</option><option value="THB">THB</option>
+              </select>
+              <ConfigProvider locale={zhCN}>
+                <RangePicker
+                  showTime={{ format: "HH:mm:ss" }}
+                  format="YYYY-MM-DD HH:mm:ss"
+                  placeholder={["交易开始时间","结束时间"]}
+                  allowEmpty={[true, true]}
+                  value={[inDateFrom ? moment(inDateFrom.replace("T"," ")) : null, inDateTo ? moment(inDateTo.replace("T"," ")) : null]}
+                  onChange={(vals) => {
+                    if (!vals) { setInDateFrom(""); setInDateTo(""); return; }
+                    setInDateFrom(vals[0] ? vals[0].format("YYYY-MM-DDTHH:mm:ss") : "");
+                    setInDateTo(vals[1] ? vals[1].format("YYYY-MM-DDTHH:mm:ss") : "");
+                  }}
+                  style={{ height: 36, width: 380 }}
+                />
+              </ConfigProvider>
+              {/* V0.2 隐藏「状态」筛选 (Sammy 2026-04-30): 后期重启把这块加回 */}
+              <button className="btn btn-primary" style={{padding:"8px 18px"}} onClick={doSearch}>搜索</button>
+              <button className="btn btn-ghost" style={{padding:"8px 14px"}} onClick={resetSearch}>重置</button>
+            </div>
+            <div className="flex items-center mt-2 text-xs text-faint">
+              <span>共 {list.length} 条</span>
+            </div>
+          </div>
+          <div className="bg-panel border border-line rounded-lg overflow-hidden">
+            <div className="scroll-x">
+              <table>
+                <thead><tr>
+                  {/* V0.2 隐藏「状态」列 (Sammy 2026-04-30): 后期重启把 th 状态 + td 状态 chip 加回 */}
+                  {/* V0.2 隐藏「流水号」列 (Sammy 2026-04-30): 后期重启把 th + td 流水号 加回; 字段后端仍存 */}
+                  <th><FieldHint hint="资金动作主体的系统户口号(顶代/代理/玩家)。永不回收、永不复用、永不变更。">系统户口号</FieldHint></th>
+                  <th><FieldHint hint="资金动作主体的登录用户账号。同一 user 多币种 = 多个户口。">用户账号</FieldHint></th>
+                  <th><FieldHint hint="交易类型 4 类:credit 上分 / debit 下分(账号树内) + transfer_in 三方上分 / transfer_out 三方下分(玩家钱包 ↔ 三方钱包)。">交易类型</FieldHint></th>
+                  <th><FieldHint hint="flow 方向:in = credit + transfer_in;out = debit + transfer_out。给筛选区分账面方向用。">转入/转出</FieldHint></th>
+                  <th><FieldHint hint="交易币种。资金转账只能在同一币种线内进行,跨币种禁止。">币种</FieldHint></th>
+                  <th className="text-right"><FieldHint hint="交易金额(单位「万」中文模式)。上下分:整树总线余额不变(只是分布变了)。三方上下分:玩家整体可用资金不变。risk 角色可见(对账需要)。">金额</FieldHint></th>
+                  <th><FieldHint hint="交易发起时间 YYYY-MM-DD HH:mm:ss。默认 DESC 排序。">时间</FieldHint></th>
+                </tr></thead>
+                <tbody>
+                  {list.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).map(l => {
+                    const isIn = isCredit(l.type) || l.type === "transfer_in";
+                    return (
+                    <tr key={l.id}>
+                      <td className="mono text-muted">{l.mainSysId || "—"}</td>
+                      <td className="mono">{l.mainUser || "—"}</td>
+                      <td>{l.typeLabel}</td>
+                      <td><span className={"chip " + (isIn ? "chip-active" : "chip-warn")} style={{fontSize:11}}>{isIn ? "转入" : "转出"}</span></td>
+                      <td><span className="chip chip-info">{l.currency}</span></td>
+                      <td className="num text-right">{fmtAmount(l.amount)}</td>
+                      <td className="text-muted" style={{fontSize:12}}>{l.time}</td>
+                    </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <Pagination total={list.length} pageNum={pageNum} setPageNum={setPageNum}/>
+          </div>
+        </div>
+      );
+    }
+
+    // ============== 操作日志页 ==============
+    function AuditPage({ role, system, player }) {
+      const [tab, setTab] = useState("system");
+
+      // 提交触发模式 (跟其他报表页一致)
+      const [inActor, setInActor] = useState(""), [actorQ, setActorQ] = useState("");
+      const [inActorType, setInActorType] = useState("all"), [actorTypeQ, setActorTypeQ] = useState("all");
+      const [inDateFrom, setInDateFrom] = useState(""), [dateFrom, setDateFrom] = useState("");
+      const [inDateTo, setInDateTo] = useState(""), [dateTo, setDateTo] = useState("");
+      const [pageNum, setPageNum] = useState(0);
+
+      const doSearch = () => {
+        setActorQ(inActor.trim()); setActorTypeQ(inActorType); setDateFrom(inDateFrom); setDateTo(inDateTo); setPageNum(0);
+      };
+      const resetSearch = () => {
+        setInActor(""); setInActorType("all"); setInDateFrom(""); setInDateTo("");
+        setActorQ(""); setActorTypeQ("all"); setDateFrom(""); setDateTo(""); setPageNum(0);
+      };
+      // 切 tab 时重置筛选 + pageNum (避免上个 tab 的过滤值/页码串入下个 tab)
+      const switchTab = (t) => { setTab(t); resetSearch(); };
+
+      const raw = tab === "system" ? system : player;
+      const data = raw.filter(r => {
+        if (actorQ && !(r.actor || "").includes(actorQ)) return false;
+        if (actorTypeQ !== "all" && r.actorType !== actorTypeQ) return false;
+        if (dateFrom) {
+          let fromCmp = dateFrom.replace("T", " ");
+          if (fromCmp.length === 16) fromCmp += ":00";
+          if (r.time < fromCmp) return false;
+        }
+        if (dateTo) {
+          let toCmp = dateTo.replace("T", " ");
+          if (toCmp.length === 16) toCmp += ":59";
+          if (r.time > toCmp) return false;
+        }
+        return true;
+      });
+
+      // 主体类型下拉选项随 tab 变
+      const actorTypeOptions = tab === "system"
+        ? [{v:"all",l:"全部主体类型"},{v:"员工",l:"员工"}]
+        : [{v:"all",l:"全部主体类型"},{v:"玩家",l:"玩家"},{v:"代理",l:"代理"}];
+      const actorPlaceholder = tab === "system" ? "搜索员工账号" : "搜索玩家 / 代理账号";
+
+      return (
+        <div className="p-6">
+          <div className="mb-5">
+            <h2 className="text-xl font-semibold">操作日志</h2>
+            <p className="text-xs text-muted mt-1">系统 = 平台员工动作  ·  玩家 = C 端玩家 + B 端代理动作</p>
+            <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):S 端视角下,代理也是被管对象,所以归在「玩家」Tab</p>
+          </div>
+          <details className="rounded-lg p-3 mb-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(给开发对接,正式环境删除)</summary>
+            <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
+              <div><b>① 双 Tab 数据源:</b></div>
+              <div>· <code>系统</code> Tab:平台员工(admin / risk / finance / ops)的写动作,actorType ∈ {"{"} 员工 {"}"}</div>
+              <div>· <code>玩家</code> Tab:C 端玩家 + B 端代理的写动作,actorType ∈ {"{"} 代理 / 玩家 {"}"} — 代理也是被管对象,所以归在玩家 Tab</div>
+              <div className="mt-2"><b>② 写动作触发(后端硬规则):</b></div>
+              <div>· 每个写动作 API 内部必须 <code>service.appendAudit(...)</code>,跟 DB 写动作同一事务(或异步 MQ 但保证落库)</div>
+              <div>· 跑批任务:<code>actor_type = '系统'</code>(虚拟主体)V0.2 不实现,真实开发可加</div>
+              <div className="mt-2"><b>③ 27 类动作 target 模板(常见):</b></div>
+              <div>· <code>修改资料</code> → <code>${"{"}type{"}"} ${"{"}user{"}"} (${"{"}sysId{"}"}) ${"{"}diffs.join(' / '){"}"}</code></div>
+              <div>· <code>上分</code> / <code>下分</code> → <code>${"{"}type{"}"} ${"{"}user{"}"} (${"{"}sysId{"}"}) ${"{"}amount{"}"} ${"{"}currency{"}"}</code></div>
+              <div>· <code>禁用账号</code> / <code>启用账号</code> → <code>${"{"}type{"}"} ${"{"}user{"}"} (${"{"}sysId{"}"})</code> + 是否级联说明</div>
+              <div>· <code>导出 Excel</code> → <code>${"{"}menuName{"}"} / 全量 ${"{"}totalCount{"}"} 条 → ${"{"}filename{"}"}</code></div>
+              <div>· 完整 27 类动作 target 模板详见 PRD §8.1 / §8.2 / §8.3</div>
+              <div className="mt-2"><b>④ 字段计算 diff 规则(以修改资料为例):</b></div>
+              <div>· <code>refRate</code>:<code>if (data.refRate != null && data.refRate !== old.refRate) diffs.push(`佣金率: ${"{"}oldPct{"}"} → ${"{"}newPct{"}"}`)</code></div>
+              <div>· <code>status</code>:中文 <code>启用 / 禁用</code>(不用 active/frozen 英文)</div>
+              <div className="mt-2"><b>⑤ 切 Tab 重置筛选:</b></div>
+              <div>· 避免上个 Tab 的过滤值/页码串入下个 Tab(switchTab → resetSearch)</div>
+              <div className="mt-2"><b>⑥ 三角色字段权限:</b></div>
+              <div>· <code>admin / risk / finance</code>:都可见全部日志(只读)</div>
+              <div>· 操作日志不可修改 / 不可删除(append-only,合规要求)</div>
+            </div>
+          </details>
+          <div className="border-b border-line mb-4 flex">
+            <div className={"tab " + (tab==="system"?"active":"")} onClick={()=>switchTab("system")}>系统</div>
+            <div className={"tab " + (tab==="player"?"active":"")} onClick={()=>switchTab("player")}>玩家</div>
+          </div>
+          <div className="bg-panel border border-line rounded-lg p-3 mb-4">
+            <div className="flex flex-wrap gap-2 items-center">
+              <input className="input" style={{width:240}} placeholder={actorPlaceholder} value={inActor} onChange={e=>setInActor(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <select className="input" style={{width:160}} value={inActorType} onChange={e=>setInActorType(e.target.value)}>
+                {actorTypeOptions.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+              </select>
+              <ConfigProvider locale={zhCN}>
+                <RangePicker
+                  showTime={{ format: "HH:mm:ss" }}
+                  format="YYYY-MM-DD HH:mm:ss"
+                  placeholder={["操作开始时间","结束时间"]}
+                  allowEmpty={[true, true]}
+                  value={[inDateFrom ? moment(inDateFrom.replace("T"," ")) : null, inDateTo ? moment(inDateTo.replace("T"," ")) : null]}
+                  onChange={(vals) => {
+                    if (!vals) { setInDateFrom(""); setInDateTo(""); return; }
+                    setInDateFrom(vals[0] ? vals[0].format("YYYY-MM-DDTHH:mm:ss") : "");
+                    setInDateTo(vals[1] ? vals[1].format("YYYY-MM-DDTHH:mm:ss") : "");
+                  }}
+                  style={{ height: 36, width: 380 }}
+                />
+              </ConfigProvider>
+              <button className="btn btn-primary" style={{padding:"8px 18px"}} onClick={doSearch}>搜索</button>
+              <button className="btn btn-ghost" style={{padding:"8px 14px"}} onClick={resetSearch}>重置</button>
+            </div>
+            <div className="flex items-center mt-2 text-xs text-faint">
+              <span>共 {data.length} 条</span>
+            </div>
+          </div>
+          <div className="bg-panel border border-line rounded-lg overflow-hidden">
+            <div className="scroll-x">
+              <table>
+                <thead><tr>
+                  {/* V0.2 隐藏「目标」列 (Sammy 2026-04-30 拍 一期不加): 后端 target 字段仍写入 audit_log,前端不展示。后期重启把 th 目标 + td 目标 加回 */}
+                  <th><FieldHint hint="操作发生时间 YYYY-MM-DD HH:mm:ss。append-only,不可修改。">时间</FieldHint></th>
+                  <th><FieldHint hint="主体类型:员工(系统 Tab)/ 代理 / 玩家(玩家 Tab)。S 端视角下代理也是被管对象,所以归在玩家 Tab。">主体类型</FieldHint></th>
+                  <th><FieldHint hint="主体身份描述:格式「user (id) · 类型」。员工主体的角色会展示在括号内(admin / risk / finance / ops)。">主体</FieldHint></th>
+                  <th><FieldHint hint="动作枚举 27 类:登录 / 登出 / 修改资料 / 上分 / 下分 / 启用 / 禁用 / 改方案 / 重置密码 / 导出 Excel / 增删员工 等。">动作</FieldHint></th>
+                  <th><FieldHint hint="操作来源 IP(后端从 request 取)。用于安全审计 + IP 白名单核查。">IP</FieldHint></th>
+                </tr></thead>
+                <tbody>
+                  {data.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).map((r, i) => (
+                    <tr key={i}>
+                      <td className="text-muted" style={{fontSize:12}}>{r.time}</td>
+                      {/* V0.2 (Sammy 2026-04-30): 员工 chip-cool → 紫色, 跟顶代账号类型紫保持一致 */}
+                      <td>{r.actorType === "员工"
+                        ? <span className="chip" style={{background:"#2A1F3D",color:"#9B7FE8"}}>{r.actorType}</span>
+                        : r.actorType === "代理"
+                          ? <span className="chip chip-warn">{r.actorType}</span>
+                          : <span className="chip chip-info">{r.actorType}</span>}
+                      </td>
+                      <td className="mono">{r.actor}</td>
+                      <td>{r.action}</td>
+                      <td className="mono text-faint" style={{fontSize:11}}>{r.ip}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Pagination total={data.length} pageNum={pageNum} setPageNum={setPageNum}/>
+          </div>
+        </div>
+      );
+    }
+
+    // ============== 登录页 ==============
+    // V0.2 收尾 (Sammy 2026-04-30 拍): IP 白名单功能 V0.2 不做, LoginPage 只保留账号 + 密码校验
+    // (原 IP 白名单代码 / IPWhitelistPage / 模拟 IP 输入框全部砍掉, 真实 IP 字段保留 mock 默认值给审计日志用)
+    function LoginPage({ onLogin, staffList }) {
+      const [user, setUser] = useState("");
+      const [pwd, setPwd] = useState("");
+      const [showPwd, setShowPwd] = useState(false);
+      const [err, setErr] = useState("");
+      const submit = () => {
+        const matched = staffList.find(s => s.user === user.trim());
+        if (!matched) { setErr("员工账号不存在"); return; }
+        if (pwd !== "123456") { setErr("登录密码错误"); return; }  // V0.2 mock: 所有员工密码统一 123456
+        onLogin(matched, "10.4.2.18");  // mock 默认 IP, 真实开发后端从 request 取
+      };
+      return (
+        <div className="min-h-screen bg-app flex items-center justify-center" style={{padding:"24px"}}>
+          <div className="bg-panel border border-line rounded-lg" style={{padding:"40px 36px",width:380}}>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-cool text-2xl">◆</span>
+              <span className="font-semibold tracking-wider text-lg" style={{letterSpacing:2}}>三方游戏</span>
+            </div>
+            <div className="text-xs text-faint mb-6 ml-7">内部员工登录</div>
+            <div className="mb-3">
+              <label className="block text-xs text-muted mb-1">员工账号</label>
+              <input className="input" placeholder="请输入员工账号" value={user} onChange={e=>setUser(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") submit();}} autoFocus/>
+            </div>
+            <div className="mb-3">
+              <label className="block text-xs text-muted mb-1">登录密码</label>
+              <div style={{position:"relative"}}>
+                <input className="input" type={showPwd ? "text" : "password"} placeholder="请输入密码" value={pwd} onChange={e=>setPwd(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") submit();}} style={{paddingRight:36}}/>
+                <span onClick={()=>setShowPwd(!showPwd)} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",color:"#9AA4B5",cursor:"pointer",fontSize:12,userSelect:"none"}}>{showPwd ? "🙈" : "👁"}</span>
+              </div>
+            </div>
+            {err && <div className="text-xs mb-3" style={{color:"#FF6B6B"}}>{err}</div>}
+            <button className="btn btn-primary w-full" style={{padding:"10px 0",marginTop:6}} onClick={submit}>登录</button>
+            <div className="text-xs mt-4" style={{fontSize:10,color:"#9B7FE8"}}>
+              📝 PM 说明(非产品文案):V0.2 mock 员工 admin / risk-mei / finance-luo / ops-chen,密码统一 123456
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============== 修改密码弹窗 ==============
+    function ChangePwdModal({ user, onClose, onConfirm }) {
+      const [oldPwd, setOldPwd] = useState("");
+      const [newPwd, setNewPwd] = useState("");
+      const [newPwdC, setNewPwdC] = useState("");
+      const [err, setErr] = useState("");
+      const submit = () => {
+        if (oldPwd !== "123456") { setErr("原密码错误"); return; }
+        if (!newPwd || newPwd.length < 6) { setErr("新密码至少 6 位"); return; }
+        if (newPwd === oldPwd) { setErr("新密码不能跟原密码相同"); return; }
+        if (newPwd !== newPwdC) { setErr("两次新密码不一致"); return; }
+        onConfirm();
+      };
+      return (
+        <div className="modal-backdrop" onClick={onClose}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{width:420}}>
+            <h3 className="text-base font-semibold mb-1">修改登录密码</h3>
+            <p className="text-xs text-faint mb-4">当前账号 <span className="mono text-cool">{user.user}</span> · 修改后需重新登录</p>
+            <div className="mb-3">
+              <label className="block text-xs text-muted mb-1">原密码</label>
+              <input className="input" type="password" value={oldPwd} onChange={e=>setOldPwd(e.target.value)} placeholder="请输入原密码" autoFocus/>
+            </div>
+            <div className="mb-3">
+              <label className="block text-xs text-muted mb-1">新密码</label>
+              <input className="input" type="password" value={newPwd} onChange={e=>setNewPwd(e.target.value)} placeholder="至少 6 位"/>
+            </div>
+            <div className="mb-3">
+              <label className="block text-xs text-muted mb-1">确认新密码</label>
+              <input className="input" type="password" value={newPwdC} onChange={e=>setNewPwdC(e.target.value)} placeholder="再次输入新密码"/>
+            </div>
+            {err && <div className="text-xs mb-3" style={{color:"#FF6B6B"}}>{err}</div>}
+            <div className="text-xs text-faint mb-3" style={{fontSize:10,color:"#F0B93A"}}>
+              ℹ 操作密码 = 登录密码,改后所有写动作的二次校验也用新密码
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button className="btn btn-ghost" onClick={onClose}>取消</button>
+              <button className="btn btn-primary" onClick={submit}>确认修改</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============== 员工账号页 (权限管理 / 员工账号) ==============
+    function StaffPage({ currentUser, appendSystemLog, staff, setStaff }) {
+      // staff / setStaff 由 App 层 lift (V0.2 修 bug, Sammy 2026-04-30): 新员工立即可登录, 删除立即生效
+      const [showAdd, setShowAdd] = useState(false);
+      const [delConfirm, setDelConfirm] = useState(null);
+      const [editRoleModal, setEditRoleModal] = useState(null);
+
+      const handleEditRole = (s, newRole) => {
+        if (s.user === "admin") { alert("⚠ admin 是系统超级账号\nadmin 角色不可修改,确保始终至少有 1 个 operator 能管理系统"); return; }
+        const oldRole = s.role;
+        setStaff(staff.map(x => x.user === s.user ? { ...x, role: newRole } : x));
+        setEditRoleModal(null);
+        appendSystemLog && appendSystemLog("修改员工角色", s.user+"  "+ROLES[oldRole].name+" → "+ROLES[newRole].name+" (该员工已登录会话需重登才生效)");
+      };
+      const handleAdd = (data) => {
+        if (staff.find(s => s.user === data.user)) { alert("⚠ 员工账号已存在\n请换一个员工账号(若该账号已离职,请先在权限管理删除)"); return; }
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2,"0");
+        const createdAt = now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate())+" "+pad(now.getHours())+":"+pad(now.getMinutes())+":"+pad(now.getSeconds());
+        setStaff([...staff, { ...data, createdAt, lastLogin:"-" }]);
+        setShowAdd(false);
+        appendSystemLog && appendSystemLog("新增员工", data.user+" / 角色 "+ROLES[data.role].name);
+      };
+      const handleDel = (s) => {
+        if (s.user === "admin") { alert("⚠ admin 是系统超级账号\nadmin 不可删除,确保始终至少有 1 个 operator 能管理系统"); return; }
+        if (s.user === currentUser.user) { alert("⚠ 不能删除当前登录账号\n请先用其他 operator 账号登录,再删除当前账号"); return; }
+        setStaff(staff.filter(x => x.user !== s.user));
+        setDelConfirm(null);
+        appendSystemLog && appendSystemLog("删除员工", s.user+" / 角色 "+ROLES[s.role].name);
+      };
+
+      return (
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-xl font-semibold">员工账号</h2>
+              <p className="text-xs text-muted mt-1">仅 operator 可见</p>
+              <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):新增 / 删除登录总控后台的员工;角色决定可见菜单与可写动作</p>
+            </div>
+            <button className="btn btn-primary" onClick={()=>setShowAdd(true)} style={{padding:"8px 18px"}}>+ 新增员工</button>
+          </div>
+          <details className="rounded-lg p-3 mb-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(给开发对接,正式环境删除)</summary>
+            <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
+              <div><b>① 角色枚举(4 种):</b></div>
+              <div>· <code>admin</code> 平台运营:可见全菜单,可写所有动作,可管理员工</div>
+              <div>· <code>risk</code> 风控:不可见占成 / 余额相关字段,只读核查</div>
+              <div>· <code>finance</code> 财务:全字段可见,负责导出 / 对账</div>
+              <div>· <code>ops</code> 客服:有限字段,不可见员工账号管理菜单</div>
+              <div className="mt-2"><b>② 字段:</b></div>
+              <div>· 员工账号 <code>user</code>(4-20 位英数+中划线,唯一)/ 角色 <code>role</code> / 电话 <code>phone</code> / 创建时间 <code>createdAt</code> / 最近登录 <code>lastLogin</code> + lastLoginIP</div>
+              <div>· V0.2 mock 操作密码 = 登录密码(简化);真实开发拆分:登录密码 + 操作密码 双密码体系</div>
+              <div className="mt-2"><b>③ 写动作(增 / 删 / 改 / 启停):</b></div>
+              <div>· <code>新增员工</code>:必填 user / pwd / role / phone(选填) + 操作密码二次确认</div>
+              <div>· <code>删除员工</code>:不能删除 <code>admin</code> 超级账号 + 不能删除自己(防自锁)</div>
+              <div>· <code>修改角色</code>:admin → 其他角色禁止(防超级账号丢失)</div>
+              <div>· 修改 / 删除写 audit_log + 强制踢已登录会话(真实开发)</div>
+              <div className="mt-2"><b>④ 登录态(V0.2 修 bug,Sammy 2026-04-30 拍):</b></div>
+              <div>· staff state lift 到 App 层 — 切菜单 unmount 不丢 mock(新员工立即可登录、删除立即生效)</div>
+              <div>· <code>lastLogin</code> 字段在 onLogin 时同步刷新(setStaff(staff.map(...lastLogin:now)))</div>
+              <div className="mt-2"><b>⑤ 三角色字段权限:</b></div>
+              <div>· 只有 <code>admin / operator</code> 角色能看见本页菜单 + 增删改;其他角色菜单隐藏</div>
+            </div>
+          </details>
+          <div className="bg-panel border border-line rounded-lg overflow-hidden">
+            <div className="scroll-x">
+              <table>
+                <thead><tr>
+                  <th><FieldHint hint="员工登录账号 user(4-20 位英文+数字+中划线,全局唯一)。admin 是超级账号(不可删除 / 不可改角色 / 防自锁)。">员工账号</FieldHint></th>
+                  <th><FieldHint hint="角色枚举 4 种:admin 平台运营(全菜单+全写动作)/ risk 风控(只读,占成+余额不返回)/ finance 财务(全字段,导出对账)/ ops 客服(有限字段)。">角色</FieldHint></th>
+                  <th><FieldHint hint="联系电话(选填,异常登录通知用)。修改不触发操作密码二次确认。">电话</FieldHint></th>
+                  <th><FieldHint hint="员工账号创建时间 YYYY-MM-DD HH:mm:ss(由 admin 通过「+ 新增员工」创建时记录)。">创建时间</FieldHint></th>
+                  <th><FieldHint hint="该员工最近一次登录时间 + IP(用于安全审计)。onLogin 同步刷新(lift to App,切菜单不丢)。">最近登录</FieldHint></th>
+                  <th>操作</th>
+                </tr></thead>
+                <tbody>
+                  {staff.map(s => (
+                    <tr key={s.user}>
+                      <td className="mono">{s.user}{s.user === currentUser.user && <span className="text-faint ml-2" style={{fontSize:10}}>(当前登录)</span>}{s.user === "admin" && <span className="ml-2" style={{fontSize:10,color:"#F0B93A"}}>★ 超级账号</span>}</td>
+                      <td><span className="chip" style={{background:ROLES[s.role].color+"22",color:ROLES[s.role].color}}>{ROLES[s.role].name}</span></td>
+                      <td className="mono text-muted" style={{fontSize:12}}>{s.phone}</td>
+                      <td className="text-muted" style={{fontSize:12}}>{s.createdAt}</td>
+                      <td className="text-muted" style={{fontSize:12}}>{s.lastLogin}</td>
+                      <td>
+                        <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,marginRight:4}} onClick={()=>setEditRoleModal(s)} disabled={s.user === currentUser.user || s.user === "admin"} title={s.user === "admin" ? "admin 是系统超级账号,角色不可修改" : ""}>修改角色</button>
+                        <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,color:"#FF6B6B"}} onClick={()=>setDelConfirm(s)} disabled={s.user === currentUser.user || s.user === "admin"} title={s.user === "admin" ? "admin 是系统超级账号,不可删除" : ""}>删除</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {showAdd && <AddStaffModal onClose={()=>setShowAdd(false)} onSubmit={handleAdd}/>}
+          {editRoleModal && <EditStaffRoleModal staff={editRoleModal} onClose={()=>setEditRoleModal(null)} onSubmit={(newRole)=>handleEditRole(editRoleModal, newRole)}/>}
+          {delConfirm && (
+            <div className="modal-backdrop" onClick={()=>setDelConfirm(null)}>
+              <div className="modal" onClick={e=>e.stopPropagation()} style={{width:420}}>
+                <h3 className="text-base font-semibold mb-3">确认删除员工?</h3>
+                <p className="text-sm text-muted mb-4">确认删除 <span className="mono text-cool">{delConfirm.user}</span> ({ROLES[delConfirm.role].name}) ?该员工将无法登录系统,历史操作日志保留。</p>
+                <div className="flex justify-end gap-2">
+                  <button className="btn btn-ghost" onClick={()=>setDelConfirm(null)}>取消</button>
+                  <button className="btn btn-primary" style={{background:"#FF6B6B",borderColor:"#FF6B6B"}} onClick={()=>handleDel(delConfirm)}>确认删除</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function EditStaffRoleModal({ staff, onClose, onSubmit }) {
+      const [newRole, setNewRole] = useState(staff.role);
+      const [opPwd, setOpPwd] = useState("");
+      const [err, setErr] = useState("");
+      const submit = () => {
+        if (newRole === staff.role) { setErr("⚠ 角色未修改"); return; }
+        if (opPwd !== "123456") { setErr("⚠ 操作密码错误"); return; }
+        onSubmit(newRole);
+      };
+      return (
+        <div className="modal-backdrop" onClick={onClose}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{width:440}}>
+            <h3 className="text-base font-semibold mb-1">修改员工角色</h3>
+            <p className="text-xs text-faint mb-4">员工 <span className="mono text-cool">{staff.user}</span> · 当前角色 <span className="chip" style={{background:ROLES[staff.role].color+"22",color:ROLES[staff.role].color,fontSize:10}}>{ROLES[staff.role].name}</span></p>
+            <div className="mb-3">
+              <label className="block text-xs text-muted mb-1">新角色 <span style={{color:"#FF6B6B"}}>*</span></label>
+              <select className="input" value={newRole} onChange={e=>setNewRole(e.target.value)}>
+                <option value="operator">平台运营 (operator) - 全菜单 + 可写</option>
+                <option value="risk">风控审计 (risk) - 注单/场次/操作日志,只读</option>
+                <option value="finance">财务对账 (finance) - 注单/场次/流水/操作日志,只读</option>
+              </select>
+            </div>
+            <div className="mb-3">
+              <label className="block text-xs text-muted mb-1">操作密码 <span style={{color:"#FF6B6B"}}>*</span></label>
+              <input type="password" className="input" value={opPwd} onChange={e=>setOpPwd(e.target.value)} placeholder="当前登录员工的登录密码" autoFocus/>
+            </div>
+            <div className="text-xs mb-3" style={{color:"#F0B93A",fontSize:11}}>
+              ⚠ 该员工如已登录,需重新登录后新角色才生效
+            </div>
+            {err && <div className="text-xs mb-3" style={{color:"#FF6B6B"}}>{err}</div>}
+            <div className="flex justify-end gap-2 mt-4">
+              <button className="btn btn-ghost" onClick={onClose}>取消</button>
+              <button className="btn btn-primary" onClick={submit}>确认修改</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function AddStaffModal({ onClose, onSubmit }) {
+      const [user, setUser] = useState("");
+      const [pwd, setPwd] = useState("");
+      const [pwdC, setPwdC] = useState("");
+      const [role, setRole] = useState("operator");
+      const [phone, setPhone] = useState("");
+      const [err, setErr] = useState("");
+      const submit = () => {
+        if (!/^[A-Za-z0-9-]{4,20}$/.test(user)) { setErr("员工账号需 4-20 位英文+数字+中划线"); return; }
+        if (!pwd || pwd.length < 6) { setErr("初始密码至少 6 位"); return; }
+        if (pwd !== pwdC) { setErr("两次密码不一致"); return; }
+        onSubmit({ user, role, phone });
+      };
+      return (
+        <div className="modal-backdrop" onClick={onClose}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{width:480}}>
+            <h3 className="text-base font-semibold mb-1">新增员工账号</h3>
+            <p className="text-xs text-faint mb-4">创建后员工用此账号 + 初始密码登录,首次登录建议改密</p>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">员工账号 <span style={{color:"#FF6B6B"}}>*</span></label><input className="input" value={user} onChange={e=>setUser(e.target.value)} placeholder="4-20 位英文+数字+中划线" autoFocus/></div>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">初始密码 <span style={{color:"#FF6B6B"}}>*</span></label><input className="input" type="password" value={pwd} onChange={e=>setPwd(e.target.value)} placeholder="至少 6 位"/></div>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">确认密码 <span style={{color:"#FF6B6B"}}>*</span></label><input className="input" type="password" value={pwdC} onChange={e=>setPwdC(e.target.value)}/></div>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">角色 <span style={{color:"#FF6B6B"}}>*</span></label>
+              <select className="input" value={role} onChange={e=>setRole(e.target.value)}>
+                <option value="operator">平台运营 (operator) - 全菜单 + 可写</option>
+                <option value="risk">风控审计 (risk) - 注单/场次/操作日志,只读</option>
+                <option value="finance">财务对账 (finance) - 注单/场次/流水/操作日志,只读</option>
+              </select>
+            </div>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">联系电话</label><input className="input" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="选填,异常登录通知"/></div>
+            {err && <div className="text-xs mb-3" style={{color:"#FF6B6B"}}>{err}</div>}
+            <div className="flex justify-end gap-2 mt-4">
+              <button className="btn btn-ghost" onClick={onClose}>取消</button>
+              <button className="btn btn-primary" onClick={submit}>确认新增</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============== IP 白名单页 (系统管理 / IP 白名单) ==============
+    // V0.2 完整功能 (Sammy 2026-04-30 拍): 增删改启停 + 操作密码二次校验 + 防自锁 + 当前 IP 提示 + 命中拒登 (LoginPage 校验)
+    function IPWhitelistPage({ list, setList, currentLoginIP, appendSystemLog }) {
+      const [showAdd, setShowAdd] = useState(false);
+      const [confirmAction, setConfirmAction] = useState(null);  // { type:"toggle"|"delete", item }
+      const [opPwd, setOpPwd] = useState("");
+      const [opErr, setOpErr] = useState("");
+
+      // 筛选 (提交触发, 跟其他列表页一致)
+      const [inIP, setInIP] = useState(""), [ipQ, setIpQ] = useState("");
+      const [inStatus, setInStatus] = useState("all"), [statusQ, setStatusQ] = useState("all");
+      const [pageNum, setPageNum] = useState(0);
+      const doSearch = () => { setIpQ(inIP.trim()); setStatusQ(inStatus); setPageNum(0); };
+      const resetSearch = () => { setInIP(""); setInStatus("all"); setIpQ(""); setStatusQ("all"); setPageNum(0); };
+
+      const filtered = list.filter(w => {
+        if (ipQ && !w.ip.includes(ipQ) && !(w.label || "").includes(ipQ)) return false;
+        if (statusQ === "enabled" && !w.enabled) return false;
+        if (statusQ === "disabled" && w.enabled) return false;
+        return true;
+      });
+
+      const enabledCount = list.filter(w => w.enabled).length;
+      const isCurrentIPAllowed = enabledCount === 0 || list.filter(w => w.enabled).some(w => ipMatches(currentLoginIP, w.ip));
+
+      const doConfirm = () => {
+        if (opPwd !== "123456") { setOpErr("操作密码错误"); return; }
+        const { type, item } = confirmAction;
+        if (type === "toggle") {
+          // 防自锁:不能停用最后一条启用项 (会导致所有 IP 都拒登,包括当前登录员工)
+          if (item.enabled && enabledCount === 1) {
+            setOpErr("不能停用最后一条启用的白名单(否则所有 IP 都将拒登)"); return;
+          }
+          setList(list.map(w => w.id === item.id ? { ...w, enabled: !w.enabled } : w));
+          appendSystemLog && appendSystemLog((item.enabled ? "停用" : "启用")+" IP 白名单", item.ip+" ("+item.label+")");
+        } else if (type === "delete") {
+          if (item.enabled && enabledCount === 1) {
+            setOpErr("不能删除最后一条启用的白名单(否则所有 IP 都将拒登)"); return;
+          }
+          setList(list.filter(w => w.id !== item.id));
+          appendSystemLog && appendSystemLog("删除 IP 白名单", item.ip+" ("+item.label+")");
+        }
+        setConfirmAction(null); setOpPwd(""); setOpErr("");
+      };
+
+      const handleAdd = (data) => {
+        const maxId = list.reduce((m, w) => Math.max(m, w.id), 0);
+        const now = new Date(); const pad = (n) => String(n).padStart(2,"0");
+        const createdAt = now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate())+" "+pad(now.getHours())+":"+pad(now.getMinutes())+":"+pad(now.getSeconds());
+        setList([...list, { id: maxId+1, ip:data.ip, label:data.label, enabled:data.enabled, createdAt }]);
+        setShowAdd(false);
+        appendSystemLog && appendSystemLog("新增 IP 白名单", data.ip+" ("+data.label+", "+(data.enabled?"启用":"已停用")+")");
+      };
+
+      return (
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-xl font-semibold">IP 白名单</h2>
+              <p className="text-xs text-muted mt-1">仅 operator 可见</p>
+              <p className="text-xs mt-1" style={{color:"#9B7FE8"}}>📝 PM 说明(非产品文案):限定哪些 IP 段可登录总控后台;命中白名单外 IP 直接拒登</p>
+            </div>
+            <button className="btn btn-primary" onClick={()=>setShowAdd(true)} style={{padding:"8px 18px"}}>+ 新增白名单</button>
+          </div>
+          <div className="bg-cool-soft border border-cool rounded-lg p-3 mb-4 text-xs flex items-start gap-2">
+            <span className="text-cool" style={{marginTop:1}}>ℹ</span>
+            <span>
+              <b>当前登录 IP:</b> <span className="mono text-cool">{currentLoginIP}</span> {isCurrentIPAllowed ? <span style={{color:"#5BC97C"}}>✓ 在白名单内</span> : <span style={{color:"#FF6B6B"}}>✗ 不在白名单内 (下次登录将被拒)</span>}
+              {" "}· <b>启用项 {enabledCount} 条</b>(0 条 = 所有 IP 均可登录)· 校验范围:LoginPage 提交时;停用 / 删除最后一条启用项有防自锁拦截
+            </span>
+          </div>
+          <details className="rounded-lg p-3 mb-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(给开发对接,正式环境删除)</summary>
+            <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
+              <div><b>① IP 校验时机:</b></div>
+              <div>· LoginPage 提交时(后端 onLogin API 拿 request IP 比对白名单)</div>
+              <div>· 命中白名单外 IP 直接拒登,提示「您的 IP 不在登录白名单内,请联系超级管理员」</div>
+              <div>· 启用项 = 0 时跳过校验(所有 IP 均可登录),便于系统初始化</div>
+              <div className="mt-2"><b>② IP 格式支持(V0.2):</b></div>
+              <div>· IPv4 单 IP:<code>192.168.1.1</code></div>
+              <div>· CIDR /N 段:<code>10.4.2.0/24</code>(整个 /24 段都允许)</div>
+              <div>· 真实开发可换 ip-cidr / netmask 库;mock 用纯 JS 实现</div>
+              <div className="mt-2"><b>③ 写动作(增 / 删 / 启停):</b></div>
+              <div>· <code>新增白名单</code>:必填 IP + 备注 + 操作密码二次确认</div>
+              <div>· <code>启用 / 停用</code>:切换 status,操作密码二次确认</div>
+              <div>· <code>删除</code>:操作密码二次确认</div>
+              <div className="mt-2"><b>④ 防自锁拦截:</b></div>
+              <div>· 停用 / 删除最后一条启用项之前,检查当前登录 IP 是否在剩余启用项里</div>
+              <div>· 不在 → 阻断动作,提示「停用后您将无法再登录」</div>
+              <div>· 在 → 允许(但建议先确认有其他超级账号可登录)</div>
+              <div className="mt-2"><b>⑤ 三角色字段权限:</b></div>
+              <div>· 只有 <code>admin / operator</code> 角色能看见本菜单 + 增删改</div>
+              <div className="mt-2"><b>⑥ V0.2 收尾(Sammy 2026-04-30 拍):</b></div>
+              <div>· 本菜单 V0.2 在 ROLES.menus 里隐藏(代码保留,后期重启加回)</div>
+              <div>· LoginPage 只保留账号 + 密码校验,IP 校验逻辑暂不接入</div>
+              <div>· 真实 IP 字段(<code>lastLoginIP</code>)保留 mock 默认值给审计日志用</div>
+            </div>
+          </details>
+          <div className="bg-panel border border-line rounded-lg p-3 mb-4">
+            <div className="flex flex-wrap gap-2 items-center">
+              <input className="input mono" style={{width:280,fontSize:13}} placeholder="搜索 IP / IP 段 / 备注" value={inIP} onChange={e=>setInIP(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") doSearch();}}/>
+              <select className="input" style={{width:120}} value={inStatus} onChange={e=>setInStatus(e.target.value)}>
+                <option value="all">全部状态</option>
+                <option value="enabled">启用</option>
+                <option value="disabled">已停用</option>
+              </select>
+              <button className="btn btn-primary" style={{padding:"8px 18px"}} onClick={doSearch}>搜索</button>
+              <button className="btn btn-ghost" style={{padding:"8px 14px"}} onClick={resetSearch}>重置</button>
+            </div>
+            <div className="flex items-center mt-2 text-xs text-faint">
+              <span>共 {filtered.length} 条</span>
+            </div>
+          </div>
+          <div className="bg-panel border border-line rounded-lg overflow-hidden">
+            <div className="scroll-x">
+              <table>
+                <thead><tr>
+                  <th><FieldHint hint="IPv4 单 IP(192.168.1.1)或 CIDR 段(10.4.2.0/24)。LoginPage 提交时后端拿 request IP 比对白名单。">IP / IP 段</FieldHint></th>
+                  <th><FieldHint hint="备注(必填),说明该 IP 段用途(如「办公网段」「运营 admin 家用」)。便于运维核查。">备注</FieldHint></th>
+                  <th><FieldHint hint="启用 / 已停用。启用项 = 0 时跳过校验(所有 IP 均可登录)。停用 / 删除最后一条启用项前有防自锁拦截。">状态</FieldHint></th>
+                  <th><FieldHint hint="该白名单条目创建时间 YYYY-MM-DD HH:mm:ss。">创建时间</FieldHint></th>
+                  <th>操作</th>
+                </tr></thead>
+                <tbody>
+                  {filtered.slice(pageNum*PAGE_SIZE, (pageNum+1)*PAGE_SIZE).map(item => (
+                    <tr key={item.id}>
+                      <td className="mono">{item.ip}</td>
+                      <td className="text-muted" style={{fontSize:12}}>{item.label}</td>
+                      <td><span className={"chip " + (item.enabled ? "chip-active" : "chip-frozen")}>{item.enabled ? "启用" : "已停用"}</span></td>
+                      <td className="text-muted" style={{fontSize:12}}>{item.createdAt}</td>
+                      <td>
+                        <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,marginRight:4}} onClick={()=>{setConfirmAction({type:"toggle",item}); setOpPwd(""); setOpErr("");}}>{item.enabled ? "停用" : "启用"}</button>
+                        <button className="btn btn-ghost" style={{padding:"4px 10px",fontSize:11,color:"#FF6B6B"}} onClick={()=>{setConfirmAction({type:"delete",item}); setOpPwd(""); setOpErr("");}}>删除</button>
+                      </td>
+                    </tr>
+                  ))}
+                  {filtered.length === 0 && <tr><td colSpan="5" style={{textAlign:"center",padding:"20px",color:"#6B7280"}}>{list.length === 0 ? "暂无白名单(所有 IP 均可登录)" : "无匹配数据"}</td></tr>}
+                </tbody>
+              </table>
+            </div>
+            <Pagination total={filtered.length} pageNum={pageNum} setPageNum={setPageNum}/>
+          </div>
+          {showAdd && <AddIPModal onClose={()=>setShowAdd(false)} onSubmit={handleAdd} existingIPs={list.map(w=>w.ip)}/>}
+          {confirmAction && (
+            <div className="modal-backdrop" onClick={()=>{setConfirmAction(null); setOpPwd(""); setOpErr("");}}>
+              <div className="modal" onClick={e=>e.stopPropagation()} style={{width:440}}>
+                <h3 className="text-base font-semibold mb-3">{confirmAction.type === "toggle" ? (confirmAction.item.enabled ? "确认停用?" : "确认启用?") : "确认删除?"}</h3>
+                <p className="text-sm text-muted mb-4">
+                  {confirmAction.type === "toggle"
+                    ? <>{confirmAction.item.enabled ? "停用" : "启用"} <span className="mono text-cool">{confirmAction.item.ip}</span> ({confirmAction.item.label})</>
+                    : <>删除 <span className="mono text-cool">{confirmAction.item.ip}</span> ({confirmAction.item.label}),无法恢复</>
+                  }
+                </p>
+                <div className="mb-3">
+                  <label className="block text-xs text-muted mb-1">操作密码 <span style={{color:"#FF6B6B"}}>*</span></label>
+                  <input type="password" className="input" value={opPwd} onChange={e=>setOpPwd(e.target.value)} placeholder="当前登录员工的登录密码" autoFocus/>
+                </div>
+                {opErr && <div className="text-xs mb-3" style={{color:"#FF6B6B"}}>{opErr}</div>}
+                <div className="flex justify-end gap-2 mt-4">
+                  <button className="btn btn-ghost" onClick={()=>{setConfirmAction(null); setOpPwd(""); setOpErr("");}}>取消</button>
+                  <button className="btn btn-primary" style={confirmAction.type === "delete" ? {background:"#FF6B6B",borderColor:"#FF6B6B"} : {}} onClick={doConfirm}>确认</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function AddIPModal({ onClose, onSubmit, existingIPs }) {
+      const [ip, setIP] = useState("");
+      const [label, setLabel] = useState("");
+      const [enabled, setEnabled] = useState(true);
+      const [opPwd, setOpPwd] = useState("");
+      const [err, setErr] = useState("");
+      const submit = () => {
+        const ipTrim = ip.trim();
+        if (!ipTrim) { setErr("请输入 IP 或 IP 段"); return; }
+        if (!isValidIPOrCIDR(ipTrim)) { setErr("格式不合法,例:192.168.1.1 或 10.4.2.0/24"); return; }
+        if (existingIPs.includes(ipTrim)) { setErr("已存在该 IP / IP 段"); return; }
+        if (!label.trim()) { setErr("请输入备注(便于后期管理)"); return; }
+        if (opPwd !== "123456") { setErr("操作密码错误"); return; }
+        onSubmit({ ip: ipTrim, label: label.trim(), enabled });
+      };
+      return (
+        <div className="modal-backdrop" onClick={onClose}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{width:480}}>
+            <h3 className="text-base font-semibold mb-1">新增 IP 白名单</h3>
+            <p className="text-xs text-faint mb-4">支持单 IP(192.168.1.1)或 CIDR 段(10.4.2.0/24)</p>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">IP / IP 段 <span style={{color:"#FF6B6B"}}>*</span></label><input className="input mono" value={ip} onChange={e=>setIP(e.target.value)} placeholder="例: 192.168.1.1 或 10.4.2.0/24" autoFocus/></div>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">备注 <span style={{color:"#FF6B6B"}}>*</span></label><input className="input" value={label} onChange={e=>setLabel(e.target.value)} placeholder="例: 办公网段 / 运营 admin 家用"/></div>
+            <div className="mb-3">
+              <label className="block text-xs text-muted mb-1">初始状态</label>
+              <div className="flex gap-4 text-sm" style={{paddingTop:6}}>
+                <label><input type="radio" checked={enabled} onChange={()=>setEnabled(true)}/> <span className="ml-1">启用</span></label>
+                <label><input type="radio" checked={!enabled} onChange={()=>setEnabled(false)}/> <span className="ml-1">已停用</span></label>
+              </div>
+            </div>
+            <div className="mb-3"><label className="block text-xs text-muted mb-1">操作密码 <span style={{color:"#FF6B6B"}}>*</span></label><input type="password" className="input" value={opPwd} onChange={e=>setOpPwd(e.target.value)} placeholder="当前登录员工的登录密码"/></div>
+            {err && <div className="text-xs mb-3" style={{color:"#FF6B6B"}}>{err}</div>}
+            <div className="flex justify-end gap-2 mt-4">
+              <button className="btn btn-ghost" onClick={onClose}>取消</button>
+              <button className="btn btn-primary" onClick={submit}>确认新增</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============== 数据看板 (V0.2 简洁版门户页) ==============
+    function DashboardPage({ role, auditSystem, setActive, accounts }) {
+      const r = ROLES[role];
+      // 按"人"算顶代户口数 (Sammy 2026-04-30 拍): 1 顶代多币种 = 多行, 但只算 1 个人 (distinct user)
+      // 启用 / 冻结状态:任一币种行 active 就算"启用人",全部行都 frozen 才算"冻结人"
+      // accounts 由 App 层 lift (V0.2 修 bug): 顶代被冻结 / 上下分余额变化都立即反映到 KPI
+      const topAgentRows = Object.values(accounts).filter(a => a.accountType === "普通(顶代)");
+      const topAgentUsers = {};  // user → { hasActive }
+      topAgentRows.forEach(a => {
+        if (!topAgentUsers[a.user]) topAgentUsers[a.user] = { hasActive: false };
+        if (a.status === "active") topAgentUsers[a.user].hasActive = true;
+      });
+      const topAgentPeople = Object.keys(topAgentUsers).length;
+      const topActivePeople = Object.values(topAgentUsers).filter(u => u.hasActive).length;
+      const totalSessions = MOCK_SPORTS_SESSIONS.filter(s => (s.validStake||0) > 0).length;
+      const todayBets = MOCK_BETS.filter(b => b.gameType.includes("体育") && b.status === "已结算").length;
+      const recent = auditSystem.slice(0, 10);
+      const Card = ({ label, value, sub, color }) => (
+        <div className="bg-panel border border-line rounded-lg p-4">
+          <div className="text-xs text-muted mb-2">{label}</div>
+          <div className="num text-2xl font-semibold" style={{color: color || "#E4ECF7"}}>{value}</div>
+          {sub && <div className="text-xs text-faint mt-1">{sub}</div>}
+        </div>
+      );
+      return (
+        <div className="p-6">
+          <div className="mb-5">
+            <h2 className="text-xl font-semibold">数据看板</h2>
+            <p className="text-xs text-muted mt-1">欢迎 <span className="text-cool">{r.name}</span></p>
+          </div>
+          <details className="rounded-lg p-3 mb-4 text-xs" style={{background:"rgba(155,127,232,0.06)",border:"1px solid rgba(155,127,232,0.3)",color:"#9B7FE8"}}>
+            <summary className="cursor-pointer select-none font-semibold" style={{outline:"none"}}>📝 业务规则(给开发对接,正式环境删除)</summary>
+            <div className="mt-3 space-y-2 leading-relaxed" style={{paddingLeft:18}}>
+              <div><b>① 4 张 KPI 卡口径:</b></div>
+              <div>· <code>顶代户口数</code>:启用 + 冻结合计人数 / 启用人数 / 总行数(多币种拆分)— 数据源 accounts state(lift to App)</div>
+              <div>· <code>累计体育场次</code>:<code>MOCK_SPORTS_SESSIONS.filter(s=>(s.validStake||0)&gt;0).length</code> 跟体育场次记录页过滤一致</div>
+              <div>· <code>累计已结算注单</code>:<code>MOCK_BETS.filter(b=>b.gameType.includes('体育') && b.status==='已结算').length</code> 跟体育注单记录页过滤一致</div>
+              <div>· <code>最近系统动作</code>:<code>auditSystem.length</code>(系统 audit_log 总数)</div>
+              <div className="mt-2"><b>② 卡片业务对齐(Q-S42 待):</b></div>
+              <div>· Dashboard 累计场次 vs 场次记录页过滤口径需对齐 — V0.2 都按 validStake&gt;0 过滤</div>
+              <div className="mt-2"><b>③ 「最近系统动作」表 5 条:</b></div>
+              <div>· 取 <code>auditSystem.slice(0, 5)</code>;点「查看完整日志 →」跳到操作日志页系统 Tab</div>
+              <div className="mt-2"><b>④ 三角色字段权限:</b></div>
+              <div>· <code>admin / risk / finance</code>:都可见 4 张 KPI</div>
+              <div>· <code>risk</code> 视角 KPI 数值不变(因为 KPI 是聚合数,不暴露占成 / 余额明细)</div>
+              <div className="mt-2"><b>⑤ V0.2 收尾(Sammy 2026-04-30 拍):</b></div>
+              <div>· 本菜单 V0.2 在 ROLES.menus 里隐藏(代码保留,后期重启加回)</div>
+              <div>· 默认菜单切换到「顶代户口」</div>
+            </div>
+          </details>
+          <div className="grid grid-cols-4 gap-4 mb-5">
+            <Card label="顶代户口数" value={topAgentPeople+" 人"} sub={"启用 "+topActivePeople+" / 冻结 "+(topAgentPeople-topActivePeople)+"  ·  共 "+topAgentRows.length+" 行(多币种拆分)"} color="#4A9EFF"/>
+            <Card label="累计体育场次" value={totalSessions+" 条"} sub="跨日已结算" color="#5BC97C"/>
+            <Card label="累计已结算注单" value={todayBets+" 条"} sub="体育游戏" color="#F0B93A"/>
+            <Card label="最近系统动作" value={auditSystem.length+" 条"} sub="点下方查看明细" color="#9B7FE8"/>
+          </div>
+          <div className="bg-panel border border-line rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-line">
+              <div className="font-semibold text-sm">最近系统动作 · 最新 {recent.length} 条</div>
+              <button className="btn btn-ghost" style={{padding:"4px 12px",fontSize:11}} onClick={()=>setActive("sys.audit")}>查看完整日志 →</button>
+            </div>
+            <div className="scroll-x">
+              <table>
+                <thead><tr><th>时间</th><th>员工</th><th>动作</th><th>目标</th></tr></thead>
+                <tbody>
+                  {recent.map((r, i) => (
+                    <tr key={i}>
+                      <td className="text-muted" style={{fontSize:12}}>{r.time}</td>
+                      <td className="mono">{r.actor}</td>
+                      <td><span className="chip chip-cool" style={{fontSize:10}}>{r.action}</span></td>
+                      <td className="text-muted" style={{fontSize:12}}>{r.target}</td>
+                    </tr>
+                  ))}
+                  {recent.length === 0 && <tr><td colSpan="4" style={{textAlign:"center",padding:"30px",color:"#6B7280"}}>暂无动作记录</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============== 主框架 ==============
+    function App() {
+      // ⚠ React Hooks 规则: 所有 hooks 必须在 early return 之前,且每次 render 调用顺序一致
+      const [currentUser, setCurrentUser] = useState(null);  // null = 未登录
+      const [loginIP, setLoginIP] = useState(null);          // 登录时记录的 IP, 给右上块 / 操作日志展示
+      const [active, setActive] = useState("agents");  // V0.2 收尾: dashboard 隐藏后默认进顶代户口
+      const [showChangePwd, setShowChangePwd] = useState(false);
+      const [showUserMenu, setShowUserMenu] = useState(false);
+      const [ipWhitelist, setIpWhitelist] = useState(() => [...INITIAL_IPWHITE]);
+      const [auditSystem, setAuditSystem] = useState(() => [...INITIAL_AUDIT_SYSTEM]);
+      const [auditPlayer, setAuditPlayer] = useState(() => [...INITIAL_AUDIT_PLAYER]);
+      // V0.2 修 bug (Sammy 2026-04-30): accounts / topKeys / staff lift 到 App 层
+      // 避免切菜单 unmount 子组件时 mock state 销毁 (顶代余额改了切走再回来就回退、新员工不能登录等)
+      const [accounts, setAccounts] = useState(() => ({...ACCOUNTS}));
+      const [topKeys, setTopKeys] = useState(() => [...TOP_AGENT_KEYS]);
+      const [staff, setStaff] = useState(() => [...INITIAL_STAFF]);
+
+      // 写动作回写系统操作日志 (Sammy 2026-04-30 拍 A 方案):
+      // 所有 S 端写动作都 unshift 一条到 auditSystem,真实演示动作 ↔ 日志的实时关联
+      // user/ip 参数可选 (登录时 currentUser 还没 setState, 显式传)
+      const appendSystemLog = (action, target, extra = {}) => {
+        const user = extra.user || currentUser;
+        const ip = extra.ip || loginIP || "10.4.2.18";
+        if (!user) return;
+        const now = new Date(); const pad = (n) => String(n).padStart(2,"0");
+        const time = now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate())+" "+pad(now.getHours())+":"+pad(now.getMinutes())+":"+pad(now.getSeconds());
+        setAuditSystem(prev => [{
+          time, actorType:"员工", actor: user.user+" ("+user.role+")",
+          action, target, ip, reason: extra.reason || "-",
+        }, ...prev]);
+      };
+
+      const role = currentUser ? currentUser.role : null;
+      const r = role ? ROLES[role] : null;
+      const visibleMenus = r ? r.menus : [];
+
+      // 角色变化兜底:若当前菜单不可见,回退到第一个可见菜单
+      React.useEffect(() => {
+        if (currentUser && !visibleMenus.includes(active)) setActive(visibleMenus[0]);
+      }, [role]);
+
+      // 所有 hooks 调用完毕后再 early return (避免登录前后 hook 数量不一致引发 React 报错)
+      if (!currentUser) return <LoginPage onLogin={(s, ip)=>{
+        // 更新 staff 表里该员工的 lastLogin 为本次登录时间, 同步刷新 currentUser 副本 (右上块下拉 / StaffPage 列 都用得到)
+        const now = new Date(); const pad = (n) => String(n).padStart(2,"0");
+        const nowStr = now.getFullYear()+"-"+pad(now.getMonth()+1)+"-"+pad(now.getDate())+" "+pad(now.getHours())+":"+pad(now.getMinutes())+":"+pad(now.getSeconds());
+        const fresh = { ...s, lastLogin: nowStr };
+        setStaff(staff.map(x => x.user === s.user ? fresh : x));
+        setCurrentUser(fresh); setLoginIP(ip);
+        appendSystemLog("登录", "S 端 / 角色: "+s.role, { user: fresh, ip });
+      }} staffList={staff}/>;
+
+      const Menu = ({ id, label, icon }) => visibleMenus.includes(id) && (
+        <div className={"menu-item " + (active===id?"active":"")} onClick={()=>setActive(id)}>
+          <span style={{width:14}}>{icon}</span>{label}
+        </div>
+      );
+
+      const breadcrumb = {
+        "dashboard":"数据看板",
+        "agents":"账号管理 / 顶代户口",
+        "reports.bets":"报表管理 / 体育注单记录",
+        "reports.sports":"报表管理 / 体育场次记录",
+        "reports.ledger":"报表管理 / 交易流水记录",
+        "perm.staff":"权限管理 / 员工账号",
+        "sys.audit":"系统管理 / 操作日志",
+        "sys.ipwhite":"系统管理 / IP 白名单",
+      }[active];
+
+      return (
+        <div className="flex min-h-screen">
+          {/* Sidebar */}
+          <aside className="w-56 bg-panel border-r border-line flex flex-col">
+            <div className="px-5 py-5 border-b border-line">
+              <div className="flex items-center gap-2">
+                <span className="text-cool text-lg">◆</span>
+                <span className="font-semibold tracking-wider" style={{letterSpacing:2}}>三方游戏</span>
+              </div>
+              <div className="text-xs text-faint mt-1 ml-5">三方游戏总控后台</div>
+            </div>
+            <nav className="flex-1 px-3 py-3 overflow-y-auto">
+              {/* V0.2 收尾 (Sammy 2026-04-30 拍): 数据看板 / IP 白名单 菜单隐藏 (代码保留 in App, 后期重启时把 ROLES.menus 加回 + 这里 Menu 加回即可) */}
+
+              <div className="menu-group">账号管理</div>
+              <Menu id="agents" label="顶代户口" icon="◉"/>
+
+              <div className="menu-group">报表管理</div>
+              <Menu id="reports.bets" label="体育注单记录" icon="◐"/>
+              <Menu id="reports.sports" label="体育场次记录" icon="◑"/>
+              <Menu id="reports.ledger" label="交易流水记录" icon="◒"/>
+
+              {visibleMenus.includes("perm.staff") && <div className="menu-group">权限管理</div>}
+              <Menu id="perm.staff" label="员工账号" icon="◆"/>
+
+              <div className="menu-group">系统管理</div>
+              <Menu id="sys.audit" label="操作日志" icon="◓"/>
+            </nav>
+            <div className="px-4 py-3 border-t border-line text-xs text-faint">
+              <div>内部工具 · 仅限授权员工</div>
+              <div className="mt-1" style={{fontSize:10,color:"#9B7FE8"}}>📝 PM 说明(非产品文案):原型仅评审用,实际开发使用 @ant-design/pro-components</div>
+            </div>
+          </aside>
+
+          {/* Main */}
+          <main className="flex-1 flex flex-col bg-app">
+            <header className="border-b border-line px-6 py-3 flex items-center bg-panel" style={{justifyContent:"space-between"}}>
+              <div className="text-xs text-faint">{breadcrumb}</div>
+              {/* 右上员工信息块 */}
+              <div style={{position:"relative"}}>
+                <div className="flex items-center gap-2 cursor-pointer" onClick={()=>setShowUserMenu(!showUserMenu)} style={{padding:"4px 10px",borderRadius:6,background:showUserMenu?"#1A2434":"transparent"}}>
+                  <span style={{width:24,height:24,borderRadius:"50%",background:r.color,color:"#0B0F15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600}}>{currentUser.user[0].toUpperCase()}</span>
+                  <span className="text-xs">{currentUser.user}</span>
+                  <span className="chip" style={{background:r.color+"22",color:r.color,fontSize:10}}>{r.name}</span>
+                  <span className="text-faint" style={{fontSize:10}}>▾</span>
+                </div>
+                {showUserMenu && (
+                  <div className="bg-panel border border-line rounded-lg" style={{position:"absolute",top:"100%",right:0,marginTop:4,minWidth:180,padding:"6px 0",zIndex:30,boxShadow:"0 4px 12px rgba(0,0,0,0.4)"}}>
+                    <div className="px-4 py-2 text-xs text-faint border-b border-line">{currentUser.phone || "-"}</div>
+                    <div className="px-4 py-2 text-xs text-faint border-b border-line">最近登录: <span className="mono">{currentUser.lastLogin || "-"}</span></div>
+                    <div className="px-4 py-2 cursor-pointer hover:bg-app text-sm" style={{cursor:"pointer"}} onClick={()=>{setShowChangePwd(true); setShowUserMenu(false);}}>修改密码</div>
+                    <div className="px-4 py-2 cursor-pointer hover:bg-app text-sm" style={{cursor:"pointer",color:"#FF8B6B"}} onClick={()=>{if(confirm("确认退出登录?")){appendSystemLog("登出","S 端 / 角色: "+role); setCurrentUser(null); setShowUserMenu(false);}}}>退出登录</div>
+                  </div>
+                )}
+              </div>
+            </header>
+            <div className="flex-1 overflow-auto">
+              {active === "dashboard" && <DashboardPage role={role} auditSystem={auditSystem} setActive={setActive} accounts={accounts}/>}
+              {active === "agents" && <AgentsPage role={role} canWrite={r.canWrite} appendSystemLog={appendSystemLog} accounts={accounts} setAccounts={setAccounts} topKeys={topKeys} setTopKeys={setTopKeys}/>}
+              {active === "reports.bets" && <BetsPage role={role} appendSystemLog={appendSystemLog}/>}
+              {active === "reports.sports" && <SportsSessionsPage role={role} appendSystemLog={appendSystemLog}/>}
+              {active === "reports.ledger" && <LedgerPage role={role} appendSystemLog={appendSystemLog}/>}
+              {active === "perm.staff" && <StaffPage currentUser={currentUser} appendSystemLog={appendSystemLog} staff={staff} setStaff={setStaff}/>}
+              {active === "sys.audit" && <AuditPage role={role} system={auditSystem} player={auditPlayer}/>}
+              {active === "sys.ipwhite" && <IPWhitelistPage list={ipWhitelist} setList={setIpWhitelist} currentLoginIP={loginIP || "10.4.2.18"} appendSystemLog={appendSystemLog}/>}
+            </div>
+          </main>
+          {showChangePwd && <ChangePwdModal user={currentUser} onClose={()=>setShowChangePwd(false)} onConfirm={()=>{
+            appendSystemLog("修改密码", "自身账号 "+currentUser.user+" (强制重登)");
+            appendSystemLog("登出", "S 端 / 角色: "+role+" (改密强制)");
+            setShowChangePwd(false); alert("密码修改成功,请用新密码重新登录"); setCurrentUser(null);
+          }}/>}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  </script>
+</body>
+</html>
